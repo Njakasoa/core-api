@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: core
+          POSTGRES_PASSWORD: core
+          POSTGRES_DB: core_api_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U core -d core_api_test"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://core:core@localhost:5432/core_api_test
+      JWT_SECRET: ci-secret-ci-secret-ci-secret-32chars
+      NODE_ENV: test
+      RATE_LIMIT_MAX: "100000"
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+      - name: Typecheck
+        run: bun run typecheck
+      - name: Migrate
+        run: bun run db:migrate
+      - name: Test
+        run: bun test
