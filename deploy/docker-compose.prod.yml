@@ -1,13 +1,15 @@
-# Production stack for a single VPS behind Caddy.
-# The API binds to localhost only; Caddy terminates TLS and reverse-proxies it.
+# Production stack for a single VPS with Caddy on the shared `proxy` network.
 # Run from the repo root:  docker compose -f deploy/docker-compose.prod.yml up -d --build
+name: core-api
+
 services:
   db:
     image: postgres:16-alpine
+    container_name: core-api-db
     restart: unless-stopped
     environment:
       POSTGRES_USER: core
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-core}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: core_api
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -21,6 +23,8 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
+    image: core-api:local
+    container_name: core-api
     restart: unless-stopped
     depends_on:
       db:
@@ -28,12 +32,32 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: postgres://core:${POSTGRES_PASSWORD:-core}@db:5432/core_api
+      DATABASE_URL: postgres://core:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/core_api
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
-    ports:
-      # localhost-only — Caddy is the public entrypoint.
-      - "127.0.0.1:3000:3000"
+    expose:
+      - "3000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "bun",
+          "-e",
+          "const r=await fetch('http://127.0.0.1:3000/readyz');if(!r.ok)process.exit(1)",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 15s
+    networks:
+      - default
+      - proxy
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
 
 volumes:
   pgdata:
+
+networks:
+  proxy:
+    external: true
