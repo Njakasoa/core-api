@@ -1,0 +1,14 @@
+[Unit]
+Description=Update core-api from GitHub and redeploy
+Wants=network-online.target docker.service
+After=network-online.target docker.service
+ConditionPathExists=/opt/stacks/core-api/.env
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/stacks/core-api
+ExecStart=/usr/bin/env bash /opt/stacks/core-api/deploy/update-core-api.sh
+TimeoutStartSec=15min
+
+StandardOutput=journal
+StandardError=journal

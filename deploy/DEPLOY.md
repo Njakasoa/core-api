@@ -44,12 +44,44 @@ docs at `https://api.njakasoa.xyz/docs`.
 
 ## 4. Updating
 
+### Automatic deployment
+
+Install the systemd service and timer once:
+
 ```bash
-cd /opt/stacks/core-api && git pull
-docker compose --env-file .env -f deploy/docker-compose.prod.yml up -d --build
+cd /opt/stacks/core-api
+sudo install -m 0644 deploy/systemd/core-api-update.service \
+  /etc/systemd/system/core-api-update.service
+sudo install -m 0644 deploy/systemd/core-api-update.timer \
+  /etc/systemd/system/core-api-update.timer
+sudo systemctl daemon-reload
+sudo systemctl enable --now core-api-update.timer
 ```
 
-(Or wire a one-line cron like the ai-server stack does for auto-pull + rebuild.)
+Every minute, the timer fetches `origin/main`. When the revision changes, it:
+
+1. refuses to deploy over tracked local changes;
+2. fast-forwards the checkout to `origin/main`;
+3. validates Compose and rebuilds the API image;
+4. recreates the services without deleting the PostgreSQL volume;
+5. waits for `https://api.njakasoa.xyz/readyz`;
+6. records the result in the systemd journal.
+
+Useful commands:
+
+```bash
+systemctl status core-api-update.timer core-api-update.service
+journalctl -u core-api-update.service -n 100 --no-pager
+systemctl start core-api-update.service
+```
+
+### Manual update
+
+```bash
+cd /opt/stacks/core-api
+git pull --ff-only origin main
+docker compose --env-file .env -f deploy/docker-compose.prod.yml up -d --build
+```
 
 ## Notes
 
