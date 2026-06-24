@@ -1,7 +1,6 @@
-# Add this block to your VPS Caddyfile (e.g. /etc/caddy/Caddyfile), then
-# `caddy reload`. Caddy auto-provisions TLS and transparently upgrades the
-# /rt WebSocket connection.
+# Add this block to the central proxy Caddyfile. Caddy and core-api must share
+# the external Docker network named `proxy`.
 api.njakasoa.xyz {
 	encode zstd gzip
-	reverse_proxy 127.0.0.1:3000
+	reverse_proxy core-api:3000
 }
