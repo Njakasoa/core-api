@@ -74,14 +74,14 @@ export function createApp() {
       },
     }),
   );
-  // Scalar's config type is a strict union that rejects `url` at the literal
-  // level, but the middleware reads it fine at runtime. Cast to its param type.
+  // Scalar reads the spec source from `spec.url` (see @scalar/core
+  // html-rendering); a top-level `url` is ignored, which renders a blank page.
   app.get(
     "/docs",
     apiReference({
-      url: "/openapi.json",
+      spec: { url: "/openapi.json" },
       pageTitle: "core-api docs",
-    } as Parameters<typeof apiReference>[0]),
+    }),
   );
 
   return app;
