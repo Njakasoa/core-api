@@ -1,0 +1,39 @@
+# Production stack for a single VPS behind Caddy.
+# The API binds to localhost only; Caddy terminates TLS and reverse-proxies it.
+# Run from the repo root:  docker compose -f deploy/docker-compose.prod.yml up -d --build
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: core
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-core}
+      POSTGRES_DB: core_api
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U core -d core_api"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  api:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgres://core:${POSTGRES_PASSWORD:-core}@db:5432/core_api
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+    ports:
+      # localhost-only — Caddy is the public entrypoint.
+      - "127.0.0.1:3000:3000"
+
+volumes:
+  pgdata:
