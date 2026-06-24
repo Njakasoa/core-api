@@ -18,6 +18,7 @@ import { orgsRoute } from "./routes/orgs.ts";
 import { apiKeysRoute } from "./routes/api-keys.ts";
 import { itemsRoute } from "./routes/items.ts";
 import { webhooksRoute } from "./routes/webhooks.ts";
+import { assetsRoute } from "./routes/assets.ts";
 import { realtimeRoute } from "./realtime/ws.ts";
 
 export function createApp() {
@@ -35,6 +36,7 @@ export function createApp() {
   app.notFound(notFound);
 
   // ── Meta ───────────────────────────────────────────────
+  app.route("/", assetsRoute()); // /favicon.ico, etc. (njakasoa brand)
   app.route("/", healthRoute());
   app.route("/", realtimeRoute()); // GET /rt (WebSocket upgrade)
   app.get("/", (c) =>
@@ -81,6 +83,7 @@ export function createApp() {
     apiReference({
       spec: { url: "/openapi.json" },
       pageTitle: "core-api docs",
+      favicon: "/favicon.png",
     }),
   );
 
