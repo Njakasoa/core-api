@@ -19,7 +19,7 @@ cd /opt/stacks/core-api
 cat > .env <<EOF
 JWT_SECRET=$(openssl rand -base64 48)
 POSTGRES_PASSWORD=$(openssl rand -hex 32)
-CORS_ORIGINS=https://njakasoa.xyz
+CORS_ORIGINS=https://njakasoa.xyz,https://warzone.njakasoa.xyz
 EOF
 
 docker compose --env-file .env -f deploy/docker-compose.prod.yml up -d --build
