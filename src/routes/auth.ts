@@ -184,6 +184,25 @@ export function authRoute(): Hono<{ Variables: Variables }> {
     },
   );
 
+  // ── Guest (anonymous) ───────────────────────────────────
+  // Mints a short-lived access token for an ephemeral guest identity — no
+  // account, no DB row. The token only unlocks the realtime gateway (/rt):
+  // guests have no org, so every /v1 org-scoped route still rejects them.
+  // Used by warzone.njakasoa.xyz so players can join a room without signing up.
+  app.post(
+    "/guest",
+    describeRoute({ description: "Mint a short-lived anonymous access token", tags: ["auth"] }),
+    async (c) => {
+      const guestId = id("guest");
+      const accessToken = await signAccessToken(guestId);
+      return c.json({
+        accessToken,
+        user: { id: guestId, guest: true },
+        expiresIn: env.ACCESS_TTL,
+      });
+    },
+  );
+
   // ── 2FA / TOTP ──────────────────────────────────────────
   app.post(
     "/2fa/setup",
