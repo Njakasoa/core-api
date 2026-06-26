@@ -21,6 +21,7 @@ import { webhooksRoute } from "./routes/webhooks.ts";
 import { assetsRoute } from "./routes/assets.ts";
 import { turnRoute } from "./routes/turn.ts";
 import { realtimeRoute } from "./realtime/ws.ts";
+import { quizRoute } from "./games/quiz/ws.ts";
 
 export function createApp() {
   const app = new Hono<{ Variables: Variables }>();
@@ -40,6 +41,7 @@ export function createApp() {
   app.route("/", assetsRoute()); // /favicon.ico, etc. (njakasoa brand)
   app.route("/", healthRoute());
   app.route("/", realtimeRoute()); // GET /rt (WebSocket upgrade)
+  app.route("/", quizRoute());     // GET /quiz/rt (Quiz Run game gateway)
   app.get("/", (c) =>
     c.json({
       name: "core-api",

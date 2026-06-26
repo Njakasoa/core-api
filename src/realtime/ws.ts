@@ -1,9 +1,7 @@
 import { Hono } from "hono";
-import { createBunWebSocket } from "hono/bun";
 import type { WSContext } from "hono/ws";
 import { verifyAccessToken } from "../lib/jwt.ts";
-
-const { upgradeWebSocket, websocket } = createBunWebSocket();
+import { upgradeWebSocket } from "./bun-ws.ts";
 
 /**
  * In-memory room registry — the foundation for the multiplayer game. One
@@ -125,5 +123,3 @@ export function realtimeRoute(): Hono {
 
   return app;
 }
-
-export { websocket };

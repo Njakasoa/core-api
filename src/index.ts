@@ -1,5 +1,5 @@
 import { app } from "./app.ts";
-import { websocket } from "./realtime/ws.ts";
+import { websocket } from "./realtime/bun-ws.ts";
 import { env } from "./env.ts";
 import { startWebhookDispatcher } from "./workers/webhook-dispatcher.ts";
 
