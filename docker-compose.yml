@@ -26,6 +26,8 @@ services:
       DATABASE_URL: postgres://core:core@db:5432/core_api
       JWT_SECRET: ${JWT_SECRET:-change-me-to-a-long-random-secret-string-min-32}
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      CF_TURN_KEY_ID: ${CF_TURN_KEY_ID}
+      CF_TURN_API_TOKEN: ${CF_TURN_API_TOKEN}
     ports:
       - "3000:3000"
 
