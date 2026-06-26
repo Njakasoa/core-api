@@ -3,7 +3,7 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: core
-      POSTGRES_PASSWORD: core
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-core}
       POSTGRES_DB: core_api
     ports:
       - "5432:5432"
@@ -24,7 +24,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: postgres://core:core@db:5432/core_api
+      DATABASE_URL: postgres://core:${POSTGRES_PASSWORD:-core}@db:5432/core_api
       JWT_SECRET: ${JWT_SECRET:-change-me-to-a-long-random-secret-string-min-32}
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
       CF_TURN_KEY_ID: ${CF_TURN_KEY_ID}
