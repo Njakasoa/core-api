@@ -7,5 +7,6 @@ bun.lockb
 .DS_Store
 dist/
 coverage/
+.deploy/
 .idea/
 .vscode/
