@@ -24,6 +24,13 @@ const schema = z.object({
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(120),
 
   WEBHOOK_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
+
+  // Cloudflare Realtime TURN — optional. When both are set, /v1/turn/credentials
+  // mints short-lived ICE servers from Cloudflare's global TURN network; when
+  // absent the endpoint falls back to STUN-only.
+  CF_TURN_KEY_ID: z.string().optional(),
+  CF_TURN_API_TOKEN: z.string().optional(),
+  TURN_TTL: z.coerce.number().int().positive().default(86_400),
 });
 
 const parsed = schema.safeParse(process.env);

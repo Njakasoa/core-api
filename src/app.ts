@@ -19,6 +19,7 @@ import { apiKeysRoute } from "./routes/api-keys.ts";
 import { itemsRoute } from "./routes/items.ts";
 import { webhooksRoute } from "./routes/webhooks.ts";
 import { assetsRoute } from "./routes/assets.ts";
+import { turnRoute } from "./routes/turn.ts";
 import { realtimeRoute } from "./realtime/ws.ts";
 
 export function createApp() {
@@ -55,6 +56,7 @@ export function createApp() {
   app.route("/v1/keys", apiKeysRoute());
   app.route("/v1/items", itemsRoute());
   app.route("/v1/webhooks", webhooksRoute());
+  app.route("/v1/turn", turnRoute());
 
   // ── OpenAPI + docs (registered last so it sees every route) ──
   app.get(
