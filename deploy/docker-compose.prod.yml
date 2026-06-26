@@ -35,6 +35,9 @@ services:
       DATABASE_URL: postgres://core:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/core_api
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      # Cloudflare TURN (optional) — needed for /v1/turn/credentials in prod.
+      CF_TURN_KEY_ID: ${CF_TURN_KEY_ID:-}
+      CF_TURN_API_TOKEN: ${CF_TURN_API_TOKEN:-}
     expose:
       - "3000"
     healthcheck:
