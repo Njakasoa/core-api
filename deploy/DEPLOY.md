@@ -90,6 +90,16 @@ docker compose --env-file .env -f deploy/docker-compose.prod.yml up -d --build
   in the live `.env`, then recreate the API: `docker compose --env-file .env
   -f deploy/docker-compose.prod.yml up -d`. A missing origin shows up in the
   browser as `No 'Access-Control-Allow-Origin' header is present`.
+- **WebRTC TURN** (for the game on mobile data / CGNAT): create a TURN app in
+  the Cloudflare dashboard (Realtime → TURN), then add its Token ID + API token
+  to the live `.env` and recreate the API:
+  ```
+  CF_TURN_KEY_ID=<turn token id>
+  CF_TURN_API_TOKEN=<turn api token>
+  ```
+  `POST /v1/turn/credentials` (Bearer token required — the game's guest token
+  works) then returns short-lived ICE servers. Without these vars it returns
+  STUN-only and players behind symmetric NAT fall back to the WS relay.
 - **Postgres**: this runs Postgres in a container with a named volume. For
   production durability you may prefer a managed Postgres — just point
   `DATABASE_URL` at it and drop the `db` service.
