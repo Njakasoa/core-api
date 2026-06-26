@@ -1,41 +1,60 @@
+name: core-api
+
 services:
   db:
     image: postgres:16-alpine
+    container_name: core-api-db
+    restart: unless-stopped
     environment:
       POSTGRES_USER: core
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-core}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: core_api
-    ports:
-      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U core -d core_api"]
-      interval: 3s
+      interval: 5s
       timeout: 3s
-      retries: 10
+      retries: 12
 
   api:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: core-api:local
     container_name: core-api
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: postgres://core:${POSTGRES_PASSWORD:-core}@db:5432/core_api
-      JWT_SECRET: ${JWT_SECRET:-change-me-to-a-long-random-secret-string-min-32}
+      DATABASE_URL: postgres://core:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/core_api
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
-      CF_TURN_KEY_ID: ${CF_TURN_KEY_ID}
-      CF_TURN_API_TOKEN: ${CF_TURN_API_TOKEN}
-    ports:
-      - "3000:3000"
+      # Cloudflare TURN (optional) — needed for /v1/turn/credentials.
+      CF_TURN_KEY_ID: ${CF_TURN_KEY_ID:-}
+      CF_TURN_API_TOKEN: ${CF_TURN_API_TOKEN:-}
+    expose:
+      - "3000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "bun",
+          "-e",
+          "const r=await fetch('http://127.0.0.1:3000/readyz');if(!r.ok)process.exit(1)",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 15s
     networks:
-      default:
-      proxy:
-        aliases:
-          - core-api
+      - default
+      - proxy
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
 
 volumes:
   pgdata:

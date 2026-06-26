@@ -65,7 +65,13 @@ Every minute, the timer fetches `origin/main`. When the revision changes, it:
 3. validates Compose and rebuilds the API image;
 4. recreates the services without deleting the PostgreSQL volume;
 5. waits for `https://api.njakasoa.xyz/readyz`;
-6. records the result in the systemd journal.
+6. records the deployed commit in `.deploy/current-rev`;
+7. records the result in the systemd journal.
+
+The deployed commit marker is intentional. It lets the timer repair a partially
+manual update: if the checkout is already at `origin/main` but the Docker image
+was not rebuilt/recreated, the next timer run still redeploys and refreshes the
+marker only after the readiness check passes.
 
 Useful commands:
 

@@ -5,6 +5,7 @@ APP_DIR="${APP_DIR:-/opt/stacks/core-api}"
 BRANCH="${BRANCH:-main}"
 COMPOSE_FILE="${COMPOSE_FILE:-deploy/docker-compose.prod.yml}"
 ENV_FILE="${ENV_FILE:-.env}"
+DEPLOYED_REV_FILE="${DEPLOYED_REV_FILE:-.deploy/current-rev}"
 LOCK_FILE="${LOCK_FILE:-/run/lock/core-api-update.lock}"
 HEALTH_URL="${HEALTH_URL:-https://api.njakasoa.xyz/readyz}"
 HEALTH_RESOLVE="${HEALTH_RESOLVE:-api.njakasoa.xyz:443:127.0.0.1}"
@@ -32,6 +33,7 @@ fi
 git fetch --quiet origin "$BRANCH"
 REMOTE_REV="$(git rev-parse "origin/$BRANCH")"
 LOCAL_REV="$(git rev-parse HEAD)"
+DEPLOYED_REV="$(cat "$DEPLOYED_REV_FILE" 2>/dev/null || true)"
 
 # This allows the timer to be installed before the PR containing this script is
 # merged. It starts deploying only once the deployment code exists on main.
@@ -40,19 +42,25 @@ if ! git cat-file -e "origin/$BRANCH:deploy/update-core-api.sh" 2>/dev/null; the
   exit 0
 fi
 
-if [ "$LOCAL_REV" = "$REMOTE_REV" ]; then
-  echo "core-api already up to date at $LOCAL_REV"
+if [ "$LOCAL_REV" = "$REMOTE_REV" ] && [ "$DEPLOYED_REV" = "$REMOTE_REV" ]; then
+  echo "core-api already deployed at $REMOTE_REV"
   exit 0
 fi
 
-echo "core-api update available: $LOCAL_REV -> $REMOTE_REV"
+if [ "$LOCAL_REV" = "$REMOTE_REV" ]; then
+  echo "core-api checkout is up to date at $REMOTE_REV; redeploying because deployed marker is '${DEPLOYED_REV:-missing}'"
+else
+  echo "core-api update available: $LOCAL_REV -> $REMOTE_REV"
+fi
 
 if [ "$DRY_RUN" = "1" ]; then
   echo "dry run: deployment skipped"
   exit 0
 fi
 
-git checkout -B "$BRANCH" "origin/$BRANCH"
+if [ "$LOCAL_REV" != "$REMOTE_REV" ]; then
+  git checkout -B "$BRANCH" "origin/$BRANCH"
+fi
 
 docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" config --quiet
 docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" build api
@@ -71,5 +79,7 @@ until curl --fail --silent --show-error --max-time 5 \
   sleep 3
 done
 
+mkdir -p "$(dirname "$DEPLOYED_REV_FILE")"
+printf '%s\n' "$REMOTE_REV" > "$DEPLOYED_REV_FILE"
 docker image prune -f >/dev/null
 echo "core-api deployed successfully at $REMOTE_REV"
