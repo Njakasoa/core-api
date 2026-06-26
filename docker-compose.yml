@@ -17,6 +17,7 @@ services:
 
   api:
     build: .
+    container_name: core-api
     depends_on:
       db:
         condition: service_healthy
@@ -30,6 +31,15 @@ services:
       CF_TURN_API_TOKEN: ${CF_TURN_API_TOKEN}
     ports:
       - "3000:3000"
+    networks:
+      default:
+      proxy:
+        aliases:
+          - core-api
 
 volumes:
   pgdata:
+
+networks:
+  proxy:
+    external: true
