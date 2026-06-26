@@ -5,6 +5,9 @@ import {
   GOAL_CASES,
   QUESTION_MS,
   REVEAL_MS,
+  COOP_PERFECT_BONUS,
+  COOP_MAX_Q,
+  type MatchMode,
   type MatchPhase,
   type PlayerView,
   type QuizServerMsg,
@@ -37,6 +40,7 @@ export class QuizRoom {
   readonly code: string;
   hostId: string;
   phase: MatchPhase = "lobby";
+  mode: MatchMode = "classic";
   private players = new Map<string, Player>(); // by userId
   private order: Question[] = [];
   private qIndex = 0;
@@ -81,6 +85,23 @@ export class QuizRoom {
   get size() { return this.players.size; }
 
   // ── match flow ──
+  setMode(byUserId: string, mode: MatchMode) {
+    if (byUserId !== this.hostId || this.phase !== "lobby") return;
+    if (mode !== "classic" && mode !== "coop") return;
+    this.mode = mode;
+    this.broadcastRoster();
+  }
+
+  /** Host, after a match: reset everyone and return the whole room to the lobby. */
+  rematch(byUserId: string) {
+    if (byUserId !== this.hostId || this.phase !== "finished") return;
+    this.clearTimer();
+    this.order = []; this.qIndex = 0; this.current = undefined;
+    for (const p of this.players.values()) { p.pos = 0; p.streak = 0; p.answer = undefined; p.answeredAt = undefined; }
+    this.phase = "lobby";
+    this.broadcastRoster();
+  }
+
   start(byUserId: string, themeId: string) {
     if (byUserId !== this.hostId || this.phase !== "lobby") return;
     const theme = getTheme(themeId);
@@ -131,10 +152,15 @@ export class QuizRoom {
   private reveal() {
     if (!this.current) return;
     const { q, startedAt } = this.current;
-    for (const p of this.players.values()) {
+    const players = [...this.players.values()];
+
+    // base per-player scoring (identical in both modes)
+    let correctCount = 0;
+    for (const p of players) {
       const correct = p.answer === q.answerIndex;
       let gained = 0;
       if (correct) {
+        correctCount++;
         const dt = (p.answeredAt ?? startedAt) - startedAt;
         gained = dt < 5_000 ? 3 : dt < 10_000 ? 2 : 1;
         p.streak += 1;
@@ -144,6 +170,22 @@ export class QuizRoom {
       }
       p.pos = Math.min(GOAL_CASES, p.pos + gained);
     }
+
+    // coop "entraide": the group pulls the straggler, and a perfect round boosts all
+    let coop: { perfect: boolean; helped?: string } | undefined;
+    if (this.mode === "coop") {
+      let helped: string | undefined;
+      if (correctCount > 0) {
+        const minPos = Math.min(...players.map((p) => p.pos));
+        const laggards = players.filter((p) => p.pos === minPos && p.pos < GOAL_CASES);
+        for (const p of laggards) p.pos = Math.min(GOAL_CASES, p.pos + correctCount); // +1 per correct teammate
+        helped = laggards[0]?.name;
+      }
+      const perfect = players.length > 0 && correctCount === players.length;
+      if (perfect) for (const p of players) p.pos = Math.min(GOAL_CASES, p.pos + COOP_PERFECT_BONUS);
+      coop = { perfect, helped };
+    }
+
     this.phase = "reveal";
     this.broadcast({
       k: "reveal",
@@ -151,22 +193,32 @@ export class QuizRoom {
       answerIndex: q.answerIndex,
       explanation: q.explanation,
       players: this.views(),
+      coop,
     });
 
-    const won = [...this.players.values()].some((p) => p.pos >= GOAL_CASES);
     const last = this.qIndex + 1 >= this.order.length;
+    const end = this.mode === "coop"
+      ? players.every((p) => p.pos >= GOAL_CASES) || this.qIndex + 1 >= COOP_MAX_Q || last
+      : players.some((p) => p.pos >= GOAL_CASES) || last;
     this.timer = setTimeout(() => {
-      if (won || last) this.finish();
+      if (end) this.finish();
       else { this.qIndex += 1; this.askQuestion(); }
     }, REVEAL_MS);
   }
 
   private finish() {
     this.phase = "finished";
-    const ranking: RankingEntry[] = [...this.players.values()]
+    const players = [...this.players.values()];
+    const ranking: RankingEntry[] = [...players]
       .sort((a, b) => b.pos - a.pos)
       .map((p, i) => ({ rank: i + 1, id: p.id, name: p.name, pos: p.pos }));
-    this.broadcast({ k: "finish", ranking });
+    const coop = this.mode === "coop"
+      ? (() => {
+          const arrived = players.filter((p) => p.pos >= GOAL_CASES).length;
+          return { allFinished: arrived === players.length, arrived, total: players.length };
+        })()
+      : undefined;
+    this.broadcast({ k: "finish", mode: this.mode, ranking, coop });
   }
 
   // ── helpers ──
@@ -174,7 +226,7 @@ export class QuizRoom {
   sendSnapshot(id: string) {
     const p = this.players.get(id);
     if (!p) return;
-    safeSend(p.ws, { k: "lobby", code: this.code, hostId: this.hostId, selfId: id, players: this.views() });
+    safeSend(p.ws, { k: "lobby", code: this.code, hostId: this.hostId, selfId: id, mode: this.mode, players: this.views() });
     if (this.phase !== "lobby") safeSend(p.ws, { k: "state", phase: this.phase, players: this.views() });
   }
 
@@ -183,7 +235,7 @@ export class QuizRoom {
   broadcastRoster() {
     if (this.phase === "lobby") {
       for (const p of this.players.values()) {
-        safeSend(p.ws, { k: "lobby", code: this.code, hostId: this.hostId, selfId: p.id, players: this.views() });
+        safeSend(p.ws, { k: "lobby", code: this.code, hostId: this.hostId, selfId: p.id, mode: this.mode, players: this.views() });
       }
     } else {
       this.broadcast({ k: "state", phase: this.phase, players: this.views() });

@@ -61,8 +61,10 @@ export function quizRoute(): Hono {
           const { room, userId } = conn;
           switch (msg.k) {
             case "hello": room.setName(userId, String(msg.name ?? "")); break;
+            case "setMode": room.setMode(userId, msg.mode); break;
             case "start": room.start(userId, String(msg.themeId ?? "")); break;
             case "answer": room.answer(userId, String(msg.questionId ?? ""), Number(msg.choiceIndex)); break;
+            case "rematch": room.rematch(userId); break;
           }
         },
         onClose(_evt, ws) {
