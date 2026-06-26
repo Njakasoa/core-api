@@ -19,7 +19,7 @@ cd /opt/stacks/core-api
 cat > .env <<EOF
 JWT_SECRET=$(openssl rand -base64 48)
 POSTGRES_PASSWORD=$(openssl rand -hex 32)
-CORS_ORIGINS=https://njakasoa.xyz
+CORS_ORIGINS=https://njakasoa.xyz,https://warzone.njakasoa.xyz
 EOF
 
 docker compose --env-file .env -f deploy/docker-compose.prod.yml up -d --build
@@ -85,6 +85,11 @@ docker compose --env-file .env -f deploy/docker-compose.prod.yml up -d --build
 
 ## Notes
 
+- **Adding a browser front-end**: any new origin that calls this API from a
+  browser (e.g. `https://warzone.njakasoa.xyz`) must be added to `CORS_ORIGINS`
+  in the live `.env`, then recreate the API: `docker compose --env-file .env
+  -f deploy/docker-compose.prod.yml up -d`. A missing origin shows up in the
+  browser as `No 'Access-Control-Allow-Origin' header is present`.
 - **Postgres**: this runs Postgres in a container with a named volume. For
   production durability you may prefer a managed Postgres — just point
   `DATABASE_URL` at it and drop the `db` service.
