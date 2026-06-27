@@ -1,7 +1,7 @@
 import type { WSContext } from "hono/ws";
 import { ROLES, roleName, roleTeam, isPackKiller, type Team } from "./roles.ts";
 import {
-  PHASE_ASSET, DEBATE_MS, NIGHT_STEP_MS, VOTE_MS,
+  PHASE_ASSET, PACE_MS, NIGHT_STEP_MS,
   type Phase, type GameConfig, type PlayerPublic, type NarratorPlayer, type AnganoServerMsg,
 } from "./protocol.ts";
 
@@ -26,6 +26,7 @@ function safeSend(ws: Socket, msg: AnganoServerMsg) {
 // Preset "Fady & Traces" by default (see docs/roles-folklore-finalise-v2.md).
 const DEFAULT_CONFIG: GameConfig = { songomby: 1, roles: ["mpisikidy", "ombiasy", "mpihaza", "zazavavindrano", "kalanoro"] };
 const MIN_PLAYERS = 4; // role-bearing players (excl. narrator)
+const AUBE_PAUSE_MS = 2500; // let the death reveal land before day/night resumes
 
 // human-readable phase labels for the public banner
 const PHASE_LABEL: Partial<Record<Phase, string>> = {
@@ -128,7 +129,8 @@ export class AnganoRoom {
   setConfig(id: string, config: GameConfig) {
     if (id !== this.hostId || this.phase !== "lobby") return;
     const roles = [...new Set((config.roles ?? []).filter((r) => ROLES[r]?.optional))]; // dedupe
-    this.config = { songomby: Math.max(1, Math.min(5, Math.floor(config.songomby || 1))), roles };
+    const pace = (["rapide", "normal", "lent"] as const).includes(config.pace as never) ? config.pace : "normal";
+    this.config = { songomby: Math.max(1, Math.min(5, Math.floor(config.songomby || 1))), roles, pace, manualDeaths: !!config.manualDeaths };
     this.broadcastLobby();
   }
 
@@ -252,7 +254,7 @@ export class AnganoRoom {
       if (witch) safeSend(witch.ws, { k: "wolves", wolfIds: [], victimId: this.nightVictim });
       this.prompt("ombiasy", this.alivePlayers("ombiasy"), { targets: alive, options: ["heal", "poison", "skip"] });
     }
-    this.arm(NIGHT_STEP_MS, () => this.finishStep());
+    this.arm(this.pace().night, () => this.finishStep());
   }
   private finishStep() {
     if (this.phase === "songomby") {
@@ -351,7 +353,7 @@ export class AnganoRoom {
       this.setPhase("aube", "Le Mpihaza décoche sa flèche…", `${hp.name}, emporte un joueur avec toi.`);
       safeSend(hp.ws, { k: "prompt", kind: "mpihaza", targets: this.aliveSeats(), deadline: Date.now() + NIGHT_STEP_MS });
       this.sendNarrator();
-      this.arm(NIGHT_STEP_MS, () => this.hunterShoot(null));
+      this.arm(this.pace().night, () => this.hunterShoot(null));
       return;
     }
     if (this.deathReveals.length) {
@@ -362,7 +364,7 @@ export class AnganoRoom {
     this.sendNarrator();
     const after = this.afterDeaths; this.afterDeaths = null;
     if (this.checkWin()) return;
-    after?.();
+    if (after) this.arm(this.config.manualDeaths && this.narratorId ? 90_000 : AUBE_PAUSE_MS, after); // narrator-paced reveal, or a brief beat
   }
   private hunterShoot(targetId: string | null) {
     const hid = this.pendingHunter; if (!hid) return;
@@ -374,13 +376,13 @@ export class AnganoRoom {
   // ── day ──
   private beginDay() {
     this.setPhase("debat", `Jour ${this.day} — Débat`, "Discutez, accusez, défendez-vous.");
-    this.arm(DEBATE_MS, () => this.beginVote());
+    this.arm(this.pace().debate, () => this.beginVote());
   }
   private beginVote() {
     this.votes.clear();
     this.setPhase("vote", `Jour ${this.day} — Vote`, "Votez pour éliminer un suspect.");
     this.prompt("vote", this.aliveSeatPlayers(), { targets: this.aliveSeats() });
-    this.arm(VOTE_MS, () => this.tallyVote());
+    this.arm(this.pace().vote, () => this.tallyVote());
   }
   private tallyVote() {
     const counts = new Map<string, number>();
@@ -436,6 +438,7 @@ export class AnganoRoom {
   private alivePlaying(roleId: string): boolean { return this.alivePlayers(roleId).length > 0; }
   private firstAlive(roleId: string): string | undefined { return this.alivePlayers(roleId)[0]?.id; }
   private name(id: string): string { return this.players.get(id)?.name ?? "?"; }
+  private pace() { return PACE_MS[this.config.pace ?? "normal"] ?? PACE_MS.normal; }
   private nightText(phase: Phase): string {
     return phase === "zazavavindrano" ? "Zazavavindrano pose un fady d'eau."
       : phase === "mpamosavy" ? "Le Mpamosavy souffle une malédiction."
@@ -448,7 +451,7 @@ export class AnganoRoom {
   private setPhase(phase: Phase, title: string, text: string) {
     this.phase = phase;
     const a = PHASE_ASSET[phase];
-    const dur = phase === "debat" ? DEBATE_MS : phase === "vote" ? VOTE_MS : NIGHT_STEP_MS;
+    const dur = phase === "debat" ? this.pace().debate : phase === "vote" ? this.pace().vote : this.pace().night;
     this.lastPhase = { k: "phase", phase, day: this.day, audioKey: a.audio, imageKey: a.image, durationMs: dur, title, text };
     this.broadcast(this.lastPhase);
     this.broadcast({ k: "state", phase, day: this.day, players: [...this.players.values()].map(pub) });

@@ -26,7 +26,15 @@ export interface NarratorPlayer extends PlayerPublic { roleId?: string }
 
 export interface RoleInfo { roleId: string; team: Team; nameMg: string; desc: string }
 
-export interface GameConfig { songomby: number; roles: string[] } // pack size + enabled optional roles
+export type Pace = "rapide" | "normal" | "lent";
+export interface GameConfig { songomby: number; roles: string[]; pace?: Pace; manualDeaths?: boolean } // pack size + optional roles + pacing
+
+// phase durations per pace tier (ms)
+export const PACE_MS: Record<Pace, { night: number; debate: number; vote: number }> = {
+  rapide: { night: 20_000, debate: 60_000, vote: 30_000 },
+  normal: { night: 30_000, debate: 90_000, vote: 45_000 },
+  lent: { night: 45_000, debate: 120_000, vote: 70_000 },
+};
 
 export type AnganoClientMsg =
   | { k: "hello"; name: string }
