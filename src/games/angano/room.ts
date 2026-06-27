@@ -153,7 +153,7 @@ export class AnganoRoom {
     this.story = null;
     if (this.config.theme) {
       this.phase = "roles";
-      this.broadcast({ k: "phase", phase: "roles", day: 0, audioKey: PHASE_ASSET.roles.audio, imageKey: PHASE_ASSET.roles.image, durationMs: 8_000, title: "Le conteur tisse votre légende…", text: "Les esprits du récit s'assemblent." });
+      this.broadcast({ k: "phase", phase: "roles", day: 0, audioKey: PHASE_ASSET.roles.audio, imageKey: PHASE_ASSET.roles.image, durationMs: 30_000, title: "Le conteur tisse votre légende…", text: "Les esprits du récit s'assemblent." });
       const story = await generateStory(seats.length);
       if (this.phase !== "roles") return; // room torn down / rematch during generation
       this.story = story;
