@@ -23,39 +23,39 @@ export interface RoleDef {
 
 export const ROLES: Record<string, RoleDef> = {
   mponina: {
-    id: "mponina", nameMg: "Mponina", team: "village", asset: "introduction_phase", optional: false,
+    id: "mponina", nameMg: "Mponina", team: "village", asset: "role_mponina", optional: false,
     desc: "Aucun pouvoir nocturne. Observe, débat et vote pour chasser les monstres.",
   },
   songomby: {
-    id: "songomby", nameMg: "Songomby", team: "songomby", asset: "loup_garou_petite_fille_phase", optional: false,
+    id: "songomby", nameMg: "Songomby", team: "songomby", asset: "role_songomby", optional: false,
     desc: "Chaque nuit, les Songomby choisissent ensemble une victime à dévorer.",
   },
   mpisikidy: {
-    id: "mpisikidy", nameMg: "Mpisikidy", team: "village", asset: "voyante_phase", optional: true,
+    id: "mpisikidy", nameMg: "Mpisikidy", team: "village", asset: "role_mpisikidy", optional: true,
     desc: "Chaque nuit, le sikidy te révèle le rôle d'un joueur — mais les traces peuvent brouiller la lecture.",
   },
   ombiasy: {
-    id: "ombiasy", nameMg: "Ombiasy", team: "village", asset: "sorciere_phase", optional: true,
+    id: "ombiasy", nameMg: "Ombiasy", team: "village", asset: "role_ombiasy", optional: true,
     desc: "Un remède (sauver la victime) et un poison (tuer), chacun utilisable une seule fois.",
   },
   mpihaza: {
-    id: "mpihaza", nameMg: "Mpihaza", team: "village", asset: "vote_phase", optional: true,
+    id: "mpihaza", nameMg: "Mpihaza", team: "village", asset: "role_mpihaza", optional: true,
     desc: "Quand tu meurs, tu décoches une dernière flèche et emportes un joueur.",
   },
   zazavavindrano: {
-    id: "zazavavindrano", nameMg: "Zazavavindrano", team: "village", asset: "cupidon_phase", optional: true,
+    id: "zazavavindrano", nameMg: "Zazavavindrano", team: "village", asset: "role_zazavavindrano", optional: true,
     desc: "Chaque nuit, pose un fady d'eau sur un joueur. Si une force hostile le trouble, tu sentiras sa trace.",
   },
   kalanoro: {
-    id: "kalanoro", nameMg: "Kalanoro", team: "village", asset: "voleur_phase", optional: true,
+    id: "kalanoro", nameMg: "Kalanoro", team: "village", asset: "role_kalanoro", optional: true,
     desc: "Chaque nuit, lis les pas d'un joueur : tu sauras s'il a quitté sa place cette nuit.",
   },
   kinoly: {
-    id: "kinoly", nameMg: "Kinoly", team: "songomby", asset: "loup_garou_petite_fille_phase", optional: true,
+    id: "kinoly", nameMg: "Kinoly", team: "songomby", asset: "role_kinoly", optional: true,
     desc: "Tu chasses avec les Songomby, mais les signes te font paraître innocent à la divination.",
   },
   mpamosavy: {
-    id: "mpamosavy", nameMg: "Mpamosavy", team: "songomby", asset: "sorciere_phase", optional: true,
+    id: "mpamosavy", nameMg: "Mpamosavy", team: "songomby", asset: "role_mpamosavy", optional: true,
     desc: "Chaque nuit, tu maudis un joueur : son pouvoir nocturne échoue.",
   },
 };

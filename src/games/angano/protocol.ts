@@ -56,20 +56,22 @@ export type AnganoServerMsg =
   | { k: "finish"; winner: Team; text: string; reveal: { id: string; name: string; roleId: string; nameMg: string }[] }
   | { k: "error"; message: string };
 
-// phase → recycled ambiance audio folder + placeholder image stem
+// phase → ambiance audio folder + image stem. Night turns use the painted power
+// banners; scene phases (lobby/aube/debat/vote/finished) keep placeholders until
+// their scene banners are produced.
 export const PHASE_ASSET: Record<Phase, { audio: string; image: string }> = {
-  lobby: { audio: "introduction", image: "introduction_phase" },
-  roles: { audio: "introduction", image: "introduction_phase" },
-  zazavavindrano: { audio: "cupidon", image: "cupidon_phase" },
-  mpamosavy: { audio: "sorciere", image: "sorciere_phase" },
-  mpisikidy: { audio: "voyante", image: "voyante_phase" },
-  kalanoro: { audio: "voyante", image: "voleur_phase" },
-  songomby: { audio: "loupgarou", image: "loup_garou_petite_fille_phase" },
-  ombiasy: { audio: "sorciere", image: "sorciere_phase" },
-  aube: { audio: "aube", image: "dawn_phase" },
-  debat: { audio: "debat", image: "debat_phase" },
-  vote: { audio: "vote", image: "vote_phase" },
-  finished: { audio: "revelation", image: "revelation_phase" },
+  lobby: { audio: "introduction", image: "scene_menu" },
+  roles: { audio: "introduction", image: "scene_menu" },
+  zazavavindrano: { audio: "cupidon", image: "power_zaza_fady" },
+  mpamosavy: { audio: "sorciere", image: "power_mpamosavy_malediction" },
+  mpisikidy: { audio: "voyante", image: "power_mpisikidy_sikidy" },
+  kalanoro: { audio: "voyante", image: "power_kalanoro_traces" },
+  songomby: { audio: "loupgarou", image: "power_songomby_chasse" },
+  ombiasy: { audio: "sorciere", image: "power_ombiasy_remede" },
+  aube: { audio: "aube", image: "scene_aube" },
+  debat: { audio: "debat", image: "scene_debat" },
+  vote: { audio: "vote", image: "scene_vote" },
+  finished: { audio: "revelation", image: "scene_victory_village" },
 };
 
 export const DEBATE_MS = 90_000;
