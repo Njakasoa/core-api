@@ -140,11 +140,17 @@ export async function generateStory(seatCount: number): Promise<StorySetup> {
     `Choisis une composition cohérente avec ${seatCount} joueurs (au moins 1 Songomby, et garde une majorité de villageois).`,
     "Réponds uniquement en JSON.",
   ].join(" ");
+  const t0 = Date.now();
   try {
-    const raw = await aiGenerateJSON({ system: systemPrompt(maxSongomby), prompt });
-    if (!raw || typeof raw !== "object") return clone(DEFAULT_STORY);
+    // Creative generation is slower than a trivial call — give it real headroom
+    // (the player waits on the prep screen only as long as it actually takes).
+    const raw = await aiGenerateJSON({ system: systemPrompt(maxSongomby), prompt, timeoutMs: 30_000 });
+    const ms = Date.now() - t0;
+    if (!raw || typeof raw !== "object") { console.warn(`[angano/story] fallback DEFAULT_STORY (no AI output) in ${ms}ms`); return clone(DEFAULT_STORY); }
+    console.log(`[angano/story] generated "${(raw as { title?: string }).title ?? "?"}" in ${ms}ms`);
     return sanitizeStory(raw, seatCount);
   } catch {
+    console.warn(`[angano/story] fallback DEFAULT_STORY (error) in ${Date.now() - t0}ms`);
     return clone(DEFAULT_STORY);
   }
 }
