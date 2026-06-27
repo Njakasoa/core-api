@@ -38,6 +38,9 @@ services:
       # Cloudflare TURN (optional) — needed for /v1/turn/credentials in prod.
       CF_TURN_KEY_ID: ${CF_TURN_KEY_ID:-}
       CF_TURN_API_TOKEN: ${CF_TURN_API_TOKEN:-}
+      # AI gateway (optional) — Angano's story narrator. Unset = feature off.
+      AI_BASE_URL: ${AI_BASE_URL:-https://ai.njakasoa.xyz}
+      AI_API_TOKEN: ${AI_API_TOKEN:-}
     expose:
       - "3000"
     healthcheck:

@@ -31,6 +31,13 @@ const schema = z.object({
   CF_TURN_KEY_ID: z.string().optional(),
   CF_TURN_API_TOKEN: z.string().optional(),
   TURN_TTL: z.coerce.number().int().positive().default(86_400),
+
+  // AI gateway (ai.njakasoa.xyz) — optional. Server-to-server generative content
+  // (e.g. Angano's story narrator). When AI_API_TOKEN is unset the feature is off
+  // and games fall back to their built-in defaults.
+  AI_BASE_URL: z.string().default("https://ai.njakasoa.xyz"),
+  AI_API_TOKEN: z.string().optional(),
+  AI_TIMEOUT_MS: z.coerce.number().int().positive().default(8_000),
 });
 
 const parsed = schema.safeParse(process.env);

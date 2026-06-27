@@ -4,6 +4,7 @@ import {
   PHASE_ASSET, PACE_MS, NIGHT_STEP_MS,
   type Phase, type GameConfig, type PlayerPublic, type NarratorPlayer, type AnganoServerMsg,
 } from "./protocol.ts";
+import { generateStory, type StorySetup } from "./story.ts";
 
 type Socket = WSContext<unknown>;
 
@@ -49,6 +50,7 @@ export class AnganoRoom {
   phase: Phase = "lobby";
   day = 0;
   private config: GameConfig = { ...DEFAULT_CONFIG };
+  private story: StorySetup | null = null; // AI conteur legend for this game (null = classic)
   private players = new Map<string, Player>();
   private log: string[] = [];
   onEmpty?: () => void;
@@ -130,33 +132,77 @@ export class AnganoRoom {
     if (id !== this.hostId || this.phase !== "lobby") return;
     const roles = [...new Set((config.roles ?? []).filter((r) => ROLES[r]?.optional))]; // dedupe
     const pace = (["rapide", "normal", "lent"] as const).includes(config.pace as never) ? config.pace : "normal";
-    this.config = { songomby: Math.max(1, Math.min(5, Math.floor(config.songomby || 1))), roles, pace, manualDeaths: !!config.manualDeaths };
+    const conteur = config.conteur === "ia" ? "ia" : "humain";
+    this.config = { songomby: Math.max(1, Math.min(5, Math.floor(config.songomby || 1))), roles, pace, manualDeaths: !!config.manualDeaths, theme: !!config.theme, conteur };
     this.broadcastLobby();
   }
 
   // ── start ──
-  start(id: string) {
+  async start(id: string) {
     if (id !== this.hostId || this.phase !== "lobby") return;
+    // Conteur IA: no dedicated narrator seat — everyone plays.
+    if (this.config.conteur === "ia" && this.narratorId) {
+      const n = this.players.get(this.narratorId); if (n) n.isNarrator = false;
+      this.narratorId = null;
+    }
     const seats = [...this.players.values()].filter((p) => p.id !== this.narratorId);
-    if (seats.length < MIN_PLAYERS) return this.err(id, `Il faut au moins ${MIN_PLAYERS} joueurs (hors narrateur).`);
-    if (this.config.songomby >= seats.length) return this.err(id, "Trop de Songomby pour le nombre de joueurs.");
+    if (seats.length < MIN_PLAYERS) return this.err(id, `Il faut au moins ${MIN_PLAYERS} joueurs${this.narratorId ? " (hors narrateur)" : ""}.`);
 
-    // assign roles
-    const pool: string[] = [];
-    for (let i = 0; i < this.config.songomby; i++) pool.push("songomby");
-    for (const r of this.config.roles) if (pool.length < seats.length) pool.push(r);
-    while (pool.length < seats.length) pool.push("mponina");
-    const evilCount = pool.filter((r) => roleTeam(r) === "songomby").length;
-    if (evilCount * 2 >= seats.length) return this.err(id, "Trop de rôles maléfiques (Songomby/Kinoly/Mpamosavy) pour le nombre de joueurs.");
-    shuffle(pool);
-    const shuffled = shuffle([...seats]);
-    shuffled.forEach((p, i) => { p.roleId = pool[i]!; p.alive = true; p.healUsed = false; p.poisonUsed = false; });
+    // optional AI story: show a prep screen, generate (bounded by a timeout), then
+    // apply only the parts that keep the composition valid. Never blocks the game.
+    this.story = null;
+    if (this.config.theme) {
+      this.phase = "roles";
+      this.broadcast({ k: "phase", phase: "roles", day: 0, audioKey: PHASE_ASSET.roles.audio, imageKey: PHASE_ASSET.roles.image, durationMs: 8_000, title: "Le conteur tisse votre légende…", text: "Les esprits du récit s'assemblent." });
+      const story = await generateStory(seats.length);
+      if (this.phase !== "roles") return; // room torn down / rematch during generation
+      this.story = story;
+      this.applyStoryConfig(story, seats.length);
+    }
+
+    if (!this.assignRoles(seats, id)) { this.phase = "lobby"; this.broadcastLobby(); return; }
     this.lastZazaTarget = null; this.lastMpamosavyTarget = null;
     this.log = [];
     this.pushLog(`Partie lancée : ${seats.length} joueurs, ${this.config.songomby} Songomby.`);
     for (const p of seats) this.sendRole(p);
+    if (this.story) this.broadcast(this.storyMsg(this.story));
     this.sendNarrator();
     this.beginNight();
+  }
+
+  // role pool helpers (shared by composition validation + assignment)
+  private buildPool(cfg: GameConfig, seatCount: number): string[] {
+    const pool: string[] = [];
+    for (let i = 0; i < cfg.songomby; i++) pool.push("songomby");
+    for (const r of cfg.roles) if (pool.length < seatCount) pool.push(r);
+    while (pool.length < seatCount) pool.push("mponina");
+    return pool;
+  }
+  private compositionValid(cfg: GameConfig, seatCount: number): boolean {
+    if (cfg.songomby >= seatCount) return false;
+    const evil = this.buildPool(cfg, seatCount).filter((r) => roleTeam(r) === "songomby").length;
+    return evil * 2 < seatCount;
+  }
+  /** Override roles/songomby/pace from the AI story — only if the result stays valid. */
+  private applyStoryConfig(story: StorySetup, seatCount: number) {
+    const c = story.config; if (!c) return;
+    const cand: GameConfig = { ...this.config };
+    if (c.roles) cand.roles = [...new Set(c.roles.filter((r) => ROLES[r]?.optional))];
+    if (c.songomby) cand.songomby = Math.max(1, Math.min(5, Math.floor(c.songomby)));
+    if (c.pace) cand.pace = c.pace;
+    if (this.compositionValid(cand, seatCount)) this.config = cand;
+  }
+  private assignRoles(seats: Player[], id: string): boolean {
+    if (!this.compositionValid(this.config, seats.length)) {
+      this.err(id, "Composition invalide (trop de rôles maléfiques pour le nombre de joueurs).");
+      return false;
+    }
+    const pool = shuffle(this.buildPool(this.config, seats.length));
+    shuffle([...seats]).forEach((p, i) => { p.roleId = pool[i]!; p.alive = true; p.healUsed = false; p.poisonUsed = false; });
+    return true;
+  }
+  private storyMsg(s: StorySetup): AnganoServerMsg {
+    return { k: "story", title: s.title, villageName: s.villageName, intro: s.intro, ambiance: s.ambiance, roleEpithets: s.roleEpithets };
   }
 
   // ── client actions ──
@@ -218,6 +264,7 @@ export class AnganoRoom {
     this.wolfVotes.clear(); this.votes.clear(); this.deathQueue = []; this.deathReveals = []; this.pendingHunter = null;
     this.zazaTarget = this.mpamosavyTarget = this.seerTarget = this.kalanoroTarget = null;
     this.lastZazaTarget = this.lastMpamosavyTarget = null;
+    this.story = null;
     for (const p of this.players.values()) { p.alive = true; p.roleId = undefined; p.healUsed = false; p.poisonUsed = false; }
     this.broadcastLobby();
   }
@@ -357,7 +404,8 @@ export class AnganoRoom {
       return;
     }
     if (this.deathReveals.length) {
-      this.broadcast({ k: "deaths", ids: this.deathReveals.map((r) => r.id), reveals: this.deathReveals, text: deathsText(this.deathReveals) });
+      const dtext = this.story ? this.story.deaths[(Math.random() * this.story.deaths.length) | 0]! : deathsText(this.deathReveals);
+      this.broadcast({ k: "deaths", ids: this.deathReveals.map((r) => r.id), reveals: this.deathReveals, text: dtext });
     } else if (this.phase === "aube") {
       this.broadcast({ k: "deaths", ids: [], reveals: [], text: "Personne n'est mort cette nuit." });
     }
@@ -408,9 +456,9 @@ export class AnganoRoom {
     this.phase = "finished";
     const reveal = [...this.players.values()].filter((p) => p.id !== this.narratorId)
       .map((p) => ({ id: p.id, name: p.name, roleId: p.roleId ?? "mponina", nameMg: roleName(p.roleId ?? "mponina") }));
-    const text = winner === "village"
-      ? "Le village a chassé tous les monstres ! 🎉"
-      : "Les Songomby ont fait taire le village… 🐺";
+    const text = this.story
+      ? (winner === "village" ? this.story.victoryVillage : this.story.victorySongomby)
+      : (winner === "village" ? "Le village a chassé tous les monstres ! 🎉" : "Les Songomby ont fait taire le village… 🐺");
     this.broadcast({ k: "finish", winner, text, reveal });
     this.sendNarrator();
     return true;
@@ -452,7 +500,13 @@ export class AnganoRoom {
     this.phase = phase;
     const a = PHASE_ASSET[phase];
     const dur = phase === "debat" ? this.pace().debate : phase === "vote" ? this.pace().vote : this.pace().night;
-    this.lastPhase = { k: "phase", phase, day: this.day, audioKey: a.audio, imageKey: a.image, durationMs: dur, title, text };
+    let body = text;
+    if (this.story) {
+      if (phase === "aube") body = this.story.ambiance.dawn;
+      else if (phase === "debat") body = this.story.ambiance.debate;
+      else if (phase === "vote") body = this.story.ambiance.vote;
+    }
+    this.lastPhase = { k: "phase", phase, day: this.day, audioKey: a.audio, imageKey: a.image, durationMs: dur, title, text: body };
     this.broadcast(this.lastPhase);
     this.broadcast({ k: "state", phase, day: this.day, players: [...this.players.values()].map(pub) });
     this.sendNarrator();
@@ -473,6 +527,7 @@ export class AnganoRoom {
     const p = this.players.get(id); if (!p) return;
     safeSend(p.ws, { k: "lobby", code: this.code, hostId: this.hostId, narratorId: this.narratorId, selfId: id, config: this.config, players: [...this.players.values()].map(pub) });
     if (this.phase !== "lobby" && p.roleId) this.sendRole(p);
+    if (this.phase !== "lobby" && this.story) safeSend(p.ws, this.storyMsg(this.story));
     // reconnect resync: re-enter the stage at the current phase + state
     if (this.phase !== "lobby" && this.phase !== "finished" && this.lastPhase) {
       safeSend(p.ws, this.lastPhase);

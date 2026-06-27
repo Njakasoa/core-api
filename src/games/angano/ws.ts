@@ -50,7 +50,7 @@ export function anganoRoute(): Hono {
             case "hello": room.setName(userId, String(msg.name ?? "")); break;
             case "takeNarrator": room.takeNarrator(userId, !!msg.on); break;
             case "setConfig": room.setConfig(userId, msg.config); break;
-            case "start": room.start(userId); break;
+            case "start": void room.start(userId); break;
             case "action": room.action(userId, msg.targetId, msg.extra); break;
             case "vote": room.vote(userId, msg.targetId); break;
             case "nextPhase": room.nextPhase(userId); break;
