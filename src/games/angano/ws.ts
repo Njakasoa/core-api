@@ -61,7 +61,7 @@ export function anganoRoute(): Hono {
           const conn = conns.get(keyOf(ws));
           if (!conn) return;
           conns.delete(keyOf(ws));
-          conn.room.leave(conn.userId);
+          conn.room.disconnect(conn.userId);
         },
       };
     }),
