@@ -452,12 +452,22 @@ export class AnganoRoom {
     // private dawn results
     if (seerP && this.seerTarget && !seerBlocked) this.sendSeer(seerP, this.seerTarget);
     if (kalP && this.kalanoroTarget && !kalBlocked) {
-      const targetVisit = visits.find((v) => v.actorId === this.kalanoroTarget) ?? null;
-      const visited = !!targetVisit;
-      const namedTrace = this.consumeUnlockedReward(kalP.id, "kalanoro_named_trace");
+      const tgt = this.kalanoroTarget;
+      const targetVisit = visits.find((v) => v.actorId === tgt) ?? null;
+      let visited = !!targetVisit;
+      // Kinoly "Peau lisse" : an awakened Kinoly that moved can erase its own night trace.
+      const erased = visited
+        && this.players.get(tgt)?.roleId === "kinoly"
+        && this.consumeUnlockedReward(tgt, "kinoly_erase_trace");
+      if (erased) {
+        visited = false;
+        this.pushLog(`Peau lisse consommée par ${this.name(tgt)} : sa trace nocturne s'efface.`);
+        this.sendMission(this.players.get(tgt)!);
+      }
+      const namedTrace = !erased && this.consumeUnlockedReward(kalP.id, "kalanoro_named_trace");
       const destinationId = namedTrace ? targetVisit?.targetId ?? null : undefined;
-      safeSend(kalP.ws, { k: "trackResult", targetId: this.kalanoroTarget, visited, ...(namedTrace ? { destinationId } : {}) });
-      this.pushLog(`Kalanoro piste ${this.name(this.kalanoroTarget)} → ${visited ? "a quitté sa place" : "immobile"}${destinationId ? ` vers ${this.name(destinationId)}` : ""}.`);
+      safeSend(kalP.ws, { k: "trackResult", targetId: tgt, visited, ...(namedTrace ? { destinationId } : {}) });
+      this.pushLog(`Kalanoro piste ${this.name(tgt)} → ${visited ? "a quitté sa place" : "immobile"}${destinationId ? ` vers ${this.name(destinationId)}` : ""}.`);
       if (namedTrace) {
         this.pushLog(`Trace nommée consommée par ${kalP.name}.`);
         this.sendMission(kalP);
