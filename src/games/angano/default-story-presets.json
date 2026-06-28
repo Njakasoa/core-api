@@ -1,0 +1,629 @@
+[
+  {
+    "id": "barriere-rompue",
+    "story": {
+      "title": "La Barrière rompue",
+      "villageName": "Ambohijanaka des Enclos",
+      "intro": "À Ambohijanaka des Enclos, les cornes peintes brillent sous la lune et les sabots battent la poussière. Une barrière rompue laisse entrer le souffle des mauvais soirs, et le parc à zébus devient chemin de sort. Ce village chante bas pour garder son cœur, mais déjà la nuit mord le chemin.",
+      "roleEpithets": {
+        "mponina": "Les yeux du marché",
+        "songomby": "La gueule de poussière",
+        "mpisikidy": "Le lecteur de signes",
+        "ombiasy": "Le gardien des souffles",
+        "fanany": "Le serment des ancêtres",
+        "zazavavindrano": "La voix de l’eau claire",
+        "kalanoro": "Le pisteur de traces",
+        "kinoly": "Le revenant endormi",
+        "mpamosavy": "Le souffle qui maudit"
+      },
+      "roleSheets": {
+        "mponina": {
+          "title": "Gardien des enclos",
+          "background": "{playerName} veille sur {villageName} depuis les aurores de poussière et les appels du marché. Il connaît le pas des zébus, le bruit des barrières et la peur qui change un voisin en ombre.",
+          "rumor": "On dit que {playerName} entend d’abord les sabots que les mots.",
+          "secret": "Il cache une vieille cicatrice reçue en refermant un enclos trop vite pendant une nuit de trouble.",
+          "mission": "Parle franchement, écoute jusqu’au bout, puis fais entendre une voix juste au moment du vote.",
+          "successCondition": "Le narrateur voit {playerName} prendre la parole au moins une fois au débat.",
+          "rewardTitle": "Voix de l’Enclos"
+        },
+        "songomby": {
+          "title": "Faim sous la corne peinte",
+          "background": "{playerName} porte un visage de jour et une faim de nuit, comme un vent mauvais sur la poussière. Dans la légende, la bête suit l’odeur du sang et le fracas des portes mal fermées.",
+          "rumor": "On murmure que {playerName} regarde les zébus comme on choisit une proie.",
+          "secret": "Sous la peau du conte, il y a un appétit ancien qu’aucun chant n’apaise.",
+          "mission": "Fais naître le doute, détourne les regards, et pousse le village à se tromper de cible.",
+          "successCondition": "Le narrateur constate que {playerName} a semé un soupçon durable pendant le débat.",
+          "rewardTitle": "Crocs du Vent"
+        },
+        "mpisikidy": {
+          "title": "Liseur de sikidy",
+          "background": "{playerName} a grandi près des grains, des signes et des cauris que l’on jette pour entendre le destin. Dans la cour des zébus, il sait lire la poussière comme d’autres lisent les visages.",
+          "rumor": "On dit que {playerName} parle aux cauris quand le marché s’endort.",
+          "secret": "Il craint de voir un proche se perdre sous un signe trop clair.",
+          "mission": "Oriente le débat avec prudence et nomme une vérité sans t’exposer trop tôt.",
+          "successCondition": "Le narrateur voit {playerName} poser au moins une question précise sur une piste.",
+          "rewardTitle": "Œil des Signes"
+        },
+        "ombiasy": {
+          "title": "Gardien des souffles",
+          "background": "{playerName} garde les remèdes, les paroles et les gestes qui calment les nuits tordues. Il connaît les prières qui rallument une lampe et celles qui chassent un pas dangereux.",
+          "rumor": "On dit que {playerName} porte un sachet d’herbes noué avec du fil rouge.",
+          "secret": "Il a juré de sauver les siens une fois, puis d’exiler la menace au bon moment.",
+          "mission": "Reste crédible, soutiens sans dévoiler tout ton poids, et choisis le bon camp du jour.",
+          "successCondition": "Le narrateur voit {playerName} proposer une lecture utile sans se contredire.",
+          "rewardTitle": "Main de Rano"
+        },
+        "fanany": {
+          "title": "Serment des Razana",
+          "background": "{playerName} descend d’une lignée qui salue les tombes avant chaque lever du jour. Dans le conte, le serpent des ancêtres veille quand la honte ou le sang menacent le clan.",
+          "rumor": "On dit que {playerName} ne tourne jamais le dos aux tombeaux.",
+          "secret": "Il cache une promesse faite aux Razana, lourde comme une pierre de seuil.",
+          "mission": "Marque ton soutien avec gravité et fais sentir que ta parole a un prix.",
+          "successCondition": "Le narrateur voit {playerName} annoncer un choix ou une alliance au jour venu.",
+          "rewardTitle": "Mémoire des Razana"
+        },
+        "zazavavindrano": {
+          "title": "Voix des eaux sacrées",
+          "background": "{playerName} connaît les berges, les pierres mouillées et le silence des bassins où l’on n’élève pas la voix. Là où l’eau claire tremble, il entend ce qui dérange l’ordre du monde.",
+          "rumor": "On dit que {playerName} évite les seaux renversés et les pas brusques près de l’eau.",
+          "secret": "Il garde au fond du cœur un serment fait devant une source froide.",
+          "mission": "Observe les gestes, soutiens les prudents, et laisse les autres parler trop vite.",
+          "successCondition": "Le narrateur voit {playerName} rappeler une règle, une prudence ou une cohérence.",
+          "rewardTitle": "Écume du Fady"
+        },
+        "kalanoro": {
+          "title": "Pisteur de traces inversées",
+          "background": "{playerName} marche léger entre la poussière et les empreintes, comme si le sol lui racontait ses secrets. Dans la légende, il sait quand une place a été quittée avant l’heure.",
+          "rumor": "On dit que {playerName} repère les pas croisés même sous la pluie fine.",
+          "secret": "Il a peur d’un départ silencieux qu’il n’a jamais pu suivre.",
+          "mission": "Garde en tête le fil des déplacements et ramène le débat aux faits visibles.",
+          "successCondition": "Le narrateur voit {playerName} citer un comportement ou un mouvement précis.",
+          "rewardTitle": "Œil des Traces"
+        },
+        "kinoly": {
+          "title": "Revenant sous l’ombre",
+          "background": "{playerName} n’apparaît qu’aux jours où la mort a raté son geste et où le souffle a repris. Alors seulement, le conte se souvient de lui, comme d’une braise qu’on croyait éteinte.",
+          "rumor": "On dit que {playerName} revient avec une poussière de tombeau dans les yeux.",
+          "secret": "Il sait qu’il n’était pas censé rester, et cette seconde vie le rend plus silencieux encore.",
+          "mission": "Quand tu t’éveilles, parle peu, observe beaucoup, et choisis un cap sans te montrer pressé.",
+          "successCondition": "Le narrateur voit {playerName} reprendre place au jeu et participer au débat après son réveil.",
+          "rewardTitle": "Braise Revenante"
+        },
+        "mpamosavy": {
+          "title": "Double ombre du soir",
+          "background": "{playerName} porte un visage de voisin et un autre de nuit, comme une corde tendue sur l’enclos. Dans le conte, il souffle des mots qui font trébucher les gestes et se perdre les volontés.",
+          "rumor": "On dit que {playerName} connaît le moment exact où une lampe vacille.",
+          "secret": "Il nourrit en secret une vieille rancune qui lui sert de talisman noir.",
+          "mission": "Sème le trouble sans te découvrir, et pousse les autres à douter de leurs certitudes.",
+          "successCondition": "Le narrateur voit {playerName} alimenter un soupçon ou une contradiction utile à son camp.",
+          "rewardTitle": "Souffle de Cendre"
+        }
+      },
+      "ambiance": {
+        "night": "La nuit tombe sur l’enclos, et la poussière boit le bruit; les cornes peintes luisent, et le silence devient bruit.",
+        "dawn": "À l’aube, la barrière rompue grince encore, et chaque sabot laissé dans la terre raconte un sort.",
+        "debate": "Le jour se lève sur des regards de peur et des paroles de cœur; qui ment, qui tient, qui perd son chemin?",
+        "vote": "Quand les voix s’alignent, le village choisit son destin; une faute de main, et c’est la mort au matin."
+      },
+      "nightSteps": {
+        "zazavavindrano": "L’esprit des eaux noue un fady discret, et la surface frissonne comme un secret.",
+        "mpamosavy": "Le sorcier souffle sa cendre sur une cible, et le pouvoir visé s’égare dans la nuit fragile.",
+        "mpisikidy": "Le devin lit les cauris dans l’ombre, et la poussière lui répond sans détour ni sombre.",
+        "kalanoro": "Le pisteur compare les traces et les pas, puis voit si la place a changé ou non, tout bas.",
+        "kinoly": "Le revenant dort encore sous la tombe et le lamba, puis l’aube décidera s’il se lève ou s’effondre.",
+        "songomby": "Les Songomby flairent la peur, se consultent sans bruit, puis désignent une victime à la morsure de la nuit.",
+        "ombiasy": "Le gardien des souffles choisit un geste de salut ou d’exil, et le vieux remède tient bon au bord du péril."
+      },
+      "dayProgression": {
+        "night": [
+          "La première nuit s’étire sur les parcs à zébus, et la barrière rompue laisse entrer le froid du sort.",
+          "Les cornes peintes gardent le silence, mais déjà les sabots de la peur tassent la poussière du chemin.",
+          "Plus la nuit avance, plus les voix se font minces, comme un lamba qu’on serre contre son cœur."
+        ],
+        "dawn": [
+          "Au matin, on compte les traces, les pas, les absents, et le village cherche la faille dans la clôture.",
+          "Si le soleil monte, la poussière révèle ce que le noir cachait; chaque regard devient preuve ou détour.",
+          "Quand l’aube est trop lourde, un seul nom peut faire basculer la cour, et le marché entier retient son souffle."
+        ],
+        "debate": [
+          "On parle d’abord des faits, puis des peurs, puis des silences qui collent aux bottes comme la boue au destin.",
+          "Les soupçons tournent autour de l’enclos, et chacun défend sa voix comme on défend une lampe au vent.",
+          "Si la parole tremble, la foule se durcit; si la parole tient, elle peut encore sauver le village."
+        ],
+        "vote": [
+          "Le vote s’avance comme un zébu vers la porte, lent au début, puis lourd de conséquence.",
+          "Une erreur de trait sur le sable, et la barrière du jour se rompt avec la nuit d’après.",
+          "Quand la majorité tranche, le sort se referme; il faut viser juste, sinon le village se perd en route."
+        ]
+      },
+      "deaths": [
+        "{victim} tombe sous la nuit, et la poussière se referme sur son nom comme sur une trace effacée.",
+        "On a retrouvé {victim} sans souffle, près de l’enclos brisé; le matin est venu trop tard, trop tôt, trop serré.",
+        "Le corps de {victim} repose à l’écart, et le village compte une absence de plus dans son chemin.",
+        "{victim} n’a pas vu l’aube; les sabots, cette fois, ont battu pour un destin plus sombre.",
+        "La mort a pris {victim} dans le noir, et la cour entière sent le fer, la peur et le sort.",
+        "Quand {victim} s’éteint, le village comprend que la barrière rompue n’était pas seulement de bois, mais de cœur."
+      ],
+      "victoryVillage": "Le village gagne quand tous les Songomby sont chassés; alors l’enclos se referme, la poussière se tait, et le matin rend son chemin.",
+      "victorySongomby": "Les Songomby gagnent à la parité; alors la barrière rompt pour de bon, et la nuit boit le village jusqu’au dernier souffle.",
+      "narratorScript": [
+        "Annonce la légende comme un conte sombre de zébus, de cornes peintes et d’enclos brisé.",
+        "Lis les phases de nuit avec lenteur, comme si chaque sabot dans la poussière comptait un secret.",
+        "Au débat, rappelle seulement ce qui est visible, et laisse les joueurs tisser leurs peurs.",
+        "Au vote, fais monter la tension comme une porte qui grince avant de céder.",
+        "Si un rôle spécial est révélé, garde son ambiance de conte sans ajouter de pouvoir nouveau.",
+        "Pour Kinoly, ne dévoile sa fiche qu’après son réveil; avant cela, garde le silence sur son retour.",
+        "Termine chaque nuit par une image courte, claire, et assez forte pour que la table sente le sort."
+      ]
+    }
+  },
+  {
+    "id": "pierres-laterite",
+    "story": {
+      "title": "Les Pierres de Latérite",
+      "villageName": "Antsahon'ny Vato",
+      "intro": "Sur les collines rouges, la poussière garde les pas et les secrets, comme un vieux sort. Les tombeaux de pierre veillent, serrés sous le vent, et la nuit y mord le cœur. Quand la lune glisse sur la latérite, chaque trace devient un chemin, chaque silence un destin.",
+      "roleEpithets": {
+        "mponina": "Gardien des veillées claires",
+        "songomby": "Crocs de l'ombre rouge",
+        "mpisikidy": "Lecteur des signes voilés",
+        "ombiasy": "Médecin des pierres sacrées",
+        "fanany": "Serpent du serment ancien",
+        "zazavavindrano": "Voix des eaux enfouies",
+        "kalanoro": "Pisteur des pas retournés",
+        "kinoly": "Dormeur des tombeaux",
+        "mpamosavy": "Sorcier au double visage"
+      },
+      "roleSheets": {
+        "mponina": {
+          "title": "Le Garde de Poussière",
+          "background": "{playerName} a grandi au bord des collines, là où le vent rougit les sandales et où les anciens murmurent encore sous les pierres. Sans art nocturne, il connaît la peur des hommes et la patience du jour.",
+          "rumor": "On dit que {playerName} voit dans la poussière les mensonges avant qu'ils ne deviennent bruit.",
+          "secret": "Il cache une vieille dette envers un tombeau gardé par les Razana.",
+          "mission": "Parler juste, écouter finement, et pousser le village vers une accusation nette sans se laisser griser par la rumeur.",
+          "successCondition": "{playerName} participe clairement au débat et annonce un vote argumenté au bon moment.",
+          "rewardTitle": "Veilleur de Latérite"
+        },
+        "songomby": {
+          "title": "La Faim qui Court",
+          "background": "{playerName} porte un rire trop bref pour être humain, comme un caillou qui roule dans la nuit. Sous sa peau, la faim marche avec l'ombre, rapide et sans remords.",
+          "rumor": "Les anciens disent que {playerName} ne dort jamais vraiment quand le vent souffle sur les tombes.",
+          "secret": "Il prend plaisir à voir le village se retourner contre ses propres traces.",
+          "mission": "Semer le doute sans se trahir, et garder l'air du voisin tranquille tandis que la nuit se charge.",
+          "successCondition": "{playerName} reste crédible en public jusqu'à ce que les soupçons glissent ailleurs.",
+          "rewardTitle": "Crocs de Latérite"
+        },
+        "mpisikidy": {
+          "title": "Le Lecteur de Signes",
+          "background": "{playerName} a appris à lire les grains de sable comme on lit une prière. Les nuits lui parlent en angles discrets, en lignes rompues, en souffles retenus.",
+          "rumor": "On dit que {playerName} devine les noms avant même qu'on les prononce au marché.",
+          "secret": "Il craint les signes brouillés plus que les cris, car un signe masqué ment sans parler.",
+          "mission": "Observer avec précision, puis orienter le village vers une cible fondée sur des indices clairs et non sur la panique.",
+          "successCondition": "{playerName} formule au moins une lecture crédible et compréhensible des signes observés.",
+          "rewardTitle": "Sage des Grains"
+        },
+        "ombiasy": {
+          "title": "Le Gardien du Feu Sacré",
+          "background": "{playerName} descend d'une lignée qui parle aux pierres levées et aux braises lentes. Dans ses mains, le remède et l'exil ont le même poids, sévère et saint.",
+          "rumor": "On murmure que {playerName} connaît le nom secret des tombeaux ouverts au mauvais souffle.",
+          "secret": "Il hésite toujours avant d'user de ce qui ne se reprend pas, car un rituel juste coûte à l'âme.",
+          "mission": "Rester digne, choisir avec prudence, et convaincre le village qu'une décision sacrée vaut mieux qu'un geste trop hâtif.",
+          "successCondition": "{playerName} défend une ligne claire de protection ou d'exil sans se contredire.",
+          "rewardTitle": "Arbitre du Rano"
+        },
+        "fanany": {
+          "title": "Le Serment des Ancêtres",
+          "background": "{playerName} marche comme quelqu'un qui écoute derrière lui, même au plein jour. Les vieux disent qu'un serpent des ancêtres l'accompagne quand le soleil mord la poussière.",
+          "rumor": "On dit que {playerName} ne supporte pas les paroles vides près des pierres levées.",
+          "secret": "Il porte au fond du cœur un nom qu'il ne peut pas livrer sans trahir les Razana.",
+          "mission": "Choisir avec soin les alliances du jour, marquer sa confiance d'un regard, et faire compter sa présence dans le camp du village.",
+          "successCondition": "{playerName} annonce au moins une position publique ferme et cohérente avant la tombée du soir.",
+          "rewardTitle": "Porte-Razana"
+        },
+        "zazavavindrano": {
+          "title": "L'Onde Cachée",
+          "background": "{playerName} a été bercé par l'écho des sources sous la colline, là où l'eau chante sans se montrer. Son pas respecte les veines secrètes du sol et les serments des profondeurs.",
+          "rumor": "Les lavandières jurent que {playerName} entend la honte courir sous les pierres.",
+          "secret": "Il redoute qu'un trouble impur n'abîme l'équilibre fragile des eaux et des morts.",
+          "mission": "Rester discret, protéger les équilibres du groupe, et nourrir des soupçons utiles sans dévoiler ses certitudes trop tôt.",
+          "successCondition": "{playerName} tient une lecture prudente et cohérente de la nuit sans forcer la parole.",
+          "rewardTitle": "Gardien des Sources"
+        },
+        "kalanoro": {
+          "title": "Le Pisteur des Traces Retournées",
+          "background": "{playerName} a les yeux faits pour suivre la poussière quand elle ment, et les talons pour entendre ce qu'un pas abandonne. Dans les collines rouges, rien n'efface tout à fait une venue.",
+          "rumor": "On dit que {playerName} sait quand quelqu'un s'est déplacé, même si le vent prétend le contraire.",
+          "secret": "Il garde en mémoire des traces anciennes qu'il ne raconte jamais, de peur d'attirer un mauvais destin.",
+          "mission": "Comparer les comportements, relever les incohérences, et pousser le village à voir les déplacements de l'ombre.",
+          "successCondition": "{playerName} formule une observation de piste ou de mouvement que le narrateur peut relier à la partie.",
+          "rewardTitle": "Œil de Poussière"
+        },
+        "kinoly": {
+          "title": "Le Dormeur des Pierres",
+          "background": "{playerName} serait resté couché sous la pierre froide si les anciens n'avaient pas frappé son sommeil. Le tombeau l'a retenu une fois, puis l'a laissé debout, entre nuit et souffle.",
+          "rumor": "À mi-voix, on dit que {playerName} ne relève pas tout de suite les yeux quand son nom est cité.",
+          "secret": "Il sait que sa paix tient à un fil, et que la foule peut le rompre sans comprendre.",
+          "mission": "Après son éveil seulement, parler avec retenue, choisir sa place parmi les vivants, et ne pas laisser la peur décider à sa place.",
+          "successCondition": "{playerName} prend la parole après son réveil et assume clairement sa présence dans le débat.",
+          "rewardTitle": "Hantise des Tombeaux"
+        },
+        "mpamosavy": {
+          "title": "Le Double Souffle",
+          "background": "{playerName} porte le visage d'un voisin et la patience d'un piège. Quand la nuit tombe sur la latérite, son souffle se fait couleuvre et sa parole se fend en deux.",
+          "rumor": "On raconte que {playerName} sait calmer une assemblée d'une main et la perdre de l'autre.",
+          "secret": "Il savoure les instants où un pouvoir s'éteint sans que personne ne voie la main qui l'a touché.",
+          "mission": "Jouer l'ami utile, détourner les certitudes, et glisser le soupçon là où il fera le plus de bruit.",
+          "successCondition": "{playerName} influence au moins un débat sans révéler une hostilité ouverte.",
+          "rewardTitle": "Ombre à Deux Visages"
+        }
+      },
+      "ambiance": {
+        "night": "La nuit descend sur les collines rouges, et la poussière boit les pas sans rendre le bruit.",
+        "dawn": "À l'aube, les pierres se taisent un instant, puis le jour reprend son chemin de fer et de sueur.",
+        "debate": "Au milieu du cercle, les langues s'aiguisent, et chaque mot cherche un appui dans la peur ou le cœur.",
+        "vote": "Quand les mains se lèvent, le sort se noue; un nom tombe, et le silence répond à la mort."
+      },
+      "nightSteps": {
+        "zazavavindrano": "L'esprit des eaux lie un nom dans le secret du soir, et la source écoute sans faire de bruit.",
+        "mpamosavy": "Le sorcier glisse sa malédiction comme une cendre, et le pouvoir visé s'éteint sans éclat.",
+        "mpisikidy": "Le devin lit les signes d'un visage, et la poussière lui rend un écho clair ou brouillé.",
+        "kalanoro": "Le pisteur suit une trace neuve, puis compare la marche au souffle du vent, sans détour ni bruit.",
+        "kinoly": "Le dormeur des tombeaux se redresse si la mort le frôle, puis veille dans une seconde nuit, sans bruit.",
+        "songomby": "Les Songomby flairent la chair à travers la colline, et leur faim choisit une cible dans l'ombre.",
+        "ombiasy": "Le gardien sacré pèse le souffle d'un blessé, puis trace un exil qui coupe court au sort."
+      },
+      "dayProgression": {
+        "night": [
+          "La nuit serre les collines rouges, et chaque pierre garde un pas de plus.",
+          "Les tombeaux respirent sous la poussière, et nul ne sait quel souffle y répond.",
+          "Un nom s'efface dans l'ombre, mais la trace demeure, fine comme un fil."
+        ],
+        "dawn": [
+          "L'aube rince la latérite, pourtant la peur reste collée aux sandales.",
+          "On compte les absents, on cherche les signes, et le village se regarde sans repos.",
+          "Le jour se lève, mais le doute se lève plus vite encore."
+        ],
+        "debate": [
+          "Les voix montent, se croisent, se heurtent, et la poussière devient tribunal.",
+          "Chaque regard pèse un allié, chaque silence creuse un soupçon nouveau.",
+          "Les certitudes se fendent, puis se reforment, plus dures et plus froides.",
+          "Quand le vent tourne, même l'innocent parle comme s'il portait un sort."
+        ],
+        "vote": [
+          "Les mains hésitent, puis s'abaissent, et le destin prend forme dans le cercle.",
+          "Un nom de trop, un nom de moins, et la nuit suivante change de visage.",
+          "Le village tranche dans le vif, avec la peur pour lame et le doute pour poignée.",
+          "Après le vote, il ne reste que les traces, et elles parlent plus fort que les cris."
+        ]
+      },
+      "deaths": [
+        "{victim} a été retrouvé sans souffle, et la poussière gardait encore la marque de ses pas.",
+        "Le corps de {victim} gisait près des pierres levées; le vent seul répondait à la question.",
+        "On a nommé {victim}, puis le silence a fermé la gorge du village.",
+        "La mort a pris {victim} dans la nuit, et le matin n'a rendu qu'une trace froide.",
+        "Quand le cercle s'est rouvert, on a compris que {victim} ne reviendrait pas.",
+        "Le nom de {victim} s'est perdu dans l'aube, comme un chant coupé par la pierre."
+      ],
+      "victoryVillage": "Le village gagne quand tous les Songomby tombent, et la latérite rend enfin un chemin sans peur.",
+      "victorySongomby": "Les Songomby gagnent quand leur nombre égale celui des villageois, et la colline entière devient silence et sort.",
+      "narratorScript": [
+        "Lisez la légende comme un conte grave, avec une cadence nette et des fins de phrase qui sonnent.",
+        "Annoncez les phases sans dévoiler les secrets, et gardez les mécaniques fixes du jeu.",
+        "Faites sentir la poussière, les tombes, les pierres levées et le vent rouge sans surcharger le décor.",
+        "Quand un rôle agit, rappelez seulement l'image publique associée à son geste, pas l'issue cachée.",
+        "Après chaque nuit, donnez un signe clair de tension, puis laissez le débat respirer.",
+        "Au vote, faites entendre le poids du choix: court, sec, décisif, comme une pierre qui tombe."
+      ]
+    }
+  },
+  {
+    "id": "lac-jarres-blanches",
+    "story": {
+      "title": "Le Lac des Jarres Blanches",
+      "villageName": "Ankareno",
+      "intro": "Au bord du rano masina, les jarres blanches chantaient sous la lune au loin. Des pièces, du miel et du sel dormaient sur l’eau, promesse de paix et de peur mêlées au même cœur. Mais quand le reflet se fend, le sort devient mordant, et chaque nuit réclame son tribut, lentement ou brusquement.",
+      "roleEpithets": {
+        "mponina": "Le témoin du matin",
+        "songomby": "La gueule du grand frisson",
+        "mpisikidy": "L’œil des signes",
+        "ombiasy": "Le gardien des serments",
+        "fanany": "Le serpent de mémoire",
+        "zazavavindrano": "La voix sous l’onde",
+        "kalanoro": "La pisteuse des traces",
+        "kinoly": "Le dormeur revenu",
+        "mpamosavy": "Le charmeur de nuit"
+      },
+      "roleSheets": {
+        "mponina": {
+          "title": "Le Témoin du Rivage",
+          "background": "Tu vis à {villageName}, là où l’on lave les mains avant de parler, et où chaque regard compte comme une pièce au creux du soir. Tu n’as ni sort ni détour, mais tu connais le poids d’un silence et la valeur d’un mot qui fait le bon chemin.",
+          "rumor": "On dit que tu reconnais les menteurs à la façon dont leur voix tremble dans le vent de l’eau.",
+          "secret": "Tu gardes dans ton lamba un caillou pris au bord du lac, souvenir d’un deuil que nul n’a compris.",
+          "mission": "Parle net, écoute les échos, et pousse le village à choisir sans trembler ni céder.",
+          "successCondition": "Tu prends la parole au moins une fois pendant le débat et tu votes clairement.",
+          "rewardTitle": "Voix du Bord"
+        },
+        "songomby": {
+          "title": "La Bête du Reflet Fendu",
+          "background": "Née d’une faim ancienne, tu cours entre les roseaux comme un bruit sans visage. Tu portes la nuit sur les dents, et le lac te connaît comme il connaît l’orage qui revient.",
+          "rumor": "Les pêcheurs jurent avoir vu deux ombres boire au même reflet, puis n’en laisser qu’une.",
+          "secret": "Sous ta faim, il reste une peur sourde du miel blanc que l’on laisse au bord de l’eau.",
+          "mission": "Reste invisible, feins l’innocence, et fais croire que la nuit mord sans nom.",
+          "successCondition": "Le village ne t’identifie pas avant que la partie ne bascule.",
+          "rewardTitle": "Griffe du Crépuscule"
+        },
+        "mpisikidy": {
+          "title": "Le Lecteur de Sikidy",
+          "background": "Tu es né parmi les cauris, les poudres et les seuils où l’on écoute le destin respirer. Les signes te parlent comme une pluie fine, claire et terrible, quand le monde veut cacher sa trame.",
+          "rumor": "On dit que tes cauris frémissent quand un cœur porte un masque trop lourd.",
+          "secret": "Tu redoutes de nommer trop vite l’ombre, car un vrai savoir peut aussi brûler le cœur.",
+          "mission": "Observe sans hâter, et fais naître des soupçons précis plutôt qu’un vacarme aveugle.",
+          "successCondition": "Tu proposes au moins un nom argumenté à partir d’un indice ou d’une observation.",
+          "rewardTitle": "Liseur d’Éclats"
+        },
+        "ombiasy": {
+          "title": "Le Gardien des Serments",
+          "background": "Tu marches entre le sel et la cendre, l’oreille tournée vers les ancêtres et la main ouverte sur les vivants. Quand le village vacille, tu sais qu’un rituel peut tenir le jour au bord du précipice, sans rompre son chant.",
+          "rumor": "Les anciens disent que ton souffle calme même les chiens qui sentent la peur.",
+          "secret": "Tu portes la trace d’un serment ancien, juré devant le lac et jamais oublié.",
+          "mission": "Protège sans te dévoiler trop tôt, puis parle au bon moment pour guider la foule.",
+          "successCondition": "Tu défends ou accuses avec mesure, en restant cohérent jusqu’au vote.",
+          "rewardTitle": "Bâton du Serein"
+        },
+        "fanany": {
+          "title": "Le Serpent des Razana",
+          "background": "On raconte que les ancêtres t’ont laissé sous une peau de silence, pour que tu marches avec leur mémoire. Tu avances dans le jour comme une prière nouée, et la nuit te trouve toujours digne du vieux sang.",
+          "rumor": "Les femmes du rivage disent qu’une marque invisible suit tes pas quand tu regardes la surface de l’eau.",
+          "secret": "Tu as juré de ne pas laisser le premier coup de malheur effacer le nom des tiens.",
+          "mission": "Choisis avec soin qui mérite ta marque morale, et fais sentir au village que la mémoire veille.",
+          "successCondition": "Tu poses une marque secrète pendant le jour, puis tu restes crédible jusqu’au lendemain.",
+          "rewardTitle": "Mémoire de L’échine"
+        },
+        "zazavavindrano": {
+          "title": "L’Écouteuse des Eaux",
+          "background": "Tu es née d’une berceuse dite aux puits sacrés et aux pierres mouillées par la lune. Là où d’autres ne voient qu’un miroir, tu perçois une inquiétude, une trace, un frisson.",
+          "rumor": "On prétend que l’eau se trouble quand ton regard se pose sur un mensonge.",
+          "secret": "Tu gardes au fond du cœur une larme offerte au lac pour un disparu jamais rendu.",
+          "mission": "Reste douce en apparence, mais tends tes mots comme des nœuds au-dessus du vide.",
+          "successCondition": "Tu évoques au moins une fois une trace, une source ou un trouble venu de l’eau.",
+          "rewardTitle": "Songe d’Onde"
+        },
+        "kalanoro": {
+          "title": "La Piste Inversée",
+          "background": "Petite comme une ombre de feuille, tu lis les marques laissées par le pas, la fuite et le détour. Dans ce village, rien ne ment tout à fait à qui sait suivre l’empreinte qui revient de travers.",
+          "rumor": "On dit que tu sais si quelqu’un a quitté sa place avant même que la poussière se repose.",
+          "secret": "Tu te méfies des pas trop sûrs, car ils cachent souvent la peur d’un autre chemin.",
+          "mission": "Compare les départs, les retours et les hésitations pour nourrir le débat sans l’embraser.",
+          "successCondition": "Tu cites au moins une incohérence de déplacement ou de présence.",
+          "rewardTitle": "Larme de Trace"
+        },
+        "kinoly": {
+          "title": "Le Revenant du Bord",
+          "background": "Tu dors sous la croûte du monde, entre oubli et souvenir, comme une braise qui attend son vent. Si la mort te frôle sans t’emporter, alors seulement ton nom se retourne et ton pas redevient vivant.",
+          "rumor": "Les anciens disent qu’un dormeur peut revenir lorsque la nuit s’est trompée de victime.",
+          "secret": "Tant que tu n’as pas ouvert les yeux sur ton réveil, tu n’es qu’un murmure sans prise ni dessein.",
+          "mission": "Après ton réveil seulement, fais croire que ton retour est une rumeur de plus, et choisis ta cible avec prudence.",
+          "successCondition": "Tu ne révèles ta vraie nature qu’après ton réveil et tu participes ensuite au jeu nocturne.",
+          "rewardTitle": "Souffle Retourné"
+        },
+        "mpamosavy": {
+          "title": "Le Double au Miel Noir",
+          "background": "Tu souris au jour comme un hôte aimable, puis la nuit te donne une autre langue et un autre goût. Sous tes doigts, les serments se plient, et la chance des autres se couvre d’une buée froide.",
+          "rumor": "On dit que les lampes se ternissent quand tu passes près d’une porte entrouverte.",
+          "secret": "Tu crains le silence des jarres, car il te rappelle la seconde vie que nul ne doit nommer.",
+          "mission": "Agis avec finesse, brouille les pistes, et laisse les autres s’accuser entre eux.",
+          "successCondition": "Tu restes insoupçonné tout en poussant au désordre ou à la méfiance.",
+          "rewardTitle": "Murmure Oblique"
+        }
+      },
+      "ambiance": {
+        "night": "La lune boit dans le lac, et le vent rend la peur plus dure que le bruit.",
+        "dawn": "L’aube lave les jarres, mais ne lave pas les doutes qui restent au bord.",
+        "debate": "Chaque parole fait des vagues, chaque silence fait des routes vers l’ombre.",
+        "vote": "Quand les voix se lèvent, le destin se noue, et le cœur choisit son couteau de lumière."
+      },
+      "nightSteps": {
+        "zazavavindrano": "L’esprit des eaux tend un fady sur le miroir, et toute force hostile y laisse un frisson noir.",
+        "mpamosavy": "Le charmeur souffle son mal sur une cible nouvelle, et son pouvoir s’éteint dans une haleine cruelle.",
+        "mpisikidy": "Le devin lit les cauris dans la poussière de lune, et les signes révèlent un masque ou un mirage.",
+        "kalanoro": "La pisteuse suit des traces sans les nommer, et la place quittée parle plus fort que le pas premier.",
+        "kinoly": "Le dormeur, s’il a déjà ouvert les yeux, rôde dans le noir et choisit un nom pour le hanter au miroir.",
+        "songomby": "La meute s’unit sans débat, et la faim désigne une proie avant que le matin ne la surprenne.",
+        "ombiasy": "Le gardien des serments mesure la nuit, puis décide s’il faut panser une vie ou chasser un péril."
+      },
+      "dayProgression": {
+        "night": [
+          "La nuit tombe sur le rano masina, douce comme un chant, dure comme un sort.",
+          "Les jarres blanches brillent, et le village retient son souffle dans l’ombre sans bruit."
+        ],
+        "dawn": [
+          "À l’aube, une trace manque au bord de l’eau, et la peur s’assoit près du feu.",
+          "Chacun regarde les reflets, car le lac garde les noms comme il garde les secrets."
+        ],
+        "debate": [
+          "Le premier débat cherche la forme du mensonge, et les voix tournent comme des pirogues sur l’onde.",
+          "Puis les soupçons se resserrent, et le cœur de chacun bat contre sa propre honte."
+        ],
+        "vote": [
+          "Le vote devient lourd comme une pierre mouillée, et chaque main hésite avant le geste.",
+          "Quand la dernière voix tombe, le sort se ferme, et la vérité sort de l’orage."
+        ]
+      },
+      "deaths": [
+        "{victim} a glissé hors du cercle, et le lac a repris son souffle avec un bruit sourd.",
+        "On a retrouvé {victim} au matin, là où le miel s’était mêlé à l’eau claire et au froid.",
+        "Le nom de {victim} s’est perdu dans la nuit, puis la foule l’a rendu au silence du bord.",
+        "La tombe provisoire de {victim} s’est ouverte dans les regards, avant même que la terre ne parle.",
+        "Après {count} nuits de tension, {victim} n’a pas vu l’aube, et le village a serré les poings.",
+        "{victim} est tombé sous un sort ou une faim, et le miroir du lac n’a rien voulu dire."
+      ],
+      "victoryVillage": "Le village l’emporte quand les Songomby sont tous chassés, et l’aube boit enfin une eau sans peur ni bruit.",
+      "victorySongomby": "Les Songomby gagnent quand leur nombre atteint la parité des vivants du village, et la nuit ferme alors son poing sur le bruit.",
+      "narratorScript": [
+        "Lisez la légende comme un conte sombre, avec lenteur au début puis plus de tension au fil du jour.",
+        "Annoncez les nuits comme des vagues, les débats comme des remous, et les votes comme une pierre jetée au lac.",
+        "Gardez les révélations mécaniques nettes, mais laissez l’ambiance parler de reflets, de jarres et de miel.",
+        "Quand un joueur meurt, faites entendre le bord de l’eau, comme si le village perdait un pas dans le noir.",
+        "Soutenez les accusations sans trahir les pouvoirs, et faites monter la pression vers une fin claire.",
+        "Terminez chaque phase avec une cadence courte, pour que la peur reste dans l’air et dans le cœur."
+      ]
+    }
+  },
+  {
+    "id": "lanternes-mangrove",
+    "story": {
+      "title": "Les Lanternes de Mangrove",
+      "villageName": "Ankivy des Eaux Grises",
+      "intro": "Au bord des eaux saumâtres, les pirogues glissent sans bruit, et les lanternes s’éloignent dans le soir. Les racines dressent leurs doigts de noir, les crabes se taisent dans le miroir. Quand la brume prend le chemin, le village entend battre le destin.",
+      "roleEpithets": {
+        "mponina": "Gardien des voix du quai",
+        "songomby": "Mâchoire du courant",
+        "mpisikidy": "Liseur des écumes",
+        "ombiasy": "Médecin des marées",
+        "fanany": "Serpent du seuil",
+        "zazavavindrano": "Voix du fady marin",
+        "kalanoro": "Pisteur des traces d’eau",
+        "kinoly": "Dormeur des fonds",
+        "mpamosavy": "Murmure des lanternes"
+      },
+      "roleSheets": {
+        "mponina": {
+          "title": "Le quai des vivants",
+          "background": "{playerName} a grandi entre les pagaies et les filets, là où chaque aube sent le sel et la fumée. Il connaît le bruit des pas sur les planches comme d’autres lisent les astres.",
+          "rumor": "On dit que {playerName} reconnaît un mensonge au simple tremblement d’une voix, même dans le vent.",
+          "secret": "Il garde au fond de sa poche un éclat de nacre offert par un ancien pêcheur, souvenir d’une nuit trop longue.",
+          "mission": "Fais parler les autres, fais peser les noms, et montre que ton oreille vaut mieux qu’un cri.",
+          "successCondition": "Tu prends part aux débats et tu votes au moins une fois avant la fin de la partie.",
+          "rewardTitle": "Voix du rivage"
+        },
+        "songomby": {
+          "title": "La faim sous les racines",
+          "background": "{playerName} porte un visage d’homme et l’ombre d’une bête, né d’un conte que les anciens murmurent à voix basse. Il marche comme la nuit coule, sans laisser de trace sur le sable mouillé.",
+          "rumor": "Les pêcheurs jurent qu’un souffle froid suit les pirogues quand {playerName} passe près du quai.",
+          "secret": "Sa faim n’aime ni le jour ni les regards, mais elle écoute le battement des cœurs comme une chanson.",
+          "mission": "Cache ta soif derrière les mots, et fais croire que la brume seule avale les vivants.",
+          "successCondition": "Tu restes crédible jusqu’aux derniers tours sans révéler ton appétit.",
+          "rewardTitle": "Seigneur du Marais"
+        },
+        "mpisikidy": {
+          "title": "Le sel des signes",
+          "background": "{playerName} lit les cauris comme d’autres lisent le sable, au bord d’une eau qui ne dort jamais. Dans la mangrove, ses prières montent avec le bruit des pagaies et le goût du sel.",
+          "rumor": "On murmure que {playerName} distingue les pas vrais des pas fêlés, même sous la pluie fine.",
+          "secret": "Il craint les réponses trop nettes, car les signes aiment les chemins de traverse.",
+          "mission": "Observe sans te dévoiler, puis fais tomber un doute juste au moment où la foule hésite.",
+          "successCondition": "Tu nommes publiquement une piste ou une intuition au moins une fois.",
+          "rewardTitle": "Œil des cauris"
+        },
+        "ombiasy": {
+          "title": "Le sel et le remède",
+          "background": "{playerName} connaît les herbes qui calment, les mots qui apaisent, et les gestes qui repoussent le mal. Sous les lanternes, on vient à lui comme on vient à une rive sûre.",
+          "rumor": "On dit que {playerName} a déjà sauvé une fièvre que les autres croyaient perdue.",
+          "secret": "Il porte une vieille dette envers les Razana, et cette dette pèse plus lourd qu’un seau d’eau.",
+          "mission": "Protège les conversations utiles, puis tranche avec calme quand le danger se précise.",
+          "successCondition": "Tu annonces clairement ton intention de garder ou d’écarter une cible au cours de la partie.",
+          "rewardTitle": "Gardien des marées"
+        },
+        "fanany": {
+          "title": "Le serment sous écaille",
+          "background": "{playerName} a été marqué par une lignée ancienne, entre eau grise et lueur de feu. Quand il parle, on croit entendre un serpent glisser sous un lamba humide.",
+          "rumor": "Les anciens disent que {playerName} ne dort jamais tout à fait quand la lune se lève sur la mangrove.",
+          "secret": "Il cache une peur secrète de mourir avant d’avoir laissé une dernière marque au monde.",
+          "mission": "Choisis avec soin qui mérite ta marque, et fais sentir que ta présence n’est jamais gratuite.",
+          "successCondition": "Tu désignes secrètement un joueur au moins une fois dans la partie.",
+          "rewardTitle": "Héritier des Razana"
+        },
+        "zazavavindrano": {
+          "title": "L’écho du fady",
+          "background": "{playerName} a appris à écouter les eaux sacrées là où les racines plongent et où les pirogues se taisent. Son pas est léger, comme si la marée le portait encore.",
+          "rumor": "On raconte que {playerName} entend frémir un secret quand la surface de l’eau tremble sans vent.",
+          "secret": "Il garde un lien ancien avec une source de mangrove que nul ne doit troubler sans conséquence.",
+          "mission": "Parle peu, choisis bien ta liaison, et laisse les autres craindre ce que l’eau a vu.",
+          "successCondition": "Tu annonces clairement qu’une cible est liée au fady ou que l’eau a marqué une trace.",
+          "rewardTitle": "Voix des eaux"
+        },
+        "kalanoro": {
+          "title": "Le pas renversé",
+          "background": "{playerName} suit les traces à l’envers, là où la vase garde mieux les vérités que les paroles. Entre deux racines, il sait voir qui a bougé sans dire son nom.",
+          "rumor": "On dit que {playerName} remarque les sièges vides comme d’autres remarquent les blessures.",
+          "secret": "Il a juré de ne jamais confondre un pas prudent avec un pas coupable.",
+          "mission": "Observe la place des autres, puis tends le miroir d’un soupçon au bon moment.",
+          "successCondition": "Tu rappelles au moins une fois qu’un joueur a quitté ou changé de place dans le récit.",
+          "rewardTitle": "Trace du courant"
+        },
+        "kinoly": {
+          "title": "Le dormeur des fonds",
+          "background": "{playerName} n’est qu’un souffle au fond de l’eau, tant qu’on ne brise pas son sommeil. Quand son heure vient, la vase se souvient de lui et la nuit change de visage.",
+          "rumor": "Après le réveil, on dit que {playerName} parle comme si le monde lui devait encore un passage.",
+          "secret": "Avant son éveil, il rêve de pirogues sans rame et de lanternes qui glissent au large.",
+          "mission": "Après ton réveil seulement, fais comprendre que survivre n’est pas toujours rester tranquille.",
+          "successCondition": "Tu réagis publiquement une fois que ton état a changé, après le réveil.",
+          "rewardTitle": "Hantise des eaux"
+        },
+        "mpamosavy": {
+          "title": "Le double sourire",
+          "background": "{playerName} vend des herbes au marché le matin et jette des ombres le soir, comme si deux vies partageaient le même lamba. Sous la mangrove, son pas connaît les détours mieux que les chemins droits.",
+          "rumor": "On dit que {playerName} laisse derrière lui des lampes qui vacillent sans raison.",
+          "secret": "Il se nourrit des silences des autres et se méfie des voix trop franches.",
+          "mission": "Mène les soupçons vers le brouillard, et fais croire que la faiblesse vient du hasard.",
+          "successCondition": "Tu orientes la discussion sans te trahir au moins une fois.",
+          "rewardTitle": "Maître des ombres"
+        }
+      },
+      "ambiance": {
+        "night": "La mangrove se ferme, et les lanternes fuient la rive dans un soupir sans bruit.",
+        "dawn": "L’aube vient en eau pâle, et chaque pirogue semble compter ses peurs à voix basse.",
+        "debate": "Les langues claquent comme des rames, et le doute roule du cœur au bord du cœur.",
+        "vote": "Quand le vote se lève, le silence pèse lourd, et le destin cherche sa porte sans retard."
+      },
+      "nightSteps": {
+        "zazavavindrano": "L’esprit des eaux choisit une rive, et le fady se noue dans la brume sans bruit.",
+        "mpamosavy": "Le sorcier des lanternes glisse sa malédiction, et le pouvoir ciblé s’éteint sans éclat.",
+        "mpisikidy": "Le devin lit les cauris, et les signes s’ouvrent ou se cachent dans l’ombre du soir.",
+        "kalanoro": "Le pisteur suit une trace nouvelle, et la vase dit si la place a changé de part.",
+        "kinoly": "Le dormant respire sous l’eau noire, puis l’oubli recule et son rêve devient combat.",
+        "songomby": "La bête rassemble sa faim, et les racines frémissent sous sa morsure sans fin.",
+        "ombiasy": "Le gardien trace son rite, et le remède ou l’exil se lève au bord du temps."
+      },
+      "dayProgression": {
+        "night": [
+          "La mangrove avale les pas, et la nuit tresse ses liens dans le sel et le bruit.",
+          "Une lampe dérive au loin, et chaque rame hésite entre la peur et le destin.",
+          "Sous les racines, les secrets s’accrochent comme des crabes à la vase du soir."
+        ],
+        "dawn": [
+          "Au matin, les pirogues reviennent plus légères, mais le rivage porte un manque net.",
+          "La brume s’ouvre à peine, et les regards cherchent une vérité dans le vent.",
+          "Les premiers soupçons montent avec la marée, lents et durs comme une dette ancienne."
+        ],
+        "debate": [
+          "Le village se rassemble, et chaque voix veut devenir le chemin.",
+          "Les récits se heurtent, les certitudes chancellent, et le doute prend la main.",
+          "Plus le jour avance, plus le masque craque, et la foule entend battre le sort."
+        ],
+        "vote": [
+          "La fin approche, et le choix devient lourd comme un filet plein d’ombre.",
+          "Les noms tombent au milieu du cercle, et le silence répond sans détour.",
+          "Quand la sentence se fait, chacun sait que la mangrove garde la mémoire de la mort."
+        ]
+      },
+      "deaths": [
+        "{victim} a disparu dans la brume, et la rive n’a gardé que le bruit du vide.",
+        "Le corps de {victim} a été retrouvé près des racines, froid comme un destin sans retour.",
+        "On a nommé {victim}, et le village a compris que la nuit avait encore mordu.",
+        "{victim} s’est éteint dans le sable mouillé, sans cri, sans bruit, sans détour.",
+        "Le sort a pris {victim}, et même les lanternes ont pâli sur l’eau grise."
+      ],
+      "victoryVillage": "Le village tient la rive, et les songomby s’effacent dans l’écume et le bruit. Les pirogues rentrent une à une, et la mangrove rend enfin son soupir au jour.",
+      "victorySongomby": "Les songomby referment la nuit, et les voix du village se noient dans le bruit. Les lanternes s’éloignent pour de bon, et la mangrove ne laisse qu’un chemin de mort.",
+      "narratorScript": [
+        "Lisez la légende comme un conte de marée, lentement, avec sel et menace.",
+        "Faites monter les soupçons comme la brume, sans jamais révéler les rôles cachés.",
+        "Annoncez chaque mort avec gravité, comme si la mangrove elle-même retenait son souffle.",
+        "Au débat, laissez les phrases s’entrechoquer, puis coupez court quand le vote s’approche.",
+        "Gardez les mentions de pirogues, lanternes et racines pour soutenir la tension du soir.",
+        "Pour Kinoly, ne révélez sa fiche qu’après son réveil, jamais avant.",
+        "Terminez chaque nuit comme on ferme une porte sur l’eau, avec une rime nette et claire."
+      ]
+    }
+  }
+]

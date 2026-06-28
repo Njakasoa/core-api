@@ -27,35 +27,35 @@ export const ROLES: Record<string, RoleDef> = {
   },
   songomby: {
     id: "songomby", nameMg: "Songomby", team: "songomby", asset: "role_songomby", optional: false,
-    desc: "Chaque nuit, les Songomby choisissent ensemble une victime à dévorer.",
+    desc: "Bête mangeuse d'hommes, rapide comme le vent. Chaque nuit, les Songomby choisissent ensemble une victime à dévorer.",
   },
   mpisikidy: {
     id: "mpisikidy", nameMg: "Mpisikidy", team: "village", asset: "role_mpisikidy", optional: true,
-    desc: "Chaque nuit, le sikidy te révèle le rôle d'un joueur — mais les traces peuvent brouiller la lecture.",
+    desc: "Devin du Sikidy. Chaque nuit, lis les signes d'un joueur : tu découvres son rôle apparent, sauf si les signes sont masqués.",
   },
   ombiasy: {
     id: "ombiasy", nameMg: "Ombiasy", team: "village", asset: "role_ombiasy", optional: true,
-    desc: "Un remède (sauver la victime) et un poison (tuer), chacun utilisable une seule fois.",
+    desc: "Guérisseur et gardien spirituel. Une fois, sauve la victime ; une fois, accomplis un rituel d'exil contre un joueur dangereux.",
   },
-  mpihaza: {
-    id: "mpihaza", nameMg: "Mpihaza", team: "village", asset: "role_mpihaza", optional: true,
-    desc: "Quand tu meurs, tu décoches une dernière flèche et emportes un joueur.",
+  fanany: {
+    id: "fanany", nameMg: "Fanany", team: "village", asset: "role_fanany", optional: true,
+    desc: "Serpent des ancêtres. Chaque jour, marque secrètement un joueur : si tu meurs avant le prochain jour, la vengeance des Razana l'emporte.",
   },
   zazavavindrano: {
     id: "zazavavindrano", nameMg: "Zazavavindrano", team: "village", asset: "role_zazavavindrano", optional: true,
-    desc: "Chaque nuit, pose un fady d'eau sur un joueur. Si une force hostile le trouble, tu sentiras sa trace.",
+    desc: "Esprit des eaux sacrées. Chaque nuit, lie un joueur au Fady des eaux : si une force hostile le trouble, tu sentiras sa trace.",
   },
   kalanoro: {
     id: "kalanoro", nameMg: "Kalanoro", team: "village", asset: "role_kalanoro", optional: true,
-    desc: "Chaque nuit, lis les pas d'un joueur : tu sauras s'il a quitté sa place cette nuit.",
+    desc: "Gardien des traces inversées. Chaque nuit, piste un joueur différent de la nuit précédente : tu sauras s'il a quitté sa place.",
   },
   kinoly: {
     id: "kinoly", nameMg: "Kinoly", team: "neutre", asset: "role_kinoly", optional: true,
-    desc: "Revenant neutre. Chaque nuit, hante un joueur ; gagne personnellement s'il survit après avoir vu une cible hantée mourir au vote. Paraît Mponina au Mpisikidy.",
+    desc: "Revenant neutre dormant. La première fois que tu devrais mourir la nuit, tu survis et t'éveilles ; ensuite, tu peux hanter un joueur chaque nuit. Le vote te tue normalement. Paraît Mponina au Mpisikidy.",
   },
   mpamosavy: {
     id: "mpamosavy", nameMg: "Mpamosavy", team: "songomby", asset: "role_mpamosavy", optional: true,
-    desc: "Chaque nuit, tu maudis un joueur : son pouvoir nocturne échoue.",
+    desc: "Humain à double vie et sorcier nocturne. Chaque nuit, maudis un joueur différent de la nuit précédente : son pouvoir échoue.",
   },
 };
 
