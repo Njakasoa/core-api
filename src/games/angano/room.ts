@@ -295,15 +295,31 @@ export class AnganoRoom {
     this.broadcast({ k: "voteState", tally: this.tally() });
     if (this.aliveSeatPlayers().every((s) => this.votes.has(s.id))) this.fire();
   }
+  // Player asks the narrator to review their own mission (self-only: id is the connection's user).
+  requestMissionReview(id: string) {
+    if (this.phase === "lobby" || id === this.narratorId) return;
+    const player = this.players.get(id);
+    if (!player) return;
+    if (player.roleId === "kinoly" && !this.kinolyAwakened.has(id)) return;
+    const sheet = this.missions.get(id);
+    if (!sheet || sheet.status !== "pending") return; // already requested/validated/failed → narrator must reopen
+    sheet.status = "requested";
+    sheet.reviewRejected = false;
+    this.pushLog(`Demande de validation envoyée par ${player.name}.`);
+    this.sendMission(player);
+    this.sendNarrator();
+  }
   missionStatus(id: string, playerId: string, status: MissionStatus) {
     if (id !== this.narratorId || this.phase === "lobby") return;
     const player = this.players.get(playerId);
     if (player?.roleId === "kinoly" && !this.kinolyAwakened.has(playerId)) return;
     const sheet = this.missions.get(playerId);
     if (!sheet) return;
+    // A return-to-pending from a request is a refusal (leaves a visual trace); from validated/failed it's a reopen.
+    sheet.reviewRejected = status === "pending" && sheet.status === "requested";
     const beforeRewards = new Map(sheet.rewards.map((reward) => [reward.id, reward.status]));
     this.applyMissionStatus(sheet, status);
-    const label = status === "validated" ? "validée" : status === "failed" ? "ratée" : "rouverte";
+    const label = status === "validated" ? "validée" : status === "failed" ? "ratée" : sheet.reviewRejected ? "refusée" : "rouverte";
     this.pushLog(`Mission de ${this.name(playerId)} ${label}.`);
     if (status === "validated") this.pushLog(`${this.name(playerId)} obtient le titre « ${sheet.titleReward} » (${sheet.titlesEarned} titre${sheet.titlesEarned > 1 ? "s" : ""}).`);
     const unlocked = sheet.rewards.filter((reward) => beforeRewards.get(reward.id) === "locked" && reward.status === "unlocked");
