@@ -10,6 +10,9 @@ import { env } from "../env.ts";
 export async function aiGenerateJSON(opts: {
   system: string;
   prompt: string;
+  provider?: "claude" | "codex";
+  model?: string;
+  reasoningEffort?: string;
   timeoutMs?: number;
 }): Promise<unknown | null> {
   if (!env.AI_API_TOKEN) return null; // feature disabled
@@ -20,7 +23,15 @@ export async function aiGenerateJSON(opts: {
     const res = await fetch(`${env.AI_BASE_URL}/api/v1/chat`, {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${env.AI_API_TOKEN}` },
-      body: JSON.stringify({ prompt: opts.prompt, systemPrompt: opts.system, maxTurns: 1, timeoutMs }),
+      body: JSON.stringify({
+        prompt: opts.prompt,
+        provider: opts.provider ?? env.AI_PROVIDER,
+        model: opts.model ?? env.AI_MODEL,
+        reasoningEffort: opts.reasoningEffort ?? env.AI_REASONING_EFFORT,
+        systemPrompt: opts.system,
+        maxTurns: 1,
+        timeoutMs,
+      }),
       signal: ctrl.signal,
     });
     if (!res.ok || !res.body) return null;
