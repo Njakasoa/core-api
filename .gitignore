@@ -8,5 +8,6 @@ bun.lockb
 dist/
 coverage/
 .deploy/
+.local/
 .idea/
 .vscode/

@@ -21,6 +21,26 @@ test("roleEpithets: only known role ids, truncated", () => {
   expect(out.roleEpithets.songomby!.length).toBeLessThanOrEqual(60);
 });
 
+test("roleSheets: only known role ids, bounded fields", () => {
+  const out = sanitizeStory({
+    roleSheets: {
+      mpisikidy: {
+        title: "Oracle des hautes herbes",
+        background: "b".repeat(1000),
+        rumor: "rumeur",
+        secret: "secret",
+        mission: "mission",
+        successCondition: "validation",
+        rewardTitle: "titre",
+      },
+      bogus: { title: "non" },
+    },
+  }, 5);
+  expect(Object.keys(out.roleSheets)).toEqual(["mpisikidy"]);
+  expect(out.roleSheets.mpisikidy!.title).toBe("Oracle des hautes herbes");
+  expect(out.roleSheets.mpisikidy!.background.length).toBeLessThanOrEqual(420);
+});
+
 test("missing/empty fields fall back to defaults; ambiance always has 4 keys", () => {
   const out = sanitizeStory({}, 5);
   expect(out.title).toBe(DEFAULT_STORY.title);
