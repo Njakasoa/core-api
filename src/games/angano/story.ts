@@ -1,14 +1,15 @@
 import { aiGenerateJSON } from "../../lib/ai.ts";
 import { env } from "../../env.ts";
 import { ROLES, OPTIONAL_ROLES } from "./roles.ts";
+import storyPresetData from "./default-story-presets.json";
 
 /**
  * AI story layer for Angano. Every game can be wrapped in a unique Malagasy
  * legend (narration + ambiance) and an optional themed composition — but the
  * engine stays 100% authoritative. The AI only produces TEXT + a BOUNDED config,
  * which we validate and sanitize against the fixed role catalog; anything off-spec
- * is dropped and missing fields fall back to DEFAULT_STORY. The game never blocks
- * on the AI (timeout → DEFAULT_STORY).
+ * is dropped and missing fields fall back to a local preset. The game never blocks
+ * on the AI (timeout → local preset).
  */
 
 export type Pace = "rapide" | "normal" | "lent";
@@ -40,6 +41,29 @@ export interface StorySetup {
   narratorScript: string[];
   config?: StoryConfig; // bounded composition override (validated)
 }
+export interface StoryGenerationOptions {
+  provider?: "claude" | "codex";
+  model?: string;
+  reasoningEffort?: string;
+  timeoutMs?: number;
+  feedbackHints?: string[];
+}
+export interface StoryGenerationResult {
+  story: StorySetup;
+  raw: unknown | null;
+  fallback: boolean;
+  ms: number;
+  provider: "claude" | "codex";
+  model?: string;
+  reasoningEffort?: string;
+  seed: string;
+  direction: string;
+  feedbackHints: string[];
+}
+export interface DefaultStoryPreset {
+  id: string;
+  story: StorySetup;
+}
 
 const PACES: Pace[] = ["rapide", "normal", "lent"];
 const DEFAULT_STORY_AI_PROVIDER = "codex" as const;
@@ -50,17 +74,29 @@ const lines = (v: unknown, maxItems: number, maxChars: number): string[] =>
   Array.isArray(v) ? v.filter((s): s is string => typeof s === "string" && !!s.trim()).map((s) => clamp(s, maxChars)).slice(0, maxItems) : [];
 const DEFAULT_ROLE_EPITHETS: Record<string, string> = {
   mponina: "Gardien du foyer ordinaire",
-  songomby: "La faim derrière les maisons",
+  songomby: "Les sabots qui prennent les proies",
   mpisikidy: "L’œil des graines alignées",
-  ombiasy: "Celui qui connaît le poison et le pardon",
-  mpihaza: "La dernière flèche du village",
-  zazavavindrano: "Celle qui lie l'eau par interdit",
+  ombiasy: "Gardien des ody et du pardon",
+  fanany: "La vengeance des Razana",
+  zazavavindrano: "Gardienne du Fady des eaux",
   kalanoro: "Le lecteur des pas inversés",
-  kinoly: "Le visage presque humain",
+  kinoly: "Le revenant que la nuit réveille",
   mpamosavy: "La bouche de la malédiction",
 };
+const STORY_DIRECTIONS = [
+  "Lac sacré et offrandes blanches : centre la légende sur un rano masina, des reflets interdits, des jarres, des pièces et du miel laissés au bord de l'eau.",
+  "Forêt humide et grottes cachées : centre la légende sur des sentiers retournés, des mousses épaisses, des cavernes et des voix qui se perdent sous les arbres.",
+  "Rivage battu par les vents : centre la légende sur une plage, des pirogues, des filets, des récifs noirs et une marée qui rapporte les secrets.",
+  "Hautes terres rouges : centre la légende sur des collines de latérite, des tombeaux anciens, des pierres levées et une poussière qui garde les traces.",
+  "Marché nocturne et carrefour : centre la légende sur un village de passage, des étals fermés, des serments échangés et des ombres entre les cases.",
+  "Cascade et ravin sacré : centre la légende sur une chute d'eau, un pont étroit, des parois luisantes et un grondement qui couvre les aveux.",
+  "Village de zébus et enclos brisé : centre la légende sur des parcs à zébus, des cornes peintes, des sabots dans la poussière et une barrière rompue.",
+  "Îlot de mangrove et pirogues : centre la légende sur l'eau saumâtre, les racines aériennes, les crabes silencieux et les lanternes qui s'éloignent.",
+] as const;
+const PUBLIC_PLACEHOLDER_RE = /\{[a-zA-Z][a-zA-Z0-9]*\}/g;
+const DEATH_PLACEHOLDERS = new Set(["{victim}", "{role}", "{count}"]);
 
-/** Hardcoded fallback legend (used when the AI is off, times out, or returns junk). */
+/** Base fallback legend kept for compatibility and as the first local preset. */
 export const DEFAULT_STORY: StorySetup = {
   title: "L'ombre sur les rizières",
   villageName: "Ambodivoara",
@@ -74,13 +110,13 @@ export const DEFAULT_STORY: StorySetup = {
     vote: "Le village doit choisir qui livrer aux ancêtres.",
   },
   nightSteps: {
-    zazavavindrano: "Zazavavindrano noue l'eau au silence et cherche où poser son fady.",
+    zazavavindrano: "Zazavavindrano noue le Fady des eaux autour d'une âme à protéger.",
     mpamosavy: "Le Mpamosavy murmure une malédiction dans la nuit froide.",
     mpisikidy: "Le Mpisikidy aligne les graines pour lire ce que les visages cachent.",
     kalanoro: "Le Kalanoro suit les pas, même ceux qui reviennent à l'envers.",
-    kinoly: "Le Kinoly glisse près des portes et laisse au silence une trace pâle.",
-    songomby: "Les Songomby rôdent ensemble et choisissent quelle porte craquera.",
-    ombiasy: "L'Ombiasy pèse le remède et le poison, sachant que chacun ne revient pas.",
+    kinoly: "Le Kinoly éveillé glisse près des portes et laisse au silence une trace pâle.",
+    songomby: "Les Songomby frappent la terre de leurs sabots et choisissent quelle proie ne courra plus.",
+    ombiasy: "L'Ombiasy prépare remède, ody et rituel d'exil sous l'œil des ancêtres.",
   },
   dayProgression: {
     night: [
@@ -118,6 +154,10 @@ export const DEFAULT_STORY: StorySetup = {
     "Au vote, gardez un ton grave : le village juge, mais il peut se tromper.",
   ],
 };
+export const DEFAULT_STORY_PRESETS: DefaultStoryPreset[] = [
+  { id: "base-rizieres", story: DEFAULT_STORY },
+  ...(storyPresetData as DefaultStoryPreset[]),
+];
 
 /** Build the immutable system prompt (the "bible") from the fixed role catalog. */
 function systemPrompt(maxSongomby: number): string {
@@ -155,13 +195,15 @@ function systemPrompt(maxSongomby: number): string {
     "- roleSheets.secret : un secret intime du personnage, compatible avec son camp et son rôle, sans créer de nouveau pouvoir.",
     "- roleSheets.mission : une mission sociale légère qui influence le débat, les alliances ou le vote, mais jamais les règles ni les conditions de victoire.",
     "- roleSheets.successCondition : critère observable que le narrateur humain peut valider facilement.",
-    "- roleSheets.rewardTitle : titre honorifique court gagné si la mission est validée, sans avantage mécanique.",
+    "- roleSheets.rewardTitle : titre honorifique court, pas un pouvoir. Le serveur applique ensuite la récompense mécanique fixe ; n'invente aucun avantage.",
+    "- Kinoly : sa fiche et sa mission ne deviennent visibles qu'après son réveil par une mort nocturne évitée ; un vote le tue normalement. Son texte doit respecter cette contrainte.",
     "- Variables autorisées dans roleSheets : {playerName}, {villageName}, {storyTitle}, {roleName}. N'invente aucun vrai prénom dans ces fiches.",
     "- nightSteps : une phrase courte par sous-phase nocturne ; elle doit évoquer le rôle sans révéler qui le possède.",
     "- dayProgression : 3 à 4 phrases par clé, de plus en plus tendues du jour 1 à la fin.",
     "- deaths : 3 à 6 templates publics, avec variables autorisées {victim}, {role}, {count}. N'utilise ces variables que pour des morts déjà révélées.",
     "- narratorScript : 4 à 8 consignes/phrases de lecture pour le narrateur humain, sans secret ni solution.",
-    "- Ton folklore malgache (lamba, baobab, rizière, zébu, esprits, fady…), sombre et immersif, en FRANÇAIS.",
+    "- Ton folklore malgache doit être sombre et immersif, en FRANÇAIS. Choisis quelques éléments pertinents (lamba, rano masina, tombeaux, zébu, pirogue, ravinala, grotte, cascade, forêt, marché, fady, Razana…), mais ne remets pas systématiquement baobab/rizière/fady au centre.",
+    "- Respecte exactement les noms canoniques des rôles si tu les écris : Mponina, Songomby, Mpisikidy, Ombiasy, Fanany, Zazavavindrano, Kalanoro, Kinoly, Mpamosavy.",
     "- Mode conte rimé OBLIGATOIRE : les champs narratifs doivent sonner comme des vers de conte lus à voix haute.",
     "- Rimes : dans intro, ambiance, nightSteps, dayProgression, deaths et victoires, ajoute des rimes ou assonances visibles par phrase ou par paire de phrases (nuit/bruit, chemin/destin, peur/cœur, sort/mort).",
     "- Garde les rimes naturelles et claires : pas de poésie obscure, pas de mot rare seulement pour rimer, pas de retour à la ligne dans les chaînes JSON.",
@@ -172,10 +214,15 @@ function systemPrompt(maxSongomby: number): string {
   ].join("\n");
 }
 
-export function sanitizeStory(raw: any, seatCount: number, activeRoleIds: string[] = []): StorySetup {
-  const d = DEFAULT_STORY;
+export function sanitizeStory(raw: any, seatCount: number, activeRoleIds: string[] = [], fallback: StorySetup = DEFAULT_STORY): StorySetup {
+  const d = fallback;
   const amb = raw?.ambiance ?? {};
   const activeRoles = normalizeActiveRoles(activeRoleIds);
+  const rawVillageName = clamp(raw?.villageName, 60);
+  const rawTitle = clamp(raw?.title, 80);
+  const villageName = fillPublicPlaceholders(rawVillageName || d.villageName, { title: rawTitle || d.title, villageName: rawVillageName || d.villageName });
+  const title = fillPublicPlaceholders(rawTitle || d.title, { title: rawTitle || d.title, villageName }) || d.title;
+  const publicCtx = { title, villageName };
   const epithets: Record<string, string> = {};
   if (raw?.roleEpithets && typeof raw.roleEpithets === "object") {
     for (const [k, v] of Object.entries(raw.roleEpithets)) {
@@ -183,27 +230,33 @@ export function sanitizeStory(raw: any, seatCount: number, activeRoleIds: string
     }
   }
   for (const id of activeRoles) {
+    if (!epithets[id] && d.roleEpithets[id]) epithets[id] = clamp(d.roleEpithets[id], 60);
     if (!epithets[id]) epithets[id] = DEFAULT_ROLE_EPITHETS[id] ?? ROLES[id]!.nameMg;
   }
   const roleSheets: Record<string, StoryRoleSheet> = {};
   const rawRoleSheets = raw?.roleSheets && typeof raw.roleSheets === "object" ? raw.roleSheets : {};
   for (const [roleId, value] of Object.entries(rawRoleSheets)) {
     if (!ROLES[roleId] || !value || typeof value !== "object") continue;
-    const sheet = sanitizeRoleSheet(value);
+    const sheet = sanitizeRoleSheet(roleId, value);
+    if (Object.values(sheet).some(Boolean)) roleSheets[roleId] = sheet;
+  }
+  for (const roleId of activeRoles) {
+    if (roleSheets[roleId] || !d.roleSheets[roleId]) continue;
+    const sheet = sanitizeRoleSheet(roleId, d.roleSheets[roleId]);
     if (Object.values(sheet).some(Boolean)) roleSheets[roleId] = sheet;
   }
   const rawNightSteps = raw?.nightSteps && typeof raw.nightSteps === "object" ? raw.nightSteps : {};
   const nightSteps: Partial<Record<NightStoryPhase, string>> = {};
   for (const phase of NIGHT_STORY_PHASES) {
-    const line = clamp(rawNightSteps[phase], 220);
+    const line = fillPublicPlaceholders(clamp(rawNightSteps[phase], 220), publicCtx);
     nightSteps[phase] = line || d.nightSteps[phase];
   }
   const rawProgression = raw?.dayProgression && typeof raw.dayProgression === "object" ? raw.dayProgression : {};
   const dayProgression: StoryDayProgression = {
-    night: lines(rawProgression.night, 4, 220),
-    dawn: lines(rawProgression.dawn, 4, 220),
-    debate: lines(rawProgression.debate, 4, 220),
-    vote: lines(rawProgression.vote, 4, 220),
+    night: publicLines(rawProgression.night, 4, 220, publicCtx),
+    dawn: publicLines(rawProgression.dawn, 4, 220, publicCtx),
+    debate: publicLines(rawProgression.debate, 4, 220, publicCtx),
+    vote: publicLines(rawProgression.vote, 4, 220, publicCtx),
   };
   if (!dayProgression.night.length) dayProgression.night = d.dayProgression.night;
   if (!dayProgression.dawn.length) dayProgression.dawn = d.dayProgression.dawn;
@@ -211,8 +264,8 @@ export function sanitizeStory(raw: any, seatCount: number, activeRoleIds: string
   if (!dayProgression.vote.length) dayProgression.vote = d.dayProgression.vote;
 
   const deathSource = Array.isArray(raw?.deathTemplates) ? raw.deathTemplates : raw?.deaths;
-  const deaths = lines(deathSource, 6, 220);
-  const narratorScript = lines(raw?.narratorScript, 8, 260);
+  const deaths = publicLines(deathSource, 6, 220, publicCtx, DEATH_PLACEHOLDERS);
+  const narratorScript = publicLines(raw?.narratorScript, 8, 260, publicCtx);
 
   // bounded composition override
   let config: StoryConfig | undefined;
@@ -235,22 +288,22 @@ export function sanitizeStory(raw: any, seatCount: number, activeRoleIds: string
   }
 
   return {
-    title: clamp(raw?.title, 80) || d.title,
-    villageName: clamp(raw?.villageName, 60) || d.villageName,
-    intro: clamp(raw?.intro, 800) || d.intro,
+    title,
+    villageName,
+    intro: fillPublicPlaceholders(clamp(raw?.intro, 800) || d.intro, publicCtx),
     roleEpithets: epithets,
     roleSheets,
     ambiance: {
-      night: clamp(amb.night, 300) || d.ambiance.night,
-      dawn: clamp(amb.dawn, 300) || d.ambiance.dawn,
-      debate: clamp(amb.debate, 300) || d.ambiance.debate,
-      vote: clamp(amb.vote, 300) || d.ambiance.vote,
+      night: fillPublicPlaceholders(clamp(amb.night, 300) || d.ambiance.night, publicCtx),
+      dawn: fillPublicPlaceholders(clamp(amb.dawn, 300) || d.ambiance.dawn, publicCtx),
+      debate: fillPublicPlaceholders(clamp(amb.debate, 300) || d.ambiance.debate, publicCtx),
+      vote: fillPublicPlaceholders(clamp(amb.vote, 300) || d.ambiance.vote, publicCtx),
     },
     nightSteps,
     dayProgression,
     deaths: deaths.length ? deaths : d.deaths,
-    victoryVillage: clamp(raw?.victoryVillage, 300) || d.victoryVillage,
-    victorySongomby: clamp(raw?.victorySongomby, 300) || d.victorySongomby,
+    victoryVillage: fillPublicPlaceholders(clamp(raw?.victoryVillage, 300) || d.victoryVillage, publicCtx),
+    victorySongomby: fillPublicPlaceholders(clamp(raw?.victorySongomby, 300) || d.victorySongomby, publicCtx),
     narratorScript: narratorScript.length ? narratorScript : d.narratorScript,
     config,
   };
@@ -258,10 +311,23 @@ export function sanitizeStory(raw: any, seatCount: number, activeRoleIds: string
 
 /**
  * Generate (or fall back to) a story for a game of `seatCount` role-bearing players.
- * Never throws and never blocks longer than the AI timeout — returns DEFAULT_STORY
+ * Never throws and never blocks longer than the AI timeout — returns a local preset
  * on any failure.
  */
 export async function generateStory(seatCount: number, config?: StoryConfig): Promise<StorySetup> {
+  return (await generateStoryWithMeta(seatCount, config)).story;
+}
+
+/**
+ * Instrumented story generation used by QA/evaluation scripts. Production callers
+ * should keep using generateStory(); this variant returns raw output and timing,
+ * and can inject temporary correction hints for recursive prompt tests.
+ */
+export async function generateStoryWithMeta(
+  seatCount: number,
+  config?: StoryConfig,
+  opts: StoryGenerationOptions = {},
+): Promise<StoryGenerationResult> {
   const maxSongomby = Math.max(1, Math.floor(seatCount / 3));
   const activeRoles = activeRolesFromConfig(config);
   const activeRoleLines = activeRoles
@@ -269,6 +335,9 @@ export async function generateStory(seatCount: number, config?: StoryConfig): Pr
     .join("\n");
   const configuredRoles = (config?.roles ?? []).length ? (config?.roles ?? []).join(", ") : "aucun role special";
   const seed = Math.random().toString(36).slice(2, 7);
+  const direction = pickStoryDirection(seed);
+  const fallbackStory = pickDefaultStoryPreset(seed);
+  const feedbackHints = [...new Set((opts.feedbackHints ?? []).map((hint) => hint.trim()).filter(Boolean))].slice(-8);
   const prompt = [
     `Nouvelle partie : ${seatCount} joueurs.`,
     `Configuration choisie par l'hôte : ${config?.songomby ?? 1} Songomby, rythme ${config?.pace ?? "normal"}, rôles spéciaux activés : ${configuredRoles}.`,
@@ -276,32 +345,75 @@ export async function generateStory(seatCount: number, config?: StoryConfig): Pr
     activeRoleLines ? `RÔLES ACTIFS À PRENDRE EN COMPTE:\n${activeRoleLines}` : "RÔLES ACTIFS À PRENDRE EN COMPTE:\n- songomby",
     "Pour chaque rôle actif, fournis une entrée roleEpithets et une entrée roleSheets complète. Pour chaque rôle actif ayant une phase nocturne dans nightSteps, fournis une phrase dédiée.",
     "Si tu proposes config.roles, elle doit inclure au minimum tous les rôles spéciaux déjà activés par l'hôte ; n'en retire aucun.",
-    `Invente une légende ORIGINALE et différente à chaque fois (varie le lieu, la menace, le ton). Graine: ${seed}.`,
+    `DIRECTION CRÉATIVE OBLIGATOIRE POUR CETTE PARTIE : ${direction}`,
+    "Le titre, l'intro, les textes d'ambiance et les morts doivent suivre cette direction principale.",
+    "N'utilise pas 'baobab noir', 'baobab des fady' ou la rizière comme motif central par défaut ; ils peuvent apparaître en détail secondaire seulement si la direction le justifie.",
+    feedbackHints.length ? `CORRECTIONS AUTOMATIQUES ISSUES DES RUNS PRÉCÉDENTS À RESPECTER:\n- ${feedbackHints.join("\n- ")}` : "",
+    `Invente une légende ORIGINALE et différente à chaque fois (varie le lieu, la menace, le ton). Identifiant interne: ${seed}.`,
     `La composition finale doit rester cohérente avec ${seatCount} joueurs (au moins 1 Songomby, et garde une majorité de villageois).`,
     "Tous les textes français générés doivent conserver les accents et une typographie française correcte.",
     "Adopte une narration de livre de conte rimé : chaque texte d'ambiance doit avoir une cadence orale et au moins une rime ou assonance nette, tout en restant clair pour jouer.",
     "Réponds uniquement en JSON.",
-  ].join(" ");
+  ].filter(Boolean).join(" ");
   const t0 = Date.now();
+  const provider = opts.provider ?? env.AI_PROVIDER ?? DEFAULT_STORY_AI_PROVIDER;
+  const model = opts.model ?? env.AI_MODEL ?? (provider === "codex" ? DEFAULT_STORY_AI_MODEL : undefined);
+  const reasoningEffort = opts.reasoningEffort ?? env.AI_REASONING_EFFORT ?? (provider === "codex" ? DEFAULT_STORY_AI_REASONING_EFFORT : undefined);
   try {
     // Creative generation is slower than a trivial call — give it real headroom
     // (the player waits on the prep screen only as long as it actually takes).
-    const provider = env.AI_PROVIDER ?? DEFAULT_STORY_AI_PROVIDER;
     const raw = await aiGenerateJSON({
       system: systemPrompt(maxSongomby),
       prompt,
       provider,
-      model: env.AI_MODEL ?? (provider === "codex" ? DEFAULT_STORY_AI_MODEL : undefined),
-      reasoningEffort: env.AI_REASONING_EFFORT ?? (provider === "codex" ? DEFAULT_STORY_AI_REASONING_EFFORT : undefined),
-      timeoutMs: Math.max(30_000, env.AI_TIMEOUT_MS),
+      model,
+      reasoningEffort,
+      timeoutMs: Math.max(30_000, opts.timeoutMs ?? env.AI_TIMEOUT_MS),
     });
     const ms = Date.now() - t0;
-    if (!raw || typeof raw !== "object") { console.warn(`[angano/story] fallback DEFAULT_STORY (no AI output) in ${ms}ms`); return sanitizeStory({}, seatCount, activeRoles); }
+    if (!raw || typeof raw !== "object") {
+      console.warn(`[angano/story] fallback local story preset (no AI output) in ${ms}ms`);
+      return {
+        story: sanitizeStory({}, seatCount, activeRoles, fallbackStory),
+        raw: null,
+        fallback: true,
+        ms,
+        provider,
+        model,
+        reasoningEffort,
+        seed,
+        direction,
+        feedbackHints,
+      };
+    }
     console.log(`[angano/story] generated "${(raw as { title?: string }).title ?? "?"}" in ${ms}ms`);
-    return sanitizeStory(raw, seatCount, activeRoles);
+    return {
+      story: sanitizeStory(raw, seatCount, activeRoles),
+      raw,
+      fallback: false,
+      ms,
+      provider,
+      model,
+      reasoningEffort,
+      seed,
+      direction,
+      feedbackHints,
+    };
   } catch {
-    console.warn(`[angano/story] fallback DEFAULT_STORY (error) in ${Date.now() - t0}ms`);
-    return sanitizeStory({}, seatCount, activeRoles);
+    const ms = Date.now() - t0;
+    console.warn(`[angano/story] fallback local story preset (error) in ${ms}ms`);
+    return {
+      story: sanitizeStory({}, seatCount, activeRoles, fallbackStory),
+      raw: null,
+      fallback: true,
+      ms,
+      provider,
+      model,
+      reasoningEffort,
+      seed,
+      direction,
+      feedbackHints,
+    };
   }
 }
 
@@ -312,7 +424,7 @@ function activeRolesFromConfig(config?: StoryConfig): string[] {
   const roles = ["mponina", "songomby", ...(config?.roles ?? [])];
   return normalizeActiveRoles(roles);
 }
-function sanitizeRoleSheet(raw: unknown): StoryRoleSheet {
+function sanitizeRoleSheet(roleId: string, raw: unknown): StoryRoleSheet {
   const s = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
   return {
     title: clamp(s.title, 80),
@@ -323,4 +435,43 @@ function sanitizeRoleSheet(raw: unknown): StoryRoleSheet {
     successCondition: clamp(s.successCondition, 260),
     rewardTitle: clamp(s.rewardTitle, 80),
   };
+}
+function pickStoryDirection(seed: string): string {
+  const n = Number.parseInt(seed, 36);
+  const index = Number.isFinite(n) ? n % STORY_DIRECTIONS.length : Math.floor(Math.random() * STORY_DIRECTIONS.length);
+  return STORY_DIRECTIONS[index]!;
+}
+export function pickDefaultStoryPreset(seed = Math.random().toString(36).slice(2, 7)): StorySetup {
+  const requested = process.env.ANGANO_STORY_PRESET?.trim();
+  if (requested) {
+    const byId = DEFAULT_STORY_PRESETS.find((preset) => preset.id === requested);
+    if (byId) return byId.story;
+    const index = Number.parseInt(requested, 10);
+    if (Number.isFinite(index) && DEFAULT_STORY_PRESETS[index]) return DEFAULT_STORY_PRESETS[index]!.story;
+  }
+  const n = Number.parseInt(seed, 36);
+  const index = Number.isFinite(n) ? n % DEFAULT_STORY_PRESETS.length : Math.floor(Math.random() * DEFAULT_STORY_PRESETS.length);
+  return DEFAULT_STORY_PRESETS[index]!.story;
+}
+function publicLines(
+  v: unknown,
+  maxItems: number,
+  maxChars: number,
+  ctx: { title: string; villageName: string },
+  allowedPlaceholders = new Set<string>(),
+): string[] {
+  return lines(v, maxItems, maxChars).map((line) => fillPublicPlaceholders(line, ctx, allowedPlaceholders)).filter(Boolean);
+}
+function fillPublicPlaceholders(
+  text: string,
+  ctx: { title: string; villageName: string },
+  allowedPlaceholders = new Set<string>(),
+): string {
+  return text
+    .replaceAll("{villageName}", ctx.villageName)
+    .replaceAll("{storyTitle}", ctx.title)
+    .replace(PUBLIC_PLACEHOLDER_RE, (token) => allowedPlaceholders.has(token) ? token : "")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s+([,.;:!?])/g, "$1")
+    .trim();
 }

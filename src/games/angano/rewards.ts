@@ -13,6 +13,7 @@ export interface RewardDefinition {
   trigger: RewardTrigger;
   targetMode: RewardTargetMode;
   timing: RewardTiming;
+  requiredTitles: number;
   uses: number;
 }
 
@@ -22,10 +23,11 @@ export const REWARD_CATALOG: RewardDefinition[] = [
     roleId: "mponina",
     slot: 1,
     name: "Voix du Fokonolona",
-    desc: "Une fois pendant un vote, ton vote compte double.",
+    desc: "Une fois, ton prochain vote compte double au dépouillement.",
     trigger: "vote",
     targetMode: "vote_target",
     timing: "next_phase",
+    requiredTitles: 1,
     uses: 1,
   },
   {
@@ -37,39 +39,43 @@ export const REWARD_CATALOG: RewardDefinition[] = [
     trigger: "night",
     targetMode: "player",
     timing: "next_phase",
+    requiredTitles: 1,
     uses: 1,
   },
   {
     id: "ombiasy_self_protect",
     roleId: "ombiasy",
     slot: 1,
-    name: "Baume caché",
-    desc: "Une fois, tu peux te protéger toi-même d'une attaque nocturne.",
+    name: "Sampy protecteur",
+    desc: "Une fois, si les Songomby te ciblent la nuit, ton amulette te protège automatiquement.",
     trigger: "night",
     targetMode: "none",
     timing: "next_phase",
+    requiredTitles: 1,
     uses: 1,
   },
   {
-    id: "mpihaza_marked_arrow",
-    roleId: "mpihaza",
+    id: "fanany_return_fady",
+    roleId: "fanany",
     slot: 1,
-    name: "Flèche marquée",
-    desc: "Une fois le jour, marque une cible par défaut pour ta dernière flèche.",
+    name: "Fady de retour",
+    desc: "Une fois, si une attaque nocturne devait te tuer, tu survis et l'un des meurtriers meurt à ta place.",
     trigger: "death",
-    targetMode: "player",
-    timing: "next_phase",
+    targetMode: "none",
+    timing: "immediate",
+    requiredTitles: 1,
     uses: 1,
   },
   {
-    id: "zazavavindrano_deep_fady",
+    id: "zazavavindrano_water_offering",
     roleId: "zazavavindrano",
     slot: 1,
-    name: "Fady profond",
-    desc: "Ton prochain fady détecte toute visite, pas seulement les visites hostiles.",
+    name: "Offrande aux eaux",
+    desc: "Une fois, si ton fady est troublé, l'offrande annule la première action hostile contre la cible protégée.",
     trigger: "night",
-    targetMode: "player",
-    timing: "next_phase",
+    targetMode: "none",
+    timing: "immediate",
+    requiredTitles: 1,
     uses: 1,
   },
   {
@@ -81,17 +87,19 @@ export const REWARD_CATALOG: RewardDefinition[] = [
     trigger: "night",
     targetMode: "player",
     timing: "next_phase",
+    requiredTitles: 1,
     uses: 1,
   },
   {
-    id: "songomby_double_hunt_vote",
+    id: "songomby_lay_mark",
     roleId: "songomby",
     slot: 1,
-    name: "Appétit de meute",
-    desc: "Une fois, ton vote de chasse nocturne compte double.",
+    name: "Lay des naseaux",
+    desc: "Une fois, ta prochaine chasse qui laisse une cible vivante la marque jusqu'au prochain vote : si elle reçoit au moins un vote, elle subit +1 vote fantôme.",
     trigger: "night",
-    targetMode: "player",
+    targetMode: "none",
     timing: "next_phase",
+    requiredTitles: 1,
     uses: 1,
   },
   {
@@ -103,6 +111,7 @@ export const REWARD_CATALOG: RewardDefinition[] = [
     trigger: "passive",
     targetMode: "none",
     timing: "next_phase",
+    requiredTitles: 1,
     uses: 1,
   },
   {
@@ -114,14 +123,20 @@ export const REWARD_CATALOG: RewardDefinition[] = [
     trigger: "night",
     targetMode: "player",
     timing: "next_phase",
+    requiredTitles: 1,
     uses: 1,
   },
 ];
 
-export function rewardsForRoleSlot(roleId: string, slot: number, sourceMissionId: string): RewardInfo[] {
+export function rewardsForRole(roleId: string, sourceMissionId: string): RewardInfo[] {
   return REWARD_CATALOG
-    .filter((reward) => reward.roleId === roleId && reward.slot === slot)
+    .filter((reward) => reward.roleId === roleId)
+    .sort((a, b) => a.requiredTitles - b.requiredTitles || a.slot - b.slot)
     .map((reward) => rewardInfo(reward, sourceMissionId, "locked"));
+}
+
+export function rewardsForRoleSlot(roleId: string, slot: number, sourceMissionId: string): RewardInfo[] {
+  return rewardsForRole(roleId, sourceMissionId).filter((reward) => reward.requiredTitles <= slot);
 }
 
 export function rewardInfo(def: RewardDefinition, sourceMissionId: string, status: RewardStatus): RewardInfo {
@@ -130,6 +145,7 @@ export function rewardInfo(def: RewardDefinition, sourceMissionId: string, statu
     name: def.name,
     desc: def.desc,
     status,
+    requiredTitles: def.requiredTitles,
     uses: def.uses,
     usesLeft: status === "used" ? 0 : def.uses,
     sourceMissionId,
@@ -141,5 +157,19 @@ export function setRewardStatus(info: RewardInfo, status: RewardStatus): RewardI
     ...info,
     status,
     usesLeft: status === "used" ? 0 : info.uses,
+  };
+}
+
+export function useUnlockedReward(rewards: RewardInfo[], rewardId: string): { rewards: RewardInfo[]; used: boolean } {
+  let used = false;
+  return {
+    used: rewards.some((reward) => reward.id === rewardId && reward.status === "unlocked" && reward.usesLeft > 0),
+    rewards: rewards.map((reward) => {
+      if (!used && reward.id === rewardId && reward.status === "unlocked" && reward.usesLeft > 0) {
+        used = true;
+        return setRewardStatus(reward, "used");
+      }
+      return reward;
+    }),
   };
 }

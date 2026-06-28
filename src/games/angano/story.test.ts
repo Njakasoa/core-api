@@ -1,5 +1,5 @@
 import { test, expect } from "bun:test";
-import { sanitizeStory, DEFAULT_STORY } from "./story.ts";
+import { sanitizeStory, DEFAULT_STORY, DEFAULT_STORY_PRESETS, pickDefaultStoryPreset } from "./story.ts";
 
 // The sanitizer is the anti-desync guarantee: whatever the AI returns, the engine
 // only ever sees catalog roles, clamped counts and bounded text.
@@ -39,6 +39,7 @@ test("roleSheets: only known role ids, bounded fields", () => {
   expect(Object.keys(out.roleSheets)).toEqual(["mpisikidy"]);
   expect(out.roleSheets.mpisikidy!.title).toBe("Oracle des hautes herbes");
   expect(out.roleSheets.mpisikidy!.background.length).toBeLessThanOrEqual(420);
+  expect(out.roleSheets.mpisikidy!.rewardTitle).toBe("titre");
 });
 
 test("missing/empty fields fall back to defaults; ambiance always has 4 keys", () => {
@@ -50,6 +51,54 @@ test("missing/empty fields fall back to defaults; ambiance always has 4 keys", (
   expect(out.nightSteps.songomby).toBeTruthy();
   expect(out.dayProgression.debate.length).toBeGreaterThan(0);
   expect(out.narratorScript.length).toBeGreaterThan(0);
+});
+
+test("local default story presets include the base fallback and validated AI legends", () => {
+  expect(DEFAULT_STORY_PRESETS.map((preset) => preset.id)).toEqual([
+    "base-rizieres",
+    "barriere-rompue",
+    "pierres-laterite",
+    "lac-jarres-blanches",
+    "lanternes-mangrove",
+  ]);
+  expect(DEFAULT_STORY_PRESETS[0]?.story.title).toBe(DEFAULT_STORY.title);
+  for (const preset of DEFAULT_STORY_PRESETS.slice(1)) {
+    const sanitized = sanitizeStory({}, 9, [
+      "mponina",
+      "songomby",
+      "mpisikidy",
+      "ombiasy",
+      "fanany",
+      "zazavavindrano",
+      "kalanoro",
+      "kinoly",
+      "mpamosavy",
+    ], preset.story);
+    expect(Object.keys(preset.story.roleSheets).sort()).toEqual([
+      "fanany",
+      "kalanoro",
+      "kinoly",
+      "mpamosavy",
+      "mpisikidy",
+      "mponina",
+      "ombiasy",
+      "songomby",
+      "zazavavindrano",
+    ]);
+    expect(Object.keys(sanitized.roleSheets).sort()).toEqual(Object.keys(preset.story.roleSheets).sort());
+    expect(sanitized.roleEpithets.songomby).toBe(preset.story.roleEpithets.songomby);
+    expect(preset.story.narratorScript.length).toBeGreaterThan(0);
+  }
+});
+
+test("ANGANO_STORY_PRESET selects a deterministic local fallback preset", () => {
+  const prev = process.env.ANGANO_STORY_PRESET;
+  process.env.ANGANO_STORY_PRESET = "lac-jarres-blanches";
+  expect(pickDefaultStoryPreset("abc").title).toBe("Le Lac des Jarres Blanches");
+  process.env.ANGANO_STORY_PRESET = "0";
+  expect(pickDefaultStoryPreset("abc").title).toBe(DEFAULT_STORY.title);
+  if (prev === undefined) delete process.env.ANGANO_STORY_PRESET;
+  else process.env.ANGANO_STORY_PRESET = prev;
 });
 
 test("long strings are truncated (no unbounded payloads)", () => {
@@ -76,6 +125,40 @@ test("nightSteps and deathTemplates are sanitized with fallbacks", () => {
   expect(out.nightSteps.songomby).toBe("La meute attend.");
   expect(out.nightSteps.mpisikidy).toBe(DEFAULT_STORY.nightSteps.mpisikidy);
   expect(out.deaths).toEqual(["{victim} disparaît sous les rizières."]);
+});
+
+test("public story placeholders are resolved while death variables are preserved", () => {
+  const out = sanitizeStory({
+    title: "La nuit de {villageName}",
+    villageName: "Ambanja",
+    intro: "{playerName} entend {villageName} trembler dans {storyTitle}.",
+    ambiance: {
+      night: "La nuit couvre {villageName}.",
+      dawn: "{storyTitle} revient au matin.",
+      debate: "{roleName} ne doit pas apparaître ici.",
+      vote: "Le vote tranche.",
+    },
+    nightSteps: { songomby: "{villageName} écoute les sabots de {playerName}." },
+    dayProgression: { debate: ["{villageName} débat sous {storyTitle}."] },
+    deaths: ["{victim} tombe à {villageName}; {role} révélé, {count} morts, {playerName} oublié."],
+    victoryVillage: "{villageName} survit à {storyTitle}.",
+    narratorScript: ["Lis {villageName}, jamais {playerName}."],
+  }, 5);
+
+  expect(out.title).toBe("La nuit de Ambanja");
+  expect(out.intro).toContain("Ambanja");
+  expect(out.intro).toContain("La nuit de Ambanja");
+  expect(out.intro).not.toContain("{playerName}");
+  expect(out.ambiance.debate).not.toContain("{roleName}");
+  expect(out.nightSteps.songomby).toContain("Ambanja");
+  expect(out.nightSteps.songomby).not.toContain("{playerName}");
+  expect(out.dayProgression.debate[0]).toContain("La nuit de Ambanja");
+  expect(out.deaths[0]).toContain("{victim}");
+  expect(out.deaths[0]).toContain("{role}");
+  expect(out.deaths[0]).toContain("{count}");
+  expect(out.deaths[0]).not.toContain("{playerName}");
+  expect(out.victoryVillage).toContain("Ambanja");
+  expect(out.narratorScript[0]).not.toContain("{playerName}");
 });
 
 test("active roles get epithets and cannot be removed by AI config", () => {

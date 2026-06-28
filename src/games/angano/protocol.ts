@@ -37,6 +37,7 @@ export interface RewardInfo {
   name: string;
   desc: string;
   status: RewardStatus;
+  requiredTitles: number;
   uses: number;
   usesLeft: number;
   sourceMissionId: string;
@@ -53,7 +54,9 @@ export interface PlayerMissionSheet {
   successCondition: string;
   unlocks: string[];
   rewards: RewardInfo[];
+  titleReward: string;
   rewardTitle: string;
+  titlesEarned: number;
   status: MissionStatus;
 }
 export interface NarratorMissionSheet extends PlayerMissionSheet {
@@ -82,7 +85,7 @@ export type AnganoClientMsg =
   | { k: "takeNarrator"; on: boolean }
   | { k: "setConfig"; config: GameConfig }              // host
   | { k: "start" }                                      // host
-  | { k: "action"; targetId: string | null; extra?: string } // night action (role-contextual)
+  | { k: "action"; targetId: string | null; extra?: string } // role action (night or debate)
   | { k: "vote"; targetId: string | null }
   | { k: "missionStatus"; playerId: string; status: MissionStatus } // narrator validates social missions
   | { k: "nextPhase" }                                  // narrator pacing
@@ -96,8 +99,8 @@ export type AnganoServerMsg =
   | { k: "narrator"; players: NarratorPlayer[]; log: string[]; missionSheets?: NarratorMissionSheet[] } // private, god view + live night log
   | { k: "phase"; phase: Phase; day: number; audioKey: string; imageKey: string; durationMs: number; title: string; text: string }
   | { k: "prompt"; kind: string; targets: PlayerPublic[]; options?: string[]; deadline: number } // to the acting player(s)
-  | { k: "seerResult"; targetId: string; roleId: string; nameMg: string } // private, Mpisikidy (at dawn)
-  | { k: "trackResult"; targetId: string; visited: boolean }              // private, Kalanoro (at dawn)
+  | { k: "seerResult"; targetId: string; roleId: string; nameMg: string; team?: Team } // private, Mpisikidy (at dawn)
+  | { k: "trackResult"; targetId: string; visited: boolean; destinationId?: string | null } // private, Kalanoro (at dawn)
   | { k: "fadyTrace"; targetId: string }                                  // private, Zazavavindrano (at dawn)
   | { k: "blocked" }                                                      // private, a roleblocked actor (at dawn)
   | { k: "wolves"; wolfIds: string[]; victimId: string | null }           // private, to the pack
