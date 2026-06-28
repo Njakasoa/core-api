@@ -3,8 +3,11 @@ import { ROLES, roleName, roleTeam, isPackKiller, type Team } from "./roles.ts";
 import {
   PHASE_ASSET, PACE_MS, NIGHT_STEP_MS,
   type Phase, type GameConfig, type PlayerPublic, type NarratorPlayer, type AnganoServerMsg,
+  type MissionStatus, type PlayerMissionSheet, type NarratorMissionSheet, type PersonalWinner,
 } from "./protocol.ts";
 import { generateStory, NIGHT_STORY_PHASES, type NightStoryPhase, type StorySetup } from "./story.ts";
+import { buildMissionSheets } from "./missions.ts";
+import { setRewardStatus } from "./rewards.ts";
 
 type Socket = WSContext<unknown>;
 
@@ -32,7 +35,7 @@ const AUBE_PAUSE_MS = 2500; // let the death reveal land before day/night resume
 // human-readable phase labels for the public banner
 const PHASE_LABEL: Partial<Record<Phase, string>> = {
   zazavavindrano: "Zazavavindrano", mpamosavy: "Mpamosavy", mpisikidy: "Mpisikidy",
-  kalanoro: "Kalanoro", songomby: "Songomby", ombiasy: "Ombiasy",
+  kalanoro: "Kalanoro", kinoly: "Kinoly", songomby: "Songomby", ombiasy: "Ombiasy",
 };
 
 /**
@@ -50,7 +53,8 @@ export class AnganoRoom {
   phase: Phase = "lobby";
   day = 0;
   private config: GameConfig = { ...DEFAULT_CONFIG };
-  private story: StorySetup | null = null; // AI conteur legend for this game (null = classic)
+  private story: StorySetup | null = null; // AI story legend for this game (null = classic)
+  private missions = new Map<string, PlayerMissionSheet>();
   private players = new Map<string, Player>();
   private log: string[] = [];
   onEmpty?: () => void;
@@ -67,6 +71,9 @@ export class AnganoRoom {
   private mpamosavyTarget: string | null = null;
   private seerTarget: string | null = null;
   private kalanoroTarget: string | null = null;
+  private kinolyTargets = new Map<string, string>(); // kinolyId -> targetId chosen this night
+  private kinolyHaunts = new Map<string, Set<string>>(); // kinolyId -> targets successfully haunted
+  private kinolyObjectiveDone = new Set<string>(); // kinoly player ids
   private usedHealThisNight = false;
   private usedPoisonThisNight = false;
   // "no repeat" memory for fady / curse
@@ -132,19 +139,14 @@ export class AnganoRoom {
     if (id !== this.hostId || this.phase !== "lobby") return;
     const roles = [...new Set((config.roles ?? []).filter((r) => ROLES[r]?.optional))]; // dedupe
     const pace = (["rapide", "normal", "lent"] as const).includes(config.pace as never) ? config.pace : "normal";
-    const conteur = config.conteur === "ia" ? "ia" : "humain";
-    this.config = { songomby: Math.max(1, Math.min(5, Math.floor(config.songomby || 1))), roles, pace, manualDeaths: !!config.manualDeaths, theme: !!config.theme, conteur };
+    this.config = { songomby: Math.max(1, Math.min(5, Math.floor(config.songomby || 1))), roles, pace, manualDeaths: !!config.manualDeaths, theme: !!config.theme };
     this.broadcastLobby();
   }
 
   // ── start ──
   async start(id: string) {
     if (id !== this.hostId || this.phase !== "lobby") return;
-    // Conteur IA: no dedicated narrator seat — everyone plays.
-    if (this.config.conteur === "ia" && this.narratorId) {
-      const n = this.players.get(this.narratorId); if (n) n.isNarrator = false;
-      this.narratorId = null;
-    }
+    if (!this.narratorId) return this.err(id, "Il faut choisir un narrateur avant de lancer la partie.");
     const seats = [...this.players.values()].filter((p) => p.id !== this.narratorId);
     if (seats.length < MIN_PLAYERS) return this.err(id, `Il faut au moins ${MIN_PLAYERS} joueurs${this.narratorId ? " (hors narrateur)" : ""}.`);
 
@@ -153,7 +155,7 @@ export class AnganoRoom {
     this.story = null;
     if (this.config.theme) {
       this.phase = "roles";
-      this.broadcast({ k: "phase", phase: "roles", day: 0, audioKey: PHASE_ASSET.roles.audio, imageKey: PHASE_ASSET.roles.image, durationMs: 30_000, title: "Le conteur tisse votre légende…", text: "Les esprits du récit s'assemblent." });
+      this.broadcast({ k: "phase", phase: "roles", day: 0, audioKey: PHASE_ASSET.roles.audio, imageKey: PHASE_ASSET.roles.image, durationMs: 30_000, title: "La légende se tisse…", text: "Les esprits du récit s'assemblent." });
       const story = await generateStory(seats.length, this.config);
       if (this.phase !== "roles") return; // room torn down / rematch during generation
       this.story = story;
@@ -162,9 +164,11 @@ export class AnganoRoom {
 
     if (!this.assignRoles(seats, id)) { this.phase = "lobby"; this.broadcastLobby(); return; }
     this.lastZazaTarget = null; this.lastMpamosavyTarget = null;
+    this.kinolyTargets.clear(); this.kinolyHaunts.clear(); this.kinolyObjectiveDone.clear();
+    this.missions = this.config.theme ? buildMissionSheets(seats, this.story) : new Map();
     this.log = [];
     this.pushLog(`Partie lancée : ${seats.length} joueurs, ${this.config.songomby} Songomby.`);
-    for (const p of seats) this.sendRole(p);
+    for (const p of seats) { this.sendRole(p); this.sendMission(p); }
     if (this.story) this.broadcast(this.storyMsg(this.story));
     this.sendNarrator();
     this.beginNight();
@@ -239,6 +243,11 @@ export class AnganoRoom {
         this.kalanoroTarget = targetId;
         this.fire();
         break;
+      case "kinoly":
+        if (p.roleId !== "kinoly" || !targetId) return;
+        this.kinolyTargets.set(id, targetId);
+        this.fire();
+        break;
       case "songomby":
         if (!isPackKiller(p.roleId) || !targetId) return;
         this.wolfVotes.set(id, targetId);
@@ -265,15 +274,29 @@ export class AnganoRoom {
     this.broadcast({ k: "voteState", tally: this.tally() });
     if (this.aliveSeatPlayers().every((s) => this.votes.has(s.id))) this.fire();
   }
+  missionStatus(id: string, playerId: string, status: MissionStatus) {
+    if (id !== this.narratorId || this.phase === "lobby") return;
+    const sheet = this.missions.get(playerId);
+    if (!sheet) return;
+    this.applyMissionStatus(sheet, status);
+    const label = status === "validated" ? "validée" : status === "failed" ? "ratée" : "rouverte";
+    this.pushLog(`Mission de ${this.name(playerId)} ${label}.`);
+    if (status === "validated" && sheet.rewards.length) this.pushLog(`${this.name(playerId)} débloque ${sheet.rewards.map((reward) => reward.name).join(", ")}.`);
+    const player = this.players.get(playerId);
+    if (player) this.sendMission(player);
+    this.sendNarrator();
+  }
   nextPhase(id: string) { if (id === this.narratorId || id === this.hostId) this.fire(); }
   rematch(id: string) {
     if (id !== this.hostId || this.phase !== "finished") return;
     this.clearTimer();
     this.day = 0; this.phase = "lobby"; this.steps = []; this.stepIx = 0;
     this.wolfVotes.clear(); this.votes.clear(); this.deathQueue = []; this.deathReveals = []; this.pendingHunter = null;
+    this.kinolyTargets.clear(); this.kinolyHaunts.clear(); this.kinolyObjectiveDone.clear();
     this.zazaTarget = this.mpamosavyTarget = this.seerTarget = this.kalanoroTarget = null;
     this.lastZazaTarget = this.lastMpamosavyTarget = null;
     this.story = null;
+    this.missions.clear();
     for (const p of this.players.values()) { p.alive = true; p.roleId = undefined; p.healUsed = false; p.poisonUsed = false; }
     this.broadcastLobby();
   }
@@ -282,6 +305,7 @@ export class AnganoRoom {
   private beginNight() {
     this.day += 1;
     this.nightVictim = null; this.nightHealed = false; this.nightPoison = null; this.wolfVotes.clear();
+    this.kinolyTargets.clear();
     this.zazaTarget = this.mpamosavyTarget = this.seerTarget = this.kalanoroTarget = null;
     this.usedHealThisNight = false; this.usedPoisonThisNight = false;
     this.steps = [];
@@ -289,6 +313,7 @@ export class AnganoRoom {
     if (this.alivePlaying("mpamosavy")) this.steps.push("mpamosavy");
     if (this.alivePlaying("mpisikidy")) this.steps.push("mpisikidy");
     if (this.alivePlaying("kalanoro")) this.steps.push("kalanoro");
+    if (this.alivePlaying("kinoly")) this.steps.push("kinoly");
     if (this.alivePack().length > 0) this.steps.push("songomby");
     if (this.alivePlaying("ombiasy")) this.steps.push("ombiasy");
     this.stepIx = 0;
@@ -304,6 +329,7 @@ export class AnganoRoom {
     else if (phase === "mpamosavy") this.prompt("mpamosavy", this.alivePlayers("mpamosavy"), { targets: this.aliveExcept([this.firstAlive("mpamosavy"), this.lastMpamosavyTarget]) });
     else if (phase === "mpisikidy") this.prompt("mpisikidy", this.alivePlayers("mpisikidy"), { targets: this.aliveExcept([this.firstAlive("mpisikidy")]) });
     else if (phase === "kalanoro") this.prompt("kalanoro", this.alivePlayers("kalanoro"), { targets: this.aliveExcept([this.firstAlive("kalanoro")]) });
+    else if (phase === "kinoly") this.prompt("kinoly", this.alivePlayers("kinoly"), { targets: this.aliveExcept([this.firstAlive("kinoly")]) });
     else if (phase === "songomby") { this.sendWolves(); this.prompt("songomby", this.alivePack(), { targets: alive.filter((t) => !isPackKiller(this.players.get(t.id)?.roleId)) }); }
     else if (phase === "ombiasy") {
       const witch = this.alivePlayers("ombiasy")[0];
@@ -332,6 +358,7 @@ export class AnganoRoom {
     const mpamP = this.firstAlivePlayer("mpamosavy");
     const seerP = this.firstAlivePlayer("mpisikidy");
     const kalP = this.firstAlivePlayer("kalanoro");
+    const kinolyPs = this.alivePlayers("kinoly");
     const ombP = this.firstAlivePlayer("ombiasy");
 
     const zazaBlocked = !!zazaP && blocked.has(zazaP.id);
@@ -346,6 +373,13 @@ export class AnganoRoom {
     if (mpamP && this.mpamosavyTarget) visit(mpamP.id, this.mpamosavyTarget, true); // curse is hostile, can't be self-blocked
     if (seerP && this.seerTarget && !seerBlocked) visit(seerP.id, this.seerTarget, false);
     if (kalP && this.kalanoroTarget && !kalBlocked) visit(kalP.id, this.kalanoroTarget, false);
+    for (const kinolyP of kinolyPs) {
+      const targetId = this.kinolyTargets.get(kinolyP.id) ?? null;
+      if (targetId && !blocked.has(kinolyP.id)) {
+        visit(kinolyP.id, targetId, true);
+        this.markKinolyHaunt(kinolyP.id, targetId);
+      }
+    }
     if (this.nightVictim) for (const w of this.alivePack()) visit(w.id, this.nightVictim, true); // pack kill is unblockable
     if (ombP && !ombBlocked) {
       if (this.nightHealed) visit(ombP.id, this.nightVictim, false);
@@ -379,6 +413,9 @@ export class AnganoRoom {
     if (seerBlocked && this.seerTarget && seerP) safeSend(seerP.ws, { k: "blocked" });
     if (kalBlocked && this.kalanoroTarget && kalP) safeSend(kalP.ws, { k: "blocked" });
     if (zazaBlocked && this.zazaTarget && zazaP) safeSend(zazaP.ws, { k: "blocked" });
+    for (const kinolyP of kinolyPs) {
+      if (blocked.has(kinolyP.id) && this.kinolyTargets.has(kinolyP.id)) safeSend(kinolyP.ws, { k: "blocked" });
+    }
     if (ombBlocked && (this.usedHealThisNight || this.usedPoisonThisNight) && ombP) safeSend(ombP.ws, { k: "blocked" });
 
     this.lastZazaTarget = this.zazaTarget;
@@ -453,16 +490,17 @@ export class AnganoRoom {
     const top = [...counts.entries()].filter(([, c]) => c === max).map(([id]) => id);
     const eliminated = max > 0 && top.length ? top[(Math.random() * top.length) | 0]! : null;
     this.broadcast({ k: "voteResult", eliminatedId: eliminated, ...(eliminated ? { roleId: this.players.get(eliminated)!.roleId, nameMg: roleName(this.players.get(eliminated)!.roleId ?? "mponina") } : {}) });
-    if (eliminated) this.beginDeaths([eliminated], () => this.beginNight());
+    if (eliminated) { this.completeKinolyObjective(eliminated); this.beginDeaths([eliminated], () => this.beginNight()); }
     else { this.pushLog("Personne n'est éliminé."); this.sendNarrator(); if (!this.checkWin()) this.beginNight(); }
   }
 
-  // ── win check (V2: village vs songomby parity, no lovers) ──
+  // ── win check (V2: village vs songomby parity; neutral roles ignored for parity) ──
   private checkWin(): boolean {
     const alive = this.aliveSeatPlayers();
     const evil = alive.filter((p) => roleTeam(p.roleId ?? "") === "songomby");
+    const village = alive.filter((p) => roleTeam(p.roleId ?? "") === "village");
     if (evil.length === 0) return this.finish("village");
-    if (evil.length >= alive.length - evil.length) return this.finish("songomby");
+    if (evil.length >= village.length) return this.finish("songomby");
     return false;
   }
   private finish(winner: Team): boolean {
@@ -473,7 +511,7 @@ export class AnganoRoom {
     const text = this.story
       ? (winner === "village" ? this.story.victoryVillage : this.story.victorySongomby)
       : (winner === "village" ? "Le village a chassé tous les monstres ! 🎉" : "Les Songomby ont fait taire le village… 🐺");
-    this.broadcast({ k: "finish", winner, text, reveal });
+    this.broadcast({ k: "finish", winner, text, reveal, missions: this.narratorMissionSheets(), personalWinners: this.personalWinners() });
     this.sendNarrator();
     return true;
   }
@@ -485,6 +523,32 @@ export class AnganoRoom {
     const shown = t.roleId === "kinoly" ? "mponina" : (t.roleId ?? "mponina"); // Kinoly disguise
     safeSend(seer.ws, { k: "seerResult", targetId, roleId: shown, nameMg: roleName(shown) });
     this.pushLog(`Le Mpisikidy sonde ${t.name} → ${roleName(shown)}.`);
+  }
+  private markKinolyHaunt(kinolyId: string, targetId: string) {
+    let targets = this.kinolyHaunts.get(kinolyId);
+    if (!targets) { targets = new Set(); this.kinolyHaunts.set(kinolyId, targets); }
+    targets.add(targetId);
+    this.pushLog(`${this.name(kinolyId)} hante ${this.name(targetId)}.`);
+  }
+  private completeKinolyObjective(votedOutId: string) {
+    for (const [kinolyId, targets] of this.kinolyHaunts) {
+      const kinoly = this.players.get(kinolyId);
+      if (!kinoly?.alive || !targets.has(votedOutId) || this.kinolyObjectiveDone.has(kinolyId)) continue;
+      this.kinolyObjectiveDone.add(kinolyId);
+      this.pushLog(`Objectif du Kinoly accompli : ${this.name(votedOutId)} tombe au vote après la hantise.`);
+    }
+  }
+  private personalWinners(): PersonalWinner[] {
+    return [...this.kinolyObjectiveDone]
+      .map((id) => this.players.get(id))
+      .filter((p): p is Player => !!p && p.alive && p.roleId === "kinoly")
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        roleId: "kinoly",
+        nameMg: roleName("kinoly"),
+        reason: "A survécu après avoir mené une cible hantée au vote.",
+      }));
   }
 
   // ── helpers ──
@@ -506,6 +570,7 @@ export class AnganoRoom {
       : phase === "mpamosavy" ? "Le Mpamosavy souffle une malédiction."
       : phase === "mpisikidy" ? "Le Mpisikidy sonde un joueur."
       : phase === "kalanoro" ? "Le Kalanoro lit les pas de la nuit."
+      : phase === "kinoly" ? "Le Kinoly cherche une porte où laisser sa trace."
       : phase === "songomby" ? "Les Songomby choisissent leur victime."
       : phase === "ombiasy" ? "L'Ombiasy peut soigner ou empoisonner." : "La nuit tombe…";
   }
@@ -541,10 +606,15 @@ export class AnganoRoom {
     const def = ROLES[p.roleId ?? "mponina"]!;
     safeSend(p.ws, { k: "role", role: { roleId: def.id, team: def.team, nameMg: def.nameMg, desc: def.desc } });
   }
+  private sendMission(p: Player) {
+    const story = this.missions.get(p.id);
+    if (story) safeSend(p.ws, { k: "playerStory", story });
+  }
   private sendSelf(id: string) {
     const p = this.players.get(id); if (!p) return;
     safeSend(p.ws, { k: "lobby", code: this.code, hostId: this.hostId, narratorId: this.narratorId, selfId: id, config: this.config, players: [...this.players.values()].map(pub) });
     if (this.phase !== "lobby" && p.roleId) this.sendRole(p);
+    if (this.phase !== "lobby") this.sendMission(p);
     if (this.phase !== "lobby" && this.story) safeSend(p.ws, this.storyMsg(this.story));
     // reconnect resync: re-enter the stage at the current phase + state
     if (this.phase !== "lobby" && this.phase !== "finished" && this.lastPhase) {
@@ -562,7 +632,26 @@ export class AnganoRoom {
     const nar = this.players.get(this.narratorId); if (!nar) return;
     const players: NarratorPlayer[] = [...this.players.values()].filter((p) => p.id !== this.narratorId)
       .map((p) => ({ ...pub(p), roleId: p.roleId }));
-    safeSend(nar.ws, { k: "narrator", players, log: this.log.slice(-30) });
+    safeSend(nar.ws, { k: "narrator", players, log: this.log.slice(-30), missionSheets: this.narratorMissionSheets() });
+  }
+  private narratorMissionSheets(): NarratorMissionSheet[] {
+    return [...this.players.values()]
+      .filter((p) => p.id !== this.narratorId)
+      .map((p) => {
+        const sheet = this.missions.get(p.id);
+        if (!sheet) return null;
+        const roleId = p.roleId ?? "mponina";
+        return { ...sheet, playerName: p.name, roleId, nameMg: roleName(roleId), alive: p.alive };
+      })
+      .filter((sheet): sheet is NarratorMissionSheet => !!sheet);
+  }
+  private applyMissionStatus(sheet: PlayerMissionSheet, status: MissionStatus) {
+    sheet.status = status;
+    if (status === "validated") {
+      sheet.rewards = sheet.rewards.map((reward) => reward.status === "locked" ? setRewardStatus(reward, "unlocked") : reward);
+      return;
+    }
+    sheet.rewards = sheet.rewards.map((reward) => reward.status === "used" ? reward : setRewardStatus(reward, "locked"));
   }
   private tally() { const c = new Map<string, number>(); for (const t of this.votes.values()) c.set(t, (c.get(t) ?? 0) + 1); return [...c.entries()].map(([id, votes]) => ({ id, votes })); }
   private broadcast(msg: AnganoServerMsg) { for (const p of this.players.values()) safeSend(p.ws, msg); }

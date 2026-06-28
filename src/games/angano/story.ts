@@ -3,7 +3,7 @@ import { env } from "../../env.ts";
 import { ROLES, OPTIONAL_ROLES } from "./roles.ts";
 
 /**
- * AI "Conteur" layer for Angano. Every game can be wrapped in a unique Malagasy
+ * AI story layer for Angano. Every game can be wrapped in a unique Malagasy
  * legend (narration + ambiance) and an optional themed composition — but the
  * engine stays 100% authoritative. The AI only produces TEXT + a BOUNDED config,
  * which we validate and sanitize against the fixed role catalog; anything off-spec
@@ -13,14 +13,24 @@ import { ROLES, OPTIONAL_ROLES } from "./roles.ts";
 
 export type Pace = "rapide" | "normal" | "lent";
 export interface StoryConfig { roles?: string[]; songomby?: number; pace?: Pace }
-export const NIGHT_STORY_PHASES = ["zazavavindrano", "mpamosavy", "mpisikidy", "kalanoro", "songomby", "ombiasy"] as const;
+export const NIGHT_STORY_PHASES = ["zazavavindrano", "mpamosavy", "mpisikidy", "kalanoro", "kinoly", "songomby", "ombiasy"] as const;
 export type NightStoryPhase = typeof NIGHT_STORY_PHASES[number];
 export interface StoryDayProgression { night: string[]; dawn: string[]; debate: string[]; vote: string[] }
+export interface StoryRoleSheet {
+  title: string;
+  background: string;
+  rumor: string;
+  secret: string;
+  mission: string;
+  successCondition: string;
+  rewardTitle: string;
+}
 export interface StorySetup {
   title: string;
   villageName: string;
   intro: string;
   roleEpithets: Record<string, string>;
+  roleSheets: Record<string, StoryRoleSheet>;
   ambiance: { night: string; dawn: string; debate: string; vote: string };
   nightSteps: Partial<Record<NightStoryPhase, string>>;
   dayProgression: StoryDayProgression;
@@ -56,6 +66,7 @@ export const DEFAULT_STORY: StorySetup = {
   villageName: "Ambodivoara",
   intro: "Depuis trois nuits, le village d'Ambodivoara ne dort plus. Une présence rôde au bord de l'eau, et chaque aube emporte un visage de moins. Ce soir, il faut démasquer le mal avant qu'il ne dévore tout.",
   roleEpithets: {},
+  roleSheets: {},
   ambiance: {
     night: "La nuit tombe sur les rizières ; les esprits s'éveillent.",
     dawn: "L'aube se lève, pâle, sur ce qui reste du village.",
@@ -67,6 +78,7 @@ export const DEFAULT_STORY: StorySetup = {
     mpamosavy: "Le Mpamosavy murmure une malédiction dans la nuit froide.",
     mpisikidy: "Le Mpisikidy aligne les graines pour lire ce que les visages cachent.",
     kalanoro: "Le Kalanoro suit les pas, même ceux qui reviennent à l'envers.",
+    kinoly: "Le Kinoly glisse près des portes et laisse au silence une trace pâle.",
     songomby: "Les Songomby rôdent ensemble et choisissent quelle porte craquera.",
     ombiasy: "L'Ombiasy pèse le remède et le poison, sachant que chacun ne revient pas.",
   },
@@ -113,12 +125,13 @@ function systemPrompt(maxSongomby: number): string {
     .map((r) => `- ${r.id} ("${r.nameMg}", ${r.team}) : ${r.desc}`)
     .join("\n");
   return [
-    "Tu es le Conteur d'Angano, un jeu de déduction sociale (type loup-garou) ancré dans le folklore malgache.",
-    "À chaque partie tu inventes une LÉGENDE unique qui HABILLE le jeu — sans jamais en changer les règles.",
+    "Tu aides le narrateur humain d'Angano, un jeu de déduction sociale (type loup-garou) ancré dans le folklore malgache.",
+    "À chaque partie tu inventes une LÉGENDE unique et des FICHES DE RÔLE qui HABILLENT le jeu — sans jamais en changer les règles.",
     "",
     "RÈGLES IMMUABLES :",
     "- Les rôles, pouvoirs et conditions de victoire sont FIXES (catalogue ci-dessous). Tu n'inventes ni rôle ni pouvoir.",
-    "- Le camp \"village\" gagne en éliminant tous les \"songomby\" ; les \"songomby\" gagnent à la parité.",
+    "- Le camp \"village\" gagne en éliminant tous les \"songomby\" ; les \"songomby\" gagnent à la parité contre les villageois.",
+    "- Les rôles \"neutre\" ne comptent pas dans la parité et suivent seulement l'objectif personnel décrit par leur rôle.",
     "- Tu produis UNIQUEMENT du texte d'ambiance et, optionnellement, une composition dans les bornes.",
     "",
     "CATALOGUE DES RÔLES (id → nom canonique, camp : pouvoir) :",
@@ -126,8 +139,9 @@ function systemPrompt(maxSongomby: number): string {
     "",
     "RÉPONDS UNIQUEMENT avec un objet JSON (aucun texte autour) de cette forme :",
     '{"title":string,"villageName":string,"intro":string,"roleEpithets":{"<roleId>":string},' +
+      '"roleSheets":{"<roleId>":{"title":string,"background":string,"rumor":string,"secret":string,"mission":string,"successCondition":string,"rewardTitle":string}},' +
       '"ambiance":{"night":string,"dawn":string,"debate":string,"vote":string},' +
-      '"nightSteps":{"zazavavindrano":string,"mpamosavy":string,"mpisikidy":string,"kalanoro":string,"songomby":string,"ombiasy":string},' +
+      '"nightSteps":{"zazavavindrano":string,"mpamosavy":string,"mpisikidy":string,"kalanoro":string,"kinoly":string,"songomby":string,"ombiasy":string},' +
       '"dayProgression":{"night":[string],"dawn":[string],"debate":[string],"vote":[string]},' +
       '"deaths":[string],"victoryVillage":string,"victorySongomby":string,"narratorScript":[string],' +
       '"config":{"roles":["<roleId optionnel>"],"songomby":number,"pace":"rapide"|"normal"|"lent"}}',
@@ -135,6 +149,14 @@ function systemPrompt(maxSongomby: number): string {
     "CONTRAINTES :",
     `- config.roles : uniquement des ids OPTIONNELS parmi [${OPTIONAL_ROLES.join(", ")}]. songomby entre 1 et ${maxSongomby}. pace dans l'enum.`,
     "- roleEpithets : optionnel, une courte épithète d'ambiance par rôle (le nom canonique reste affiché).",
+    "- roleSheets : OBLIGATOIRE pour chaque rôle actif, y compris mponina et songomby. Chaque fiche sert de base privée au joueur qui reçoit ce rôle.",
+    "- roleSheets.background : 1 à 2 phrases d'origine/personnage, en mode conte, sans révéler d'information mécanique cachée.",
+    "- roleSheets.rumor : une rumeur publique ou semi-publique qui pousse au roleplay.",
+    "- roleSheets.secret : un secret intime du personnage, compatible avec son camp et son rôle, sans créer de nouveau pouvoir.",
+    "- roleSheets.mission : une mission sociale légère qui influence le débat, les alliances ou le vote, mais jamais les règles ni les conditions de victoire.",
+    "- roleSheets.successCondition : critère observable que le narrateur humain peut valider facilement.",
+    "- roleSheets.rewardTitle : titre honorifique court gagné si la mission est validée, sans avantage mécanique.",
+    "- Variables autorisées dans roleSheets : {playerName}, {villageName}, {storyTitle}, {roleName}. N'invente aucun vrai prénom dans ces fiches.",
     "- nightSteps : une phrase courte par sous-phase nocturne ; elle doit évoquer le rôle sans révéler qui le possède.",
     "- dayProgression : 3 à 4 phrases par clé, de plus en plus tendues du jour 1 à la fin.",
     "- deaths : 3 à 6 templates publics, avec variables autorisées {victim}, {role}, {count}. N'utilise ces variables que pour des morts déjà révélées.",
@@ -162,6 +184,13 @@ export function sanitizeStory(raw: any, seatCount: number, activeRoleIds: string
   }
   for (const id of activeRoles) {
     if (!epithets[id]) epithets[id] = DEFAULT_ROLE_EPITHETS[id] ?? ROLES[id]!.nameMg;
+  }
+  const roleSheets: Record<string, StoryRoleSheet> = {};
+  const rawRoleSheets = raw?.roleSheets && typeof raw.roleSheets === "object" ? raw.roleSheets : {};
+  for (const [roleId, value] of Object.entries(rawRoleSheets)) {
+    if (!ROLES[roleId] || !value || typeof value !== "object") continue;
+    const sheet = sanitizeRoleSheet(value);
+    if (Object.values(sheet).some(Boolean)) roleSheets[roleId] = sheet;
   }
   const rawNightSteps = raw?.nightSteps && typeof raw.nightSteps === "object" ? raw.nightSteps : {};
   const nightSteps: Partial<Record<NightStoryPhase, string>> = {};
@@ -210,6 +239,7 @@ export function sanitizeStory(raw: any, seatCount: number, activeRoleIds: string
     villageName: clamp(raw?.villageName, 60) || d.villageName,
     intro: clamp(raw?.intro, 800) || d.intro,
     roleEpithets: epithets,
+    roleSheets,
     ambiance: {
       night: clamp(amb.night, 300) || d.ambiance.night,
       dawn: clamp(amb.dawn, 300) || d.ambiance.dawn,
@@ -244,7 +274,7 @@ export async function generateStory(seatCount: number, config?: StoryConfig): Pr
     `Configuration choisie par l'hôte : ${config?.songomby ?? 1} Songomby, rythme ${config?.pace ?? "normal"}, rôles spéciaux activés : ${configuredRoles}.`,
     "Tu dois écrire une légende compatible avec TOUS les rôles actifs ci-dessous. Ne les ignore pas et ne les contredis pas.",
     activeRoleLines ? `RÔLES ACTIFS À PRENDRE EN COMPTE:\n${activeRoleLines}` : "RÔLES ACTIFS À PRENDRE EN COMPTE:\n- songomby",
-    "Pour chaque rôle actif, fournis une entrée roleEpithets. Pour chaque rôle actif ayant une phase nocturne dans nightSteps, fournis une phrase dédiée.",
+    "Pour chaque rôle actif, fournis une entrée roleEpithets et une entrée roleSheets complète. Pour chaque rôle actif ayant une phase nocturne dans nightSteps, fournis une phrase dédiée.",
     "Si tu proposes config.roles, elle doit inclure au minimum tous les rôles spéciaux déjà activés par l'hôte ; n'en retire aucun.",
     `Invente une légende ORIGINALE et différente à chaque fois (varie le lieu, la menace, le ton). Graine: ${seed}.`,
     `La composition finale doit rester cohérente avec ${seatCount} joueurs (au moins 1 Songomby, et garde une majorité de villageois).`,
@@ -279,6 +309,18 @@ function normalizeActiveRoles(ids: string[]): string[] {
   return [...new Set(ids.filter((id) => !!ROLES[id]))];
 }
 function activeRolesFromConfig(config?: StoryConfig): string[] {
-  const roles = ["songomby", ...(config?.roles ?? [])];
+  const roles = ["mponina", "songomby", ...(config?.roles ?? [])];
   return normalizeActiveRoles(roles);
+}
+function sanitizeRoleSheet(raw: unknown): StoryRoleSheet {
+  const s = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
+  return {
+    title: clamp(s.title, 80),
+    background: clamp(s.background, 420),
+    rumor: clamp(s.rumor, 240),
+    secret: clamp(s.secret, 260),
+    mission: clamp(s.mission, 280),
+    successCondition: clamp(s.successCondition, 260),
+    rewardTitle: clamp(s.rewardTitle, 80),
+  };
 }

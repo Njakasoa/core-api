@@ -5,10 +5,9 @@
  * V2 identity = "fady / traces / esprits" (not "loup-garou skinné"). The lovers
  * mechanic (Cupidon) is removed. See docs/roles-folklore-finalise-v2.md.
  *
- * Teams: "village" vs "songomby" (the antagonist camp, used for the parity win).
- * Note the distinction between the *team* (parity counting) and the *pack* (the
- * roles that actually bite at night): Kinoly and Mpamosavy count for the Songomby
- * parity but only Songomby + Kinoly take part in the night kill.
+ * Teams: "village" vs "songomby" (the antagonist camp, used for the parity win)
+ * plus "neutre" for personal objectives. The pack is narrower than the team:
+ * only actual Songomby see each other and take part in the night kill.
  */
 export type Team = "village" | "songomby" | "neutre";
 
@@ -51,8 +50,8 @@ export const ROLES: Record<string, RoleDef> = {
     desc: "Chaque nuit, lis les pas d'un joueur : tu sauras s'il a quitté sa place cette nuit.",
   },
   kinoly: {
-    id: "kinoly", nameMg: "Kinoly", team: "songomby", asset: "role_kinoly", optional: true,
-    desc: "Tu chasses avec les Songomby, mais les signes te font paraître innocent à la divination.",
+    id: "kinoly", nameMg: "Kinoly", team: "neutre", asset: "role_kinoly", optional: true,
+    desc: "Revenant neutre. Chaque nuit, hante un joueur ; gagne personnellement s'il survit après avoir vu une cible hantée mourir au vote. Paraît Mponina au Mpisikidy.",
   },
   mpamosavy: {
     id: "mpamosavy", nameMg: "Mpamosavy", team: "songomby", asset: "role_mpamosavy", optional: true,
@@ -61,7 +60,7 @@ export const ROLES: Record<string, RoleDef> = {
 };
 
 /** Roles that take part in the nightly pack kill (and see/choose with the wolves). */
-export const PACK_KILLERS: ReadonlySet<string> = new Set(["songomby", "kinoly"]);
+export const PACK_KILLERS: ReadonlySet<string> = new Set(["songomby"]);
 export const isPackKiller = (id: string | undefined): boolean => !!id && PACK_KILLERS.has(id);
 
 export const OPTIONAL_ROLES = Object.values(ROLES).filter((r) => r.optional).map((r) => r.id);
