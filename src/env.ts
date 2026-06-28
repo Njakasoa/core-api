@@ -37,6 +37,9 @@ const schema = z.object({
   // and games fall back to their built-in defaults.
   AI_BASE_URL: z.string().default("https://ai.njakasoa.xyz"),
   AI_API_TOKEN: z.string().optional(),
+  AI_PROVIDER: z.enum(["claude", "codex"]).optional(),
+  AI_MODEL: z.string().min(1).optional(),
+  AI_REASONING_EFFORT: z.string().min(1).optional(),
   AI_TIMEOUT_MS: z.coerce.number().int().positive().default(8_000),
 });
 

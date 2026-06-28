@@ -4,7 +4,7 @@ import {
   PHASE_ASSET, PACE_MS, NIGHT_STEP_MS,
   type Phase, type GameConfig, type PlayerPublic, type NarratorPlayer, type AnganoServerMsg,
 } from "./protocol.ts";
-import { generateStory, type StorySetup } from "./story.ts";
+import { generateStory, NIGHT_STORY_PHASES, type NightStoryPhase, type StorySetup } from "./story.ts";
 
 type Socket = WSContext<unknown>;
 
@@ -76,7 +76,7 @@ export class AnganoRoom {
   private votes = new Map<string, string>(); // voterId -> targetId
   // death resolution
   private deathQueue: string[] = [];
-  private deathReveals: { id: string; roleId: string; nameMg: string }[] = [];
+  private deathReveals: { id: string; name: string; roleId: string; nameMg: string }[] = [];
   private pendingHunter: string | null = null;
   private afterDeaths: (() => void) | null = null;
   private lastPhase?: Extract<AnganoServerMsg, { k: "phase" }>; // for reconnect resync
@@ -154,7 +154,7 @@ export class AnganoRoom {
     if (this.config.theme) {
       this.phase = "roles";
       this.broadcast({ k: "phase", phase: "roles", day: 0, audioKey: PHASE_ASSET.roles.audio, imageKey: PHASE_ASSET.roles.image, durationMs: 30_000, title: "Le conteur tisse votre légende…", text: "Les esprits du récit s'assemblent." });
-      const story = await generateStory(seats.length);
+      const story = await generateStory(seats.length, this.config);
       if (this.phase !== "roles") return; // room torn down / rematch during generation
       this.story = story;
       this.applyStoryConfig(story, seats.length);
@@ -202,7 +202,16 @@ export class AnganoRoom {
     return true;
   }
   private storyMsg(s: StorySetup): AnganoServerMsg {
-    return { k: "story", title: s.title, villageName: s.villageName, intro: s.intro, ambiance: s.ambiance, roleEpithets: s.roleEpithets };
+    return {
+      k: "story",
+      title: s.title,
+      villageName: s.villageName,
+      intro: s.intro,
+      ambiance: s.ambiance,
+      roleEpithets: s.roleEpithets,
+      composition: { songomby: this.config.songomby, roles: this.config.roles, pace: this.config.pace ?? "normal" },
+      narratorScript: s.narratorScript,
+    };
   }
 
   // ── client actions ──
@@ -391,7 +400,7 @@ export class AnganoRoom {
       const p = this.players.get(id);
       if (!p || !p.alive) continue;
       p.alive = false;
-      this.deathReveals.push({ id, roleId: p.roleId ?? "mponina", nameMg: roleName(p.roleId ?? "mponina") });
+      this.deathReveals.push({ id, name: p.name, roleId: p.roleId ?? "mponina", nameMg: roleName(p.roleId ?? "mponina") });
       this.pushLog(`${p.name} meurt (${roleName(p.roleId ?? "mponina")}).`);
       if (p.roleId === "mpihaza" && this.aliveSeats().length > 0) { this.pendingHunter = id; break; }
     }
@@ -404,8 +413,13 @@ export class AnganoRoom {
       return;
     }
     if (this.deathReveals.length) {
-      const dtext = this.story ? this.story.deaths[(Math.random() * this.story.deaths.length) | 0]! : deathsText(this.deathReveals);
-      this.broadcast({ k: "deaths", ids: this.deathReveals.map((r) => r.id), reveals: this.deathReveals, text: dtext });
+      const dtext = this.story ? storyDeathText(this.story.deaths, this.deathReveals) : deathsText(this.deathReveals);
+      this.broadcast({
+        k: "deaths",
+        ids: this.deathReveals.map((r) => r.id),
+        reveals: this.deathReveals.map((r) => ({ id: r.id, roleId: r.roleId, nameMg: r.nameMg })),
+        text: dtext,
+      });
     } else if (this.phase === "aube") {
       this.broadcast({ k: "deaths", ids: [], reveals: [], text: "Personne n'est mort cette nuit." });
     }
@@ -500,16 +514,20 @@ export class AnganoRoom {
     this.phase = phase;
     const a = PHASE_ASSET[phase];
     const dur = phase === "debat" ? this.pace().debate : phase === "vote" ? this.pace().vote : this.pace().night;
-    let body = text;
-    if (this.story) {
-      if (phase === "aube") body = this.story.ambiance.dawn;
-      else if (phase === "debat") body = this.story.ambiance.debate;
-      else if (phase === "vote") body = this.story.ambiance.vote;
-    }
+    const body = this.storyText(phase, text);
     this.lastPhase = { k: "phase", phase, day: this.day, audioKey: a.audio, imageKey: a.image, durationMs: dur, title, text: body };
     this.broadcast(this.lastPhase);
     this.broadcast({ k: "state", phase, day: this.day, players: [...this.players.values()].map(pub) });
     this.sendNarrator();
+  }
+  private storyText(phase: Phase, fallback: string): string {
+    const s = this.story;
+    if (!s) return fallback;
+    if (isNightStoryPhase(phase)) return s.nightSteps[phase] || storyLine(s.dayProgression.night, this.day) || s.ambiance.night || fallback;
+    if (phase === "aube") return storyLine(s.dayProgression.dawn, this.day) || s.ambiance.dawn || fallback;
+    if (phase === "debat") return storyLine(s.dayProgression.debate, this.day) || s.ambiance.debate || fallback;
+    if (phase === "vote") return storyLine(s.dayProgression.vote, this.day) || s.ambiance.vote || fallback;
+    return fallback;
   }
   private prompt(kind: string, to: Player[], opts: { targets: PlayerPublic[]; options?: string[] }) {
     for (const p of to) safeSend(p.ws, { k: "prompt", kind, targets: opts.targets, options: opts.options, deadline: Date.now() + NIGHT_STEP_MS });
@@ -560,6 +578,23 @@ export class AnganoRoom {
 function pub(p: Player): PlayerPublic { return { id: p.id, name: p.name, alive: p.alive, isNarrator: p.isNarrator }; }
 function deathsText(reveals: { nameMg: string; id: string }[]): string {
   return reveals.length === 0 ? "Personne n'est mort." : `Mort(s) : ${reveals.length}.`;
+}
+function storyLine(lines: string[], day: number): string {
+  if (!lines.length) return "";
+  return lines[Math.min(Math.max(0, day - 1), lines.length - 1)] ?? "";
+}
+function isNightStoryPhase(phase: Phase): phase is NightStoryPhase {
+  return (NIGHT_STORY_PHASES as readonly string[]).includes(phase);
+}
+function storyDeathText(templates: string[], reveals: { name: string; nameMg: string }[]): string {
+  const template = templates[(Math.random() * templates.length) | 0] ?? deathsText(reveals.map((r, i) => ({ id: String(i), nameMg: r.nameMg })));
+  const names = reveals.map((r) => r.name).join(", ");
+  const roles = [...new Set(reveals.map((r) => r.nameMg))].join(", ");
+  return template
+    .replaceAll("{victimName}", names)
+    .replaceAll("{victim}", names)
+    .replaceAll("{role}", roles)
+    .replaceAll("{count}", String(reveals.length));
 }
 function pickMajority(votes: string[]): string | null {
   if (!votes.length) return null;

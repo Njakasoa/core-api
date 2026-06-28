@@ -30,6 +30,7 @@ export type Pace = "rapide" | "normal" | "lent";
 export type Conteur = "ia" | "humain";
 export interface GameConfig { songomby: number; roles: string[]; pace?: Pace; manualDeaths?: boolean; theme?: boolean; conteur?: Conteur } // pack size + optional roles + pacing + AI story
 export interface StoryAmbiance { night: string; dawn: string; debate: string; vote: string }
+export interface StoryComposition { songomby: number; roles: string[]; pace: Pace }
 
 // phase durations per pace tier (ms)
 export const PACE_MS: Record<Pace, { night: number; debate: number; vote: number }> = {
@@ -51,7 +52,7 @@ export type AnganoClientMsg =
 export type AnganoServerMsg =
   | { k: "lobby"; code: string; hostId: string; narratorId: string | null; selfId: string; config: GameConfig; players: PlayerPublic[] }
   | { k: "role"; role: RoleInfo }                       // private, to each player
-  | { k: "story"; title: string; villageName: string; intro: string; ambiance: StoryAmbiance; roleEpithets: Record<string, string> } // AI conteur, to all
+  | { k: "story"; title: string; villageName: string; intro: string; ambiance: StoryAmbiance; roleEpithets: Record<string, string>; composition?: StoryComposition; narratorScript?: string[] } // AI conteur, to all
   | { k: "narrator"; players: NarratorPlayer[]; log: string[] } // private, god view + live night log
   | { k: "phase"; phase: Phase; day: number; audioKey: string; imageKey: string; durationMs: number; title: string; text: string }
   | { k: "prompt"; kind: string; targets: PlayerPublic[]; options?: string[]; deadline: number } // to the acting player(s)
