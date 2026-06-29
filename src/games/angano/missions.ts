@@ -43,6 +43,7 @@ export function buildMissionSheets(players: MissionPlayer[], story: StorySetup |
       unlocks: rewards.map((reward) => reward.id),
       rewards,
       status: "pending",
+      reviewRejected: false,
     });
   });
   return sheets;
