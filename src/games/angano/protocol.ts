@@ -97,35 +97,44 @@ export type AnganoServerMsg =
   | { k: "lobby"; code: string; hostId: string; narratorId: string | null; selfId: string; config: GameConfig; players: PlayerPublic[] }
   | { k: "role"; role: RoleInfo }                       // private, to each player
   | { k: "playerStory"; story: PlayerMissionSheet }     // private, role-play sheet + secret mission
-  | { k: "story"; title: string; villageName: string; intro: string; ambiance: StoryAmbiance; roleEpithets: Record<string, string>; composition?: StoryComposition; narratorScript?: string[] } // AI story, to all
+  | { k: "story"; title: string; villageName: string; intro: string; ambiance: StoryAmbiance; roleEpithets: Record<string, string>; composition?: StoryComposition; narratorScript?: string[]; introVoiceUrl?: string } // AI story, to all
   | { k: "narrator"; players: NarratorPlayer[]; log: string[]; missionSheets?: NarratorMissionSheet[] } // private, god view + live night log
-  | { k: "phase"; phase: Phase; day: number; audioKey: string; imageKey: string; durationMs: number; title: string; text: string }
+  | { k: "phase"; phase: Phase; day: number; audioKey: string; imageKey: string; durationMs: number; title: string; text: string; voiceUrl?: string }
   | { k: "prompt"; kind: string; targets: PlayerPublic[]; options?: string[]; deadline: number } // to the acting player(s)
   | { k: "seerResult"; targetId: string; roleId: string; nameMg: string; team?: Team } // private, Mpisikidy (at dawn)
   | { k: "trackResult"; targetId: string; visited: boolean; destinationId?: string | null } // private, Kalanoro (at dawn)
   | { k: "fadyTrace"; targetId: string }                                  // private, Zazavavindrano (at dawn)
   | { k: "blocked" }                                                      // private, a roleblocked actor (at dawn)
   | { k: "wolves"; wolfIds: string[]; victimId: string | null }           // private, to the pack
-  | { k: "deaths"; ids: string[]; reveals: { id: string; roleId: string; nameMg: string }[]; text: string } // public
+  | { k: "deaths"; ids: string[]; reveals: { id: string; roleId: string; nameMg: string }[]; text: string; voiceUrl?: string; artKey?: string } // public
   | { k: "voteState"; tally: { id: string; votes: number }[] }
   | { k: "voteResult"; eliminatedId: string | null; roleId?: string; nameMg?: string }
   | { k: "state"; phase: Phase; day: number; players: PlayerPublic[] }
-  | { k: "finish"; winner: Team; text: string; reveal: { id: string; name: string; roleId: string; nameMg: string }[]; missions?: NarratorMissionSheet[]; personalWinners?: PersonalWinner[] }
+  | { k: "finish"; winner: Team; text: string; reveal: { id: string; name: string; roleId: string; nameMg: string }[]; missions?: NarratorMissionSheet[]; personalWinners?: PersonalWinner[]; voiceUrl?: string }
   | { k: "error"; message: string };
 
-// phase → ambiance audio folder + image stem. Night turns use the painted power
-// banners; scene phases (lobby/aube/debat/vote/finished) keep placeholders until
-// their scene banners are produced.
+/**
+ * phase → ambiance audio key + image stem.
+ *
+ * Keys are canonical and Angano-native: the old set was inherited from a Loup-Garou
+ * project, so seven night turns shared three tracks named after removed mechanics
+ * (`cupidon` voiced the Zazavavindrano long after Cupid was cut). Each phase now
+ * owns its key, which lets the browser fade a distinct ambiance per turn.
+ *
+ * The browser resolves these through its own manifest with a legacy-alias table and
+ * a per-key fallback chain, so front and back can deploy in either order and an
+ * unproduced track degrades to a shared placeholder instead of silence.
+ */
 export const PHASE_ASSET: Record<Phase, { audio: string; image: string }> = {
-  lobby: { audio: "introduction", image: "scene_menu" },
-  roles: { audio: "introduction", image: "scene_menu" },
-  zazavavindrano: { audio: "cupidon", image: "power_zaza_fady" },
-  mpamosavy: { audio: "sorciere", image: "power_mpamosavy_malediction" },
-  mpisikidy: { audio: "voyante", image: "power_mpisikidy_sikidy" },
-  kalanoro: { audio: "voyante", image: "power_kalanoro_traces" },
-  kinoly: { audio: "loupgarou", image: "power_kinoly_imposture" },
-  songomby: { audio: "loupgarou", image: "power_songomby_chasse" },
-  ombiasy: { audio: "sorciere", image: "power_ombiasy_remede" },
+  lobby: { audio: "salon", image: "scene_menu" },
+  roles: { audio: "legende", image: "scene_menu" },
+  zazavavindrano: { audio: "nuit_zazavavindrano", image: "power_zaza_fady" },
+  mpamosavy: { audio: "nuit_mpamosavy", image: "power_mpamosavy_malediction" },
+  mpisikidy: { audio: "nuit_mpisikidy", image: "power_mpisikidy_sikidy" },
+  kalanoro: { audio: "nuit_kalanoro", image: "power_kalanoro_traces" },
+  kinoly: { audio: "nuit_kinoly", image: "power_kinoly_hantise" },
+  songomby: { audio: "nuit_songomby", image: "power_songomby_chasse" },
+  ombiasy: { audio: "nuit_ombiasy", image: "power_ombiasy_remede" },
   aube: { audio: "aube", image: "scene_aube" },
   debat: { audio: "debat", image: "scene_debat" },
   vote: { audio: "vote", image: "scene_vote" },

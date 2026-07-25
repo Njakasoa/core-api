@@ -41,6 +41,20 @@ const schema = z.object({
   AI_MODEL: z.string().min(1).optional(),
   AI_REASONING_EFFORT: z.string().min(1).optional(),
   AI_TIMEOUT_MS: z.coerce.number().int().positive().default(8_000),
+
+  // ElevenLabs text-to-speech — optional. Powers Angano's spoken narration. The
+  // feature only turns on when BOTH the key and a narrator voice are set; with
+  // either missing the games stay text-only (never a hard dependency).
+  ELEVENLABS_API_KEY: z.string().optional(),
+  ELEVENLABS_BASE_URL: z.string().default("https://api.elevenlabs.io"),
+  ELEVENLABS_MODEL: z.string().min(1).default("eleven_flash_v2_5"),
+  ELEVENLABS_VOICE_NARRATOR: z.string().optional(),
+  TTS_TIMEOUT_MS: z.coerce.number().int().positive().default(12_000),
+  // In-memory clip cache ceiling. Rooms already live in process memory, so a
+  // per-replica cache adds no new scaling constraint (see ARCHITECTURE.md).
+  TTS_CACHE_MB: z.coerce.number().int().positive().default(64),
+  // Hard ceiling on synthesized characters per Angano room — caps the bill.
+  ANGANO_TTS_CHAR_BUDGET: z.coerce.number().int().positive().default(8_000),
 });
 
 const parsed = schema.safeParse(process.env);
