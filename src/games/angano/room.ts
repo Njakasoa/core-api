@@ -225,6 +225,7 @@ export class AnganoRoom {
     return true;
   }
   private storyMsg(s: StorySetup): AnganoServerMsg {
+    const introVoiceUrl = this.voice.urlFor(s.intro);
     return {
       k: "story",
       title: s.title,
@@ -234,7 +235,7 @@ export class AnganoRoom {
       roleEpithets: s.roleEpithets,
       composition: { songomby: this.config.songomby, roles: this.config.roles, pace: this.config.pace ?? "normal" },
       narratorScript: s.narratorScript,
-      ...(this.voice.urlFor(s.intro) ? { introVoiceUrl: this.voice.urlFor(s.intro) } : {}),
+      ...(introVoiceUrl ? { introVoiceUrl } : {}),
     };
   }
 
