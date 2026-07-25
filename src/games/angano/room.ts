@@ -346,7 +346,20 @@ export class AnganoRoom {
     if (player) this.sendMission(player);
     this.sendNarrator();
   }
-  nextPhase(id: string) { if (id === this.narratorId || id === this.hostId) this.fire(); }
+  /**
+   * Advance one beat.
+   *
+   * `from` is the phase the narrator was looking at when they tapped. Without it, a
+   * tap that lands just as a timer fires consumes the *next* phase's advance and
+   * skips a whole beat — that is how a debate disappears between a dawn and a vote.
+   * Comparing against the live phase is exact, where a timing window would only be a
+   * guess. Omitted (an older client) means we cannot check, so we advance.
+   */
+  nextPhase(id: string, from?: Phase) {
+    if (id !== this.narratorId && id !== this.hostId) return;
+    if (from && from !== this.phase) return; // the beat they meant is already gone
+    this.fire();
+  }
 
   /**
    * Step the narrator back one beat — for a mis-tap, not for a do-over.

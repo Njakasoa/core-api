@@ -104,7 +104,7 @@ export type AnganoClientMsg =
   | { k: "vote"; targetId: string | null }
   | { k: "missionStatus"; playerId: string; status: MissionStatus } // narrator validates social missions
   | { k: "missionReviewRequest" }                       // player asks the narrator to review their own mission
-  | { k: "nextPhase" }                                  // narrator pacing
+  | { k: "nextPhase"; from?: Phase }                    // narrator pacing; `from` guards against a tap racing a timer
   | { k: "prevPhase" }                                  // narrator: undo a mis-tap (bounded, see room.ts)
   | { k: "rematch" };                                   // host
 

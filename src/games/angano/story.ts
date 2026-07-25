@@ -293,10 +293,13 @@ export function sanitizeStory(raw: any, seatCount: number, activeRoleIds: string
     if (c.roles || c.songomby || c.pace) config = c;
   }
 
+  const rawIsEmpty = !raw || typeof raw !== "object" || Object.keys(raw as object).length === 0;
   return {
     // Only a pure preset keeps its id: the moment the AI supplied any prose, the
     // legend is no longer the one the recorded pack was written for.
-    ...(raw ? {} : { id: d.id }),
+    // Note `raw` is `{}` on the no-AI-output path — truthy, but contributing nothing —
+    // so emptiness is what matters here, not presence.
+    ...(rawIsEmpty ? { id: d.id } : {}),
     title,
     villageName,
     intro: fillPublicPlaceholders(clamp(raw?.intro, 800) || d.intro, publicCtx),
