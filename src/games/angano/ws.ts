@@ -57,7 +57,7 @@ export function anganoRoute(): Hono {
               if (msg.status === "pending" || msg.status === "validated" || msg.status === "failed") room.missionStatus(userId, String(msg.playerId ?? ""), msg.status);
               break;
             case "missionReviewRequest": room.requestMissionReview(userId); break;
-            case "nextPhase": room.nextPhase(userId); break;
+            case "nextPhase": room.nextPhase(userId, msg.from); break;
             case "prevPhase": room.prevPhase(userId); break;
             case "rematch": room.rematch(userId); break;
           }

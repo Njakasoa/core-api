@@ -189,3 +189,10 @@ test("with no AI output the preset id survives sanitising", () => {
   const fallback = pickDefaultStoryPreset("aaa");
   expect(sanitizeStory(null, 6, [], fallback).id).toBe(fallback.id);
 });
+
+test("the no-AI-output path passes an empty object and must still keep the id", () => {
+  const fallback = pickDefaultStoryPreset("aaa");
+  // generateStory calls sanitizeStory({}, …, fallbackStory) when the AI returns
+  // nothing: truthy, but contributing no prose.
+  expect(sanitizeStory({}, 6, [], fallback).id).toBe(fallback.id);
+});
