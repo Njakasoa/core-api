@@ -37,9 +37,29 @@ export function ttsEnabled(): boolean {
   return !!(env.ELEVENLABS_API_KEY && env.ELEVENLABS_VOICE_NARRATOR);
 }
 
-/** Content address of a clip — same text + voice + model ⇒ same hash ⇒ free replay. */
-export function ttsHash(text: string, voiceId: string, modelId: string): string {
-  return createHash("sha256").update(`${modelId}\u0000${voiceId}\u0000${text}`).digest("hex").slice(0, 32);
+/**
+ * Content address of a clip — same text + voice + model + tuning ⇒ same hash ⇒
+ * free replay. The tuning belongs in the key: re-tuning stability must not keep
+ * serving the previous rendering.
+ */
+export function ttsHash(text: string, voiceId: string, modelId: string, settings?: unknown): string {
+  const tuning = settings ? JSON.stringify(settings) : "";
+  return createHash("sha256").update(`${modelId}\u0000${voiceId}\u0000${tuning}\u0000${text}`).digest("hex").slice(0, 32);
+}
+
+/**
+ * Voice settings, or undefined to keep the voice's own defaults. Low stability is
+ * expressive, high is flat; `style` exaggerates the acting and gets unstable past
+ * ~0.6; `speed` below 1 is slower and graver. Audition values with the front's
+ * `bun scripts/audition-voice.ts` before pinning them here.
+ */
+function voiceSettings(): Record<string, number> | undefined {
+  const settings: Record<string, number> = {};
+  if (env.ELEVENLABS_STABILITY !== undefined) settings.stability = env.ELEVENLABS_STABILITY;
+  if (env.ELEVENLABS_SIMILARITY !== undefined) settings.similarity_boost = env.ELEVENLABS_SIMILARITY;
+  if (env.ELEVENLABS_STYLE !== undefined) settings.style = env.ELEVENLABS_STYLE;
+  if (env.ELEVENLABS_SPEED !== undefined) settings.speed = env.ELEVENLABS_SPEED;
+  return Object.keys(settings).length ? settings : undefined;
 }
 
 export function ttsGet(hash: string): TtsClip | undefined {
@@ -90,7 +110,8 @@ export async function ttsSynthesize(opts: {
 
   const voiceId = opts.voiceId || env.ELEVENLABS_VOICE_NARRATOR!;
   const modelId = opts.modelId || env.ELEVENLABS_MODEL;
-  const hash = ttsHash(text, voiceId, modelId);
+  const settings = voiceSettings();
+  const hash = ttsHash(text, voiceId, modelId, settings);
 
   const hit = ttsGet(hash);
   if (hit) return hit;
@@ -107,7 +128,7 @@ export async function ttsSynthesize(opts: {
           "content-type": "application/json",
           accept: "audio/mpeg",
         },
-        body: JSON.stringify({ text, model_id: modelId }),
+        body: JSON.stringify({ text, model_id: modelId, ...(settings ? { voice_settings: settings } : {}) }),
         signal: ctrl.signal,
       },
     );

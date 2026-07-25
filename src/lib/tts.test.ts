@@ -53,6 +53,48 @@ describe("lib/tts", () => {
     expect(ttsHash("a", "v", "m")).toMatch(/^[a-f0-9]{32}$/);
   });
 
+  it("folds the voice tuning into the hash so a re-tune is not served from cache", () => {
+    const plain = ttsHash("a", "v", "m");
+    const tuned = ttsHash("a", "v", "m", { stability: 0.3 });
+    expect(tuned).not.toBe(plain);
+    expect(ttsHash("a", "v", "m", { stability: 0.3 })).toBe(tuned);
+    expect(ttsHash("a", "v", "m", { stability: 0.6 })).not.toBe(tuned);
+  });
+
+  it("omits voice_settings entirely when none is configured", async () => {
+    // Pin every knob off: a developer's local .env must not change the outcome.
+    const before = { st: env.ELEVENLABS_STABILITY, si: env.ELEVENLABS_SIMILARITY, sy: env.ELEVENLABS_STYLE, sp: env.ELEVENLABS_SPEED };
+    const e = env as Pick<typeof env, "ELEVENLABS_STABILITY" | "ELEVENLABS_SIMILARITY" | "ELEVENLABS_STYLE" | "ELEVENLABS_SPEED">;
+    e.ELEVENLABS_STABILITY = e.ELEVENLABS_SIMILARITY = e.ELEVENLABS_STYLE = e.ELEVENLABS_SPEED = undefined;
+
+    const sent: Record<string, unknown>[] = [];
+    await withUpstream(
+      async (req) => { sent.push(JSON.parse(await req.text())); return mp3(); },
+      async () => { await ttsSynthesize({ text: "sans réglage" }); },
+    );
+    expect(sent[0]).toBeDefined();
+    expect("voice_settings" in sent[0]!).toBe(false); // let the voice keep its defaults
+
+    e.ELEVENLABS_STABILITY = before.st; e.ELEVENLABS_SIMILARITY = before.si;
+    e.ELEVENLABS_STYLE = before.sy; e.ELEVENLABS_SPEED = before.sp;
+  });
+
+  it("sends the configured voice settings upstream", async () => {
+    const before = { st: env.ELEVENLABS_STABILITY, sp: env.ELEVENLABS_SPEED };
+    (env as { ELEVENLABS_STABILITY?: number }).ELEVENLABS_STABILITY = 0.35;
+    (env as { ELEVENLABS_SPEED?: number }).ELEVENLABS_SPEED = 0.92;
+
+    const sent: Record<string, unknown>[] = [];
+    await withUpstream(
+      async (req) => { sent.push(JSON.parse(await req.text())); return mp3(); },
+      async () => { await ttsSynthesize({ text: "avec réglages" }); },
+    );
+    expect(sent[0]?.voice_settings).toEqual({ stability: 0.35, speed: 0.92 });
+
+    (env as { ELEVENLABS_STABILITY?: number }).ELEVENLABS_STABILITY = before.st;
+    (env as { ELEVENLABS_SPEED?: number }).ELEVENLABS_SPEED = before.sp;
+  });
+
   it("synthesizes, caches, and replays without a second upstream call", async () => {
     let calls = 0;
     await withUpstream(
