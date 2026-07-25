@@ -171,3 +171,21 @@ test("active roles get epithets and cannot be removed by AI config", () => {
   expect(out.roleEpithets.kalanoro).toBeTruthy();
   expect(out.config?.roles).toEqual(["ombiasy", "kalanoro", "mpisikidy"]);
 });
+
+test("a preset carries its id so the browser can pick the matching voice pack", () => {
+  const preset = pickDefaultStoryPreset("lanternes-mangrove");
+  expect(DEFAULT_STORY_PRESETS.some((p) => p.id === preset.id)).toBe(true);
+});
+
+test("an AI-written legend carries no preset id", () => {
+  const fallback = pickDefaultStoryPreset("aaa");
+  expect(fallback.id).toBeDefined();
+  // any AI prose at all means the story is no longer the one the pack was written for
+  const written = sanitizeStory({ intro: "Une toute autre légende." }, 6, [], fallback);
+  expect(written.id).toBeUndefined();
+});
+
+test("with no AI output the preset id survives sanitising", () => {
+  const fallback = pickDefaultStoryPreset("aaa");
+  expect(sanitizeStory(null, 6, [], fallback).id).toBe(fallback.id);
+});

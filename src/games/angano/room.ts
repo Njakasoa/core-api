@@ -236,6 +236,7 @@ export class AnganoRoom {
     const introVoiceUrl = this.voice.urlFor(s.intro);
     return {
       k: "story",
+      ...(s.id ? { storyId: s.id } : {}),
       title: s.title,
       villageName: s.villageName,
       intro: s.intro,
