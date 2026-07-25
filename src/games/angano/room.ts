@@ -8,6 +8,7 @@ import {
 import { generateStory, NIGHT_STORY_PHASES, type NightStoryPhase, type StorySetup } from "./story.ts";
 import { buildMissionSheets } from "./missions.ts";
 import { setRewardStatus, useUnlockedReward } from "./rewards.ts";
+import { RoomVoice } from "./voice.ts";
 
 type Socket = WSContext<unknown>;
 
@@ -91,6 +92,9 @@ export class AnganoRoom {
   private votes = new Map<string, string>(); // voterId -> targetId
   private fananyMark: string | null = null;
   private fananyMarkDay = 0;
+  private voice = new RoomVoice();
+  /** Art cue for the next `deaths` broadcast (e.g. the Razana revenge), consumed once. */
+  private pendingDeathArt: string | null = null;
   private songombyLayTarget: string | null = null;
   // death resolution
   private deathQueue: string[] = [];
@@ -170,6 +174,10 @@ export class AnganoRoom {
       if (this.phase !== "roles") return; // room torn down / rematch during generation
       this.story = story;
       this.applyStoryConfig(story, seats.length);
+      // Voice the legend while the prep screen is still up. Only the opening lines
+      // are awaited; the rest keeps warming behind the first night.
+      await this.voice.warm(story);
+      if (this.phase !== "roles") return;
     }
 
     if (!this.assignRoles(seats, id)) { this.phase = "lobby"; this.broadcastLobby(); return; }
@@ -226,6 +234,7 @@ export class AnganoRoom {
       roleEpithets: s.roleEpithets,
       composition: { songomby: this.config.songomby, roles: this.config.roles, pace: this.config.pace ?? "normal" },
       narratorScript: s.narratorScript,
+      ...(this.voice.urlFor(s.intro) ? { introVoiceUrl: this.voice.urlFor(s.intro) } : {}),
     };
   }
 
@@ -338,6 +347,8 @@ export class AnganoRoom {
     this.zazaTarget = this.mpamosavyTarget = this.seerTarget = this.kalanoroTarget = null;
     this.lastZazaTarget = this.lastMpamosavyTarget = this.lastKalanoroTarget = null;
     this.story = null;
+    this.pendingDeathArt = null;
+    this.voice.dispose(); this.voice = new RoomVoice(); // a rematch writes a new legend
     this.missions.clear();
     for (const p of this.players.values()) { p.alive = true; p.roleId = undefined; p.healUsed = false; p.exileUsed = false; }
     this.broadcastLobby();
@@ -539,11 +550,15 @@ export class AnganoRoom {
     }
     if (this.deathReveals.length) {
       const dtext = this.story ? storyDeathText(this.story.deaths, this.deathReveals) : deathsText(this.deathReveals);
+      const voiceUrl = this.voice.urlFor(dtext);
+      const artKey = this.pendingDeathArt; this.pendingDeathArt = null;
       this.broadcast({
         k: "deaths",
         ids: this.deathReveals.map((r) => r.id),
         reveals: this.deathReveals.map((r) => ({ id: r.id, roleId: r.roleId, nameMg: r.nameMg })),
         text: dtext,
+        ...(voiceUrl ? { voiceUrl } : {}),
+        ...(artKey ? { artKey } : {}),
       });
     } else if (this.phase === "aube") {
       this.broadcast({ k: "deaths", ids: [], reveals: [], text: "Personne n'est mort cette nuit." });
@@ -612,7 +627,8 @@ export class AnganoRoom {
     const text = this.story
       ? (winner === "village" ? this.story.victoryVillage : this.story.victorySongomby)
       : (winner === "village" ? "Le village a chassé tous les monstres ! 🎉" : "Les Songomby ont fait taire le village… 🐺");
-    this.broadcast({ k: "finish", winner, text, reveal, missions: this.narratorMissionSheets(), personalWinners: this.personalWinners() });
+    const voiceUrl = this.voice.urlFor(text);
+    this.broadcast({ k: "finish", winner, text, reveal, missions: this.narratorMissionSheets(), personalWinners: this.personalWinners(), ...(voiceUrl ? { voiceUrl } : {}) });
     this.sendNarrator();
     return true;
   }
@@ -673,6 +689,7 @@ export class AnganoRoom {
     const target = this.players.get(targetId);
     if (!target?.alive) return;
     this.deathQueue.push(targetId);
+    this.pendingDeathArt = "power_fanany_vengeance"; // the dawn reveal gets the Razana art
     this.pushLog(`Vengeance des Razana : ${target.name} est emporté par la Marque funeste.`);
   }
   private applyFananyReturnFady(fananyId: string, murdererIds: string[]): string | null {
@@ -766,7 +783,8 @@ export class AnganoRoom {
     const a = PHASE_ASSET[phase];
     const dur = phase === "debat" ? this.pace().debate : phase === "vote" ? this.pace().vote : this.pace().night;
     const body = this.storyText(phase, text);
-    this.lastPhase = { k: "phase", phase, day: this.day, audioKey: a.audio, imageKey: a.image, durationMs: dur, title, text: body };
+    const voiceUrl = this.voice.urlFor(body);
+    this.lastPhase = { k: "phase", phase, day: this.day, audioKey: a.audio, imageKey: a.image, durationMs: dur, title, text: body, ...(voiceUrl ? { voiceUrl } : {}) };
     this.broadcast(this.lastPhase);
     this.broadcast({ k: "state", phase, day: this.day, players: [...this.players.values()].map(pub) });
     this.sendNarrator();

@@ -20,6 +20,7 @@ import { itemsRoute } from "./routes/items.ts";
 import { webhooksRoute } from "./routes/webhooks.ts";
 import { assetsRoute } from "./routes/assets.ts";
 import { turnRoute } from "./routes/turn.ts";
+import { ttsRoute } from "./routes/tts.ts";
 import { realtimeRoute } from "./realtime/ws.ts";
 import { quizRoute } from "./games/quiz/ws.ts";
 import { anganoRoute } from "./games/angano/ws.ts";
@@ -61,6 +62,7 @@ export function createApp() {
   app.route("/v1/items", itemsRoute());
   app.route("/v1/webhooks", webhooksRoute());
   app.route("/v1/turn", turnRoute());
+  app.route("/v1/tts", ttsRoute()); // GET /v1/tts/:hash — synthesized narration clips
 
   // ── OpenAPI + docs (registered last so it sees every route) ──
   app.get(
