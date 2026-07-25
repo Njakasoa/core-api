@@ -153,7 +153,15 @@ export class AnganoRoom {
     if (id !== this.hostId || this.phase !== "lobby") return;
     const roles = [...new Set((config.roles ?? []).filter((r) => ROLES[r]?.optional))]; // dedupe
     const pace = (["rapide", "normal", "lent"] as const).includes(config.pace as never) ? config.pace : "normal";
-    this.config = { songomby: Math.max(1, Math.min(5, Math.floor(config.songomby || 1))), roles, pace, manualDeaths: !!config.manualDeaths, theme: !!config.theme };
+    this.config = {
+      songomby: Math.max(1, Math.min(5, Math.floor(config.songomby || 1))),
+      roles, pace,
+      manualDeaths: !!config.manualDeaths,
+      theme: !!config.theme,
+      sameRoom: !!config.sameRoom,
+      // undefined means "follow the mode"; an explicit boolean is the narrator's call
+      autoAdvance: typeof config.autoAdvance === "boolean" ? config.autoAdvance : undefined,
+    };
     this.broadcastLobby();
   }
 
@@ -338,6 +346,78 @@ export class AnganoRoom {
     this.sendNarrator();
   }
   nextPhase(id: string) { if (id === this.narratorId || id === this.hostId) this.fire(); }
+
+  /**
+   * Step the narrator back one beat — for a mis-tap, not for a do-over.
+   *
+   * Only safe *before* a resolution. The night merely collects choices into fields,
+   * so re-entering a step is genuinely harmless: the new pick overwrites the old and
+   * nothing has been revealed. Past `resolveNight` or `tallyVote` it is not, and not
+   * because the state is hard to restore — because the information is already out.
+   * Deaths could be undone; the Mpisikidy cannot un-read the role it was just shown.
+   * Rewinding there would hand a player the answer and let them replay the night.
+   *
+   * So: within the current night, and vote → debate. Everything else is refused.
+   */
+  prevPhase(id: string) {
+    if (id !== this.narratorId && id !== this.hostId) return;
+
+    if (this.phase === "vote") {
+      this.votes.clear();
+      this.beginDay();
+      this.pushLog("Le narrateur revient au débat.");
+      this.sendNarrator();
+      return;
+    }
+    if (!this.canRewind()) {
+      return this.err(id, "Impossible de revenir en arrière : la phase précédente a déjà révélé son résultat.");
+    }
+
+    this.clearStepState(this.phase);                 // discard whatever this step collected
+    this.stepIx -= 1;
+    this.clearStepState(this.steps[this.stepIx]!);   // and let the step we return to be replayed
+    this.pushLog(`Le narrateur revient sur ${PHASE_LABEL[this.steps[this.stepIx]!] ?? this.steps[this.stepIx]}.`);
+    this.enterStep();
+  }
+
+  /** Whether stepping back is currently allowed (drives the narrator's button). */
+  private canRewind(): boolean {
+    if (this.phase === "vote") return true;
+    return isNightStoryPhase(this.phase) && this.stepIx > 0;
+  }
+
+  /**
+   * Undo what one night step collected, so replaying it starts clean.
+   *
+   * The Ombiasy branch restores its once-per-game heal and exile from the
+   * `usedXThisNight` flags. It is unreachable with today's step order — the Ombiasy
+   * goes last, so acting there resolves the night and rewinding is refused before we
+   * get here — but the order is data, and this stops a reorder from quietly eating a
+   * player's one remedy.
+   */
+  private clearStepState(phase: Phase) {
+    switch (phase) {
+      case "zazavavindrano": this.zazaTarget = null; break;
+      case "mpamosavy": this.mpamosavyTarget = null; break;
+      case "mpisikidy": this.seerTarget = null; break;
+      case "kalanoro": this.kalanoroTarget = null; break;
+      case "kinoly": this.kinolyTargets.clear(); break;
+      case "songomby": this.wolfVotes.clear(); this.nightVictim = null; break;
+      case "ombiasy": {
+        const witch = this.firstAlivePlayer("ombiasy");
+        if (witch && this.usedHealThisNight) witch.healUsed = false;
+        if (witch && this.usedExileThisNight) witch.exileUsed = false;
+        this.nightHealed = false; this.nightExile = null;
+        this.usedHealThisNight = false; this.usedExileThisNight = false;
+        break;
+      }
+    }
+  }
+
+  /** Timers run themselves unless the narrator has taken the baton. */
+  private autoAdvance(): boolean {
+    return this.config.autoAdvance ?? !this.config.sameRoom;
+  }
   rematch(id: string) {
     if (id !== this.hostId || this.phase !== "finished") return;
     this.clearTimer();
@@ -785,7 +865,7 @@ export class AnganoRoom {
     const dur = phase === "debat" ? this.pace().debate : phase === "vote" ? this.pace().vote : this.pace().night;
     const body = this.storyText(phase, text);
     const voiceUrl = this.voice.urlFor(body);
-    this.lastPhase = { k: "phase", phase, day: this.day, audioKey: a.audio, imageKey: a.image, durationMs: dur, title, text: body, ...(voiceUrl ? { voiceUrl } : {}) };
+    this.lastPhase = { k: "phase", phase, day: this.day, audioKey: a.audio, imageKey: a.image, durationMs: dur, title, text: body, ...(voiceUrl ? { voiceUrl } : {}), ...(this.autoAdvance() ? {} : { manualPacing: true }) };
     this.broadcast(this.lastPhase);
     this.broadcast({ k: "state", phase, day: this.day, players: [...this.players.values()].map(pub) });
     this.sendNarrator();
@@ -838,7 +918,7 @@ export class AnganoRoom {
     const nar = this.players.get(this.narratorId); if (!nar) return;
     const players: NarratorPlayer[] = [...this.players.values()].filter((p) => p.id !== this.narratorId)
       .map((p) => ({ ...pub(p), roleId: p.roleId }));
-    safeSend(nar.ws, { k: "narrator", players, log: this.log.slice(-30), missionSheets: this.narratorMissionSheets() });
+    safeSend(nar.ws, { k: "narrator", players, log: this.log.slice(-30), missionSheets: this.narratorMissionSheets(), canRewind: this.canRewind() });
   }
   private narratorMissionSheets(): NarratorMissionSheet[] {
     return [...this.players.values()]
@@ -881,7 +961,13 @@ export class AnganoRoom {
   private pushLog(s: string) { this.log.push(s); }
 
   // pacing: single-shot advance consumed by timeout / completed action / narrator
-  private arm(ms: number, fn: () => void) { this.clearTimer(); this.onAdvance = fn; this.timer = setTimeout(() => this.fire(), ms); }
+  private arm(ms: number, fn: () => void) {
+    this.clearTimer();
+    this.onAdvance = fn;
+    // With the narrator holding the baton we still hand clients the intended
+    // duration (so the bar reads as pacing guidance) but nothing fires on its own.
+    if (this.autoAdvance()) this.timer = setTimeout(() => this.fire(), ms);
+  }
   private fire() { const fn = this.onAdvance; this.onAdvance = null; this.clearTimer(); fn?.(); }
   private clearTimer() { if (this.timer) { clearTimeout(this.timer); this.timer = undefined; } }
 }

@@ -27,7 +27,21 @@ export interface NarratorPlayer extends PlayerPublic { roleId?: string }
 export interface RoleInfo { roleId: string; team: Team; nameMg: string; desc: string }
 
 export type Pace = "rapide" | "normal" | "lent";
-export interface GameConfig { songomby: number; roles: string[]; pace?: Pace; manualDeaths?: boolean; theme?: boolean } // pack size + optional roles + pacing + AI story
+/**
+ * `sameRoom` — everyone is around one table rather than each at home. The narrator's
+ * phone becomes the speaker (players' devices stay silent, or eight phones drift out
+ * of sync) and, unless overridden, the narrator drives every phase by hand.
+ * `autoAdvance` — defaults to `!sameRoom`; the narrator can flip it either way.
+ */
+export interface GameConfig {
+  songomby: number;
+  roles: string[];
+  pace?: Pace;
+  manualDeaths?: boolean;
+  theme?: boolean;
+  sameRoom?: boolean;
+  autoAdvance?: boolean;
+}
 export interface StoryAmbiance { night: string; dawn: string; debate: string; vote: string }
 export interface StoryComposition { songomby: number; roles: string[]; pace: Pace }
 export type MissionStatus = "pending" | "requested" | "validated" | "failed";
@@ -91,6 +105,7 @@ export type AnganoClientMsg =
   | { k: "missionStatus"; playerId: string; status: MissionStatus } // narrator validates social missions
   | { k: "missionReviewRequest" }                       // player asks the narrator to review their own mission
   | { k: "nextPhase" }                                  // narrator pacing
+  | { k: "prevPhase" }                                  // narrator: undo a mis-tap (bounded, see room.ts)
   | { k: "rematch" };                                   // host
 
 export type AnganoServerMsg =
@@ -98,8 +113,8 @@ export type AnganoServerMsg =
   | { k: "role"; role: RoleInfo }                       // private, to each player
   | { k: "playerStory"; story: PlayerMissionSheet }     // private, role-play sheet + secret mission
   | { k: "story"; title: string; villageName: string; intro: string; ambiance: StoryAmbiance; roleEpithets: Record<string, string>; composition?: StoryComposition; narratorScript?: string[]; introVoiceUrl?: string } // AI story, to all
-  | { k: "narrator"; players: NarratorPlayer[]; log: string[]; missionSheets?: NarratorMissionSheet[] } // private, god view + live night log
-  | { k: "phase"; phase: Phase; day: number; audioKey: string; imageKey: string; durationMs: number; title: string; text: string; voiceUrl?: string }
+  | { k: "narrator"; players: NarratorPlayer[]; log: string[]; missionSheets?: NarratorMissionSheet[]; canRewind?: boolean } // private, god view + live night log
+  | { k: "phase"; phase: Phase; day: number; audioKey: string; imageKey: string; durationMs: number; title: string; text: string; voiceUrl?: string; manualPacing?: boolean }
   | { k: "prompt"; kind: string; targets: PlayerPublic[]; options?: string[]; deadline: number } // to the acting player(s)
   | { k: "seerResult"; targetId: string; roleId: string; nameMg: string; team?: Team } // private, Mpisikidy (at dawn)
   | { k: "trackResult"; targetId: string; visited: boolean; destinationId?: string | null } // private, Kalanoro (at dawn)

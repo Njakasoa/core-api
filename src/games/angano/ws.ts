@@ -58,6 +58,7 @@ export function anganoRoute(): Hono {
               break;
             case "missionReviewRequest": room.requestMissionReview(userId); break;
             case "nextPhase": room.nextPhase(userId); break;
+            case "prevPhase": room.prevPhase(userId); break;
             case "rematch": room.rematch(userId); break;
           }
         },
