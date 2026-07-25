@@ -47,8 +47,21 @@ const schema = z.object({
   // either missing the games stay text-only (never a hard dependency).
   ELEVENLABS_API_KEY: z.string().optional(),
   ELEVENLABS_BASE_URL: z.string().default("https://api.elevenlabs.io"),
-  ELEVENLABS_MODEL: z.string().min(1).default("eleven_flash_v2_5"),
+  // Measured on a typical narration line: flash_v2_5 544ms, multilingual_v2 1362ms,
+  // v3 3572ms. The warm-up runs ~10 lines 4-at-a-time inside a 12s budget, so
+  // multilingual_v2 fits comfortably and reads far better than flash. Match this to
+  // whatever the front's static voice lines were generated with, or the narrator
+  // subtly changes character between a role reveal and the story.
+  ELEVENLABS_MODEL: z.string().min(1).default("eleven_multilingual_v2"),
   ELEVENLABS_VOICE_NARRATOR: z.string().optional(),
+  // Voice settings, all optional — omitted ones keep the voice's own defaults.
+  // stability: low = expressive, high = flat. style: acting exaggeration, unstable
+  // past ~0.6. speed: below 1 is slower and graver. Audition them with the front's
+  // `bun scripts/audition-voice.ts` before pinning values here.
+  ELEVENLABS_STABILITY: z.coerce.number().min(0).max(1).optional(),
+  ELEVENLABS_SIMILARITY: z.coerce.number().min(0).max(1).optional(),
+  ELEVENLABS_STYLE: z.coerce.number().min(0).max(1).optional(),
+  ELEVENLABS_SPEED: z.coerce.number().min(0.7).max(1.2).optional(),
   TTS_TIMEOUT_MS: z.coerce.number().int().positive().default(12_000),
   // In-memory clip cache ceiling. Rooms already live in process memory, so a
   // per-replica cache adds no new scaling constraint (see ARCHITECTURE.md).
