@@ -112,7 +112,7 @@ export type AnganoServerMsg =
   | { k: "lobby"; code: string; hostId: string; narratorId: string | null; selfId: string; config: GameConfig; players: PlayerPublic[] }
   | { k: "role"; role: RoleInfo }                       // private, to each player
   | { k: "playerStory"; story: PlayerMissionSheet }     // private, role-play sheet + secret mission
-  | { k: "story"; title: string; villageName: string; intro: string; ambiance: StoryAmbiance; roleEpithets: Record<string, string>; composition?: StoryComposition; narratorScript?: string[]; introVoiceUrl?: string } // AI story, to all
+  | { k: "story"; storyId?: string; title: string; villageName: string; intro: string; ambiance: StoryAmbiance; roleEpithets: Record<string, string>; composition?: StoryComposition; narratorScript?: string[]; introVoiceUrl?: string } // AI story, to all
   | { k: "narrator"; players: NarratorPlayer[]; log: string[]; missionSheets?: NarratorMissionSheet[]; canRewind?: boolean } // private, god view + live night log
   | { k: "phase"; phase: Phase; day: number; audioKey: string; imageKey: string; durationMs: number; title: string; text: string; voiceUrl?: string; manualPacing?: boolean }
   | { k: "prompt"; kind: string; targets: PlayerPublic[]; options?: string[]; deadline: number } // to the acting player(s)

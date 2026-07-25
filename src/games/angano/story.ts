@@ -27,6 +27,12 @@ export interface StoryRoleSheet {
   rewardTitle: string;
 }
 export interface StorySetup {
+  /**
+   * Identifies a hand-written preset, and only a preset. The browser uses it to pick
+   * the matching pre-recorded narration pack, so it must stay absent whenever the AI
+   * wrote the prose — a pack read over a different legend is worse than no pack.
+   */
+  id?: string;
   title: string;
   villageName: string;
   intro: string;
@@ -288,6 +294,9 @@ export function sanitizeStory(raw: any, seatCount: number, activeRoleIds: string
   }
 
   return {
+    // Only a pure preset keeps its id: the moment the AI supplied any prose, the
+    // legend is no longer the one the recorded pack was written for.
+    ...(raw ? {} : { id: d.id }),
     title,
     villageName,
     intro: fillPublicPlaceholders(clamp(raw?.intro, 800) || d.intro, publicCtx),
@@ -445,14 +454,19 @@ export function pickDefaultStoryPreset(seed = Math.random().toString(36).slice(2
   const requested = process.env.ANGANO_STORY_PRESET?.trim();
   if (requested) {
     const byId = DEFAULT_STORY_PRESETS.find((preset) => preset.id === requested);
-    if (byId) return byId.story;
+    if (byId) return stamp(byId);
     const index = Number.parseInt(requested, 10);
-    if (Number.isFinite(index) && DEFAULT_STORY_PRESETS[index]) return DEFAULT_STORY_PRESETS[index]!.story;
+    if (Number.isFinite(index) && DEFAULT_STORY_PRESETS[index]) return stamp(DEFAULT_STORY_PRESETS[index]!);
   }
   const n = Number.parseInt(seed, 36);
   const index = Number.isFinite(n) ? n % DEFAULT_STORY_PRESETS.length : Math.floor(Math.random() * DEFAULT_STORY_PRESETS.length);
-  return DEFAULT_STORY_PRESETS[index]!.story;
+  return stamp(DEFAULT_STORY_PRESETS[index]!);
 }
+/** Carry the preset's id onto the story it produced. */
+function stamp(preset: DefaultStoryPreset): StorySetup {
+  return { ...preset.story, id: preset.id };
+}
+
 function publicLines(
   v: unknown,
   maxItems: number,
