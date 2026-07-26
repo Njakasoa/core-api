@@ -157,3 +157,39 @@ test("only the narrator or host may steer the pacing", async () => {
   expect(last(nar.msgs, "phase")?.phase).toBe(reached);
   teardown(room);
 });
+
+test("a completed night step is announced, so the table can hear the turn close", async () => {
+  const { room, nar, players } = await makeRoom({ sameRoom: true });
+  const seer = byRole(players, "mpisikidy");
+  expect(seer).toBeDefined();
+
+  for (let i = 0; i < 6 && last(nar.msgs, "phase")?.phase !== "mpisikidy"; i++) room.nextPhase("nar");
+  expect(last(nar.msgs, "phase")?.phase).toBe("mpisikidy");
+  expect(last(nar.msgs, "acted")).toBeUndefined();   // nothing has been done yet
+
+  const target = players.find((p) => p.id !== seer!.id)!;
+  room.action(seer!.id, target.id);
+  // it names the step that just closed, not the one opening — the sound belongs to
+  // the deed, and the next phase message arrives in the same breath.
+  expect(last(nar.msgs, "acted")?.phase).toBe("mpisikidy");
+  // public: everyone hears it, which is the whole point around one table
+  expect(last(target.msgs, "acted")?.phase).toBe("mpisikidy");
+  teardown(room);
+});
+
+test("the Fanany's mark stays silent — it is taken in broad daylight", async () => {
+  const { room, nar, players } = await makeRoom({ roles: ["fanany", "mpisikidy"], pace: "rapide" });
+  const fanany = byRole(players, "fanany");
+  expect(fanany).toBeDefined();
+
+  // walk the night out to reach the debate
+  for (let i = 0; i < 12 && last(nar.msgs, "phase")?.phase !== "debat"; i++) room.nextPhase("nar");
+  expect(last(nar.msgs, "phase")?.phase).toBe("debat");
+
+  const before = nar.msgs.filter((m) => m.k === "acted").length;
+  const target = players.find((p) => p.id !== fanany!.id)!;
+  room.action(fanany!.id, target.id);
+  expect(last(nar.msgs, "narrator")?.log.some((l) => /Marque funeste/i.test(l))).toBe(true); // it landed
+  expect(nar.msgs.filter((m) => m.k === "acted").length).toBe(before);                        // and said nothing
+  teardown(room);
+});

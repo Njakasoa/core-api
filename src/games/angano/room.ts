@@ -256,33 +256,38 @@ export class AnganoRoom {
       case "zazavavindrano":
         if (p.roleId !== "zazavavindrano" || !targetId || targetId === id || !this.players.get(targetId)?.alive) return;
         this.zazaTarget = targetId; this.pushLog(`Zazavavindrano lie ${this.name(targetId)} au Fady des eaux.`);
+        this.acted();
         this.fire();
         break;
       case "mpamosavy":
         if (p.roleId !== "mpamosavy" || !targetId) return;
         this.mpamosavyTarget = targetId; this.pushLog(`Mpamosavy maudit ${this.name(targetId)}.`);
+        this.acted();
         this.fire();
         break;
       case "mpisikidy":
         if (p.roleId !== "mpisikidy" || !targetId) return;
         this.seerTarget = targetId;
+        this.acted();
         this.fire();
         break;
       case "kalanoro":
         if (p.roleId !== "kalanoro" || !targetId) return;
         this.kalanoroTarget = targetId;
+        this.acted();
         this.fire();
         break;
       case "kinoly":
         if (p.roleId !== "kinoly" || !this.kinolyAwakened.has(id) || !targetId) return;
         this.kinolyTargets.set(id, targetId);
+        this.acted();
         this.fire();
         break;
       case "songomby":
         if (!isPackKiller(p.roleId) || !targetId) return;
         this.wolfVotes.set(id, targetId);
         this.sendWolves();
-        if (this.alivePack().every((w) => this.wolfVotes.has(w.id))) this.fire();
+        if (this.alivePack().every((w) => this.wolfVotes.has(w.id))) { this.acted(); this.fire(); }
         break;
       case "ombiasy":
         if (p.roleId !== "ombiasy") return;
@@ -293,6 +298,7 @@ export class AnganoRoom {
           this.usedExileThisNight = true;
           this.pushLog(`Ombiasy accomplit un rituel d'exil contre ${this.name(targetId)}.`);
         }
+        this.acted();
         this.fire();
         break;
       case "debat":
@@ -973,6 +979,17 @@ export class AnganoRoom {
   private broadcast(msg: AnganoServerMsg) { for (const p of this.players.values()) safeSend(p.ws, msg); }
   private err(id: string, message: string) { const p = this.players.get(id); if (p) safeSend(p.ws, { k: "error", message }); }
   private pushLog(s: string) { this.log.push(s); }
+
+  /**
+   * Tell the room a night step was completed by its actor(s).
+   *
+   * Guarded on the phase rather than trusted from the call site: a stray `acted` on a
+   * day phase would have the table hear a night turn close in broad daylight. The
+   * Fanany's mark goes through `action()` too, during `debat`, and must stay silent.
+   */
+  private acted() {
+    if (isNightStoryPhase(this.phase)) this.broadcast({ k: "acted", phase: this.phase });
+  }
 
   // pacing: single-shot advance consumed by timeout / completed action / narrator
   private arm(ms: number, fn: () => void) {
