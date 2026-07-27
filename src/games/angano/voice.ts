@@ -1,6 +1,5 @@
 import { env } from "../../env.ts";
 import { ttsEnabled, ttsSynthesize } from "../../lib/tts.ts";
-import { toSpeakable } from "./pronunciation.ts";
 import type { StorySetup } from "./story.ts";
 
 /**
@@ -105,7 +104,9 @@ export class RoomVoice {
     if (this.spent + line.length > env.ANGANO_TTS_CHAR_BUDGET) return; // budget spent
 
     this.spent += line.length;
-    const clip = await ttsSynthesize({ text: toSpeakable(line) });
+    // Sent verbatim: Malagasy pronunciation is corrected downstream by the
+    // ElevenLabs dictionary (ELEVENLABS_DICT_ID), not by rewriting the text here.
+    const clip = await ttsSynthesize({ text: line });
     if (!clip || this.disposed) return;
     this.urls.set(line, `/v1/tts/${clip.hash}`);
   }

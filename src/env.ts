@@ -54,6 +54,17 @@ const schema = z.object({
   // subtly changes character between a role reveal and the story.
   ELEVENLABS_MODEL: z.string().min(1).default("eleven_multilingual_v2"),
   ELEVENLABS_VOICE_NARRATOR: z.string().optional(),
+  /**
+   * Pronunciation dictionary applied to every synthesis — Malagasy role names, common
+   * words and place names, respelled for a French voice. Held at ElevenLabs and
+   * referenced by id; the rules themselves are versioned in the front repo
+   * (`scripts/pronunciation-rules.ts`), which is what creates and updates it.
+   *
+   * Optional, and its absence is a degradation rather than a failure: names are then
+   * read as French. `index.ts` says so at startup, because nothing downstream would.
+   */
+  ELEVENLABS_DICT_ID: z.string().optional(),
+  ELEVENLABS_DICT_VERSION: z.string().optional(),
   // Voice settings, all optional — omitted ones keep the voice's own defaults.
   // stability: low = expressive, high = flat. style: acting exaggeration, unstable
   // past ~0.6. speed: below 1 is slower and graver. Audition them with the front's

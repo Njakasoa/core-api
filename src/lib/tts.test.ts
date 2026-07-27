@@ -95,6 +95,49 @@ describe("lib/tts", () => {
     (env as { ELEVENLABS_SPEED?: number }).ELEVENLABS_SPEED = before.sp;
   });
 
+  it("sends the pronunciation dictionary, and the text unaltered", async () => {
+    const before = { id: env.ELEVENLABS_DICT_ID, v: env.ELEVENLABS_DICT_VERSION };
+    const e = env as Pick<typeof env, "ELEVENLABS_DICT_ID" | "ELEVENLABS_DICT_VERSION">;
+    e.ELEVENLABS_DICT_ID = "dict-1"; e.ELEVENLABS_DICT_VERSION = "v-1";
+
+    const sent: Record<string, unknown>[] = [];
+    await withUpstream(
+      async (req) => { sent.push(JSON.parse(await req.text())); return mp3(); },
+      async () => { await ttsSynthesize({ text: "Les Songomby quittent les roseaux." }); },
+    );
+    expect(sent[0]?.pronunciation_dictionary_locators)
+      .toEqual([{ pronunciation_dictionary_id: "dict-1", version_id: "v-1" }]);
+    // The whole point: the correction happens upstream, so the text goes out written
+    // as it is displayed. A respelled "Sougoumbi" here would mean the old table is back.
+    expect(sent[0]?.text).toBe("Les Songomby quittent les roseaux.");
+
+    e.ELEVENLABS_DICT_ID = before.id; e.ELEVENLABS_DICT_VERSION = before.v;
+  });
+
+  it("omits the locator when no dictionary is configured", async () => {
+    const before = { id: env.ELEVENLABS_DICT_ID, v: env.ELEVENLABS_DICT_VERSION };
+    const e = env as Pick<typeof env, "ELEVENLABS_DICT_ID" | "ELEVENLABS_DICT_VERSION">;
+    e.ELEVENLABS_DICT_ID = undefined; e.ELEVENLABS_DICT_VERSION = undefined;
+
+    const sent: Record<string, unknown>[] = [];
+    await withUpstream(
+      async (req) => { sent.push(JSON.parse(await req.text())); return mp3(); },
+      async () => { await ttsSynthesize({ text: "sans dictionnaire" }); },
+    );
+    expect("pronunciation_dictionary_locators" in sent[0]!).toBe(false);
+
+    e.ELEVENLABS_DICT_ID = before.id; e.ELEVENLABS_DICT_VERSION = before.v;
+  });
+
+  it("folds the dictionary version into the hash, so a new one is not served stale", () => {
+    const none = ttsHash("a", "v", "m");
+    const v1 = ttsHash("a", "v", "m", undefined, "v-1");
+    const v2 = ttsHash("a", "v", "m", undefined, "v-2");
+    expect(v1).not.toBe(none);
+    expect(v2).not.toBe(v1);
+    expect(ttsHash("a", "v", "m", undefined, "v-1")).toBe(v1);
+  });
+
   it("synthesizes, caches, and replays without a second upstream call", async () => {
     let calls = 0;
     await withUpstream(

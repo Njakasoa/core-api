@@ -38,13 +38,24 @@ export function ttsEnabled(): boolean {
 }
 
 /**
- * Content address of a clip — same text + voice + model + tuning ⇒ same hash ⇒
- * free replay. The tuning belongs in the key: re-tuning stability must not keep
- * serving the previous rendering.
+ * The pronunciation dictionary, as a request locator — or nothing if none is
+ * configured, in which case Malagasy names are read as French.
  */
-export function ttsHash(text: string, voiceId: string, modelId: string, settings?: unknown): string {
+function dictionary(): { pronunciation_dictionary_id: string; version_id: string }[] | undefined {
+  if (!env.ELEVENLABS_DICT_ID || !env.ELEVENLABS_DICT_VERSION) return undefined;
+  return [{ pronunciation_dictionary_id: env.ELEVENLABS_DICT_ID, version_id: env.ELEVENLABS_DICT_VERSION }];
+}
+
+/**
+ * Content address of a clip — same text + voice + model + tuning + dictionary ⇒ same
+ * hash ⇒ free replay. Everything that changes the rendering belongs in the key: the
+ * dictionary version is in there because publishing a new one has to invalidate the
+ * clips synthesized under the old pronunciation, not keep serving them forever.
+ */
+export function ttsHash(text: string, voiceId: string, modelId: string, settings?: unknown, dictVersion?: string): string {
   const tuning = settings ? JSON.stringify(settings) : "";
-  return createHash("sha256").update(`${modelId}\u0000${voiceId}\u0000${tuning}\u0000${text}`).digest("hex").slice(0, 32);
+  const dict = dictVersion ?? "";
+  return createHash("sha256").update(`${modelId}\u0000${voiceId}\u0000${tuning}\u0000${dict}\u0000${text}`).digest("hex").slice(0, 32);
 }
 
 /**
@@ -111,7 +122,8 @@ export async function ttsSynthesize(opts: {
   const voiceId = opts.voiceId || env.ELEVENLABS_VOICE_NARRATOR!;
   const modelId = opts.modelId || env.ELEVENLABS_MODEL;
   const settings = voiceSettings();
-  const hash = ttsHash(text, voiceId, modelId, settings);
+  const locators = dictionary();
+  const hash = ttsHash(text, voiceId, modelId, settings, env.ELEVENLABS_DICT_VERSION);
 
   const hit = ttsGet(hash);
   if (hit) return hit;
@@ -128,7 +140,12 @@ export async function ttsSynthesize(opts: {
           "content-type": "application/json",
           accept: "audio/mpeg",
         },
-        body: JSON.stringify({ text, model_id: modelId, ...(settings ? { voice_settings: settings } : {}) }),
+        body: JSON.stringify({
+          text,
+          model_id: modelId,
+          ...(settings ? { voice_settings: settings } : {}),
+          ...(locators ? { pronunciation_dictionary_locators: locators } : {}),
+        }),
         signal: ctrl.signal,
       },
     );

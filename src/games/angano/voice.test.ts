@@ -70,12 +70,17 @@ describe("angano/voice", () => {
     });
   });
 
-  it("speaks Malagasy names phonetically upstream while keying on the written line", async () => {
+  it("sends the line exactly as written — pronunciation is the dictionary's job", async () => {
     await withUpstream(async (seen) => {
       const v = new RoomVoice();
       await v.warm(story({ nightSteps: { songomby: "Le Songomby rôde." } }));
-      expect(seen.some((t) => t.includes("Sougoumbi"))).toBe(true);
-      expect(v.urlFor("Le Songomby rôde.")).toBeDefined(); // lookup uses the displayed text
+      // This used to respell to "Sougoumbi" here, from a table duplicated across both
+      // repos that had already drifted and covered no place name at all. The
+      // correction now happens upstream (ELEVENLABS_DICT_ID), so anything rewriting
+      // the text on the way out is a regression.
+      expect(seen.some((t) => t.includes("Le Songomby rôde."))).toBe(true);
+      expect(seen.some((t) => t.includes("Sougoumbi"))).toBe(false);
+      expect(v.urlFor("Le Songomby rôde.")).toBeDefined();
     });
   });
 
