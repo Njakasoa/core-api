@@ -453,17 +453,27 @@ function pickStoryDirection(seed: string): string {
   const index = Number.isFinite(n) ? n % STORY_DIRECTIONS.length : Math.floor(Math.random() * STORY_DIRECTIONS.length);
   return STORY_DIRECTIONS[index]!;
 }
-export function pickDefaultStoryPreset(seed = Math.random().toString(36).slice(2, 7)): StorySetup {
-  const requested = process.env.ANGANO_STORY_PRESET?.trim();
+/**
+ * The legend a game opens on when nothing says otherwise.
+ *
+ * It used to be one of the four at random. It is now fixed, because only one of them
+ * is *recorded*: the browser plays a narration pack for `lac-jarres-blanches` and has
+ * none for the others, which would open a game in silence or in a synthesised voice
+ * instead of the teller's. A rotation is worth having again the day a second pack
+ * exists — until then it is a coin flip between a finished experience and a lesser one.
+ */
+export const DEFAULT_STORY_PRESET_ID = "lac-jarres-blanches";
+
+export function pickDefaultStoryPreset(seed = ""): StorySetup {
+  const requested = process.env.ANGANO_STORY_PRESET?.trim() || seed;
   if (requested) {
     const byId = DEFAULT_STORY_PRESETS.find((preset) => preset.id === requested);
     if (byId) return stamp(byId);
     const index = Number.parseInt(requested, 10);
     if (Number.isFinite(index) && DEFAULT_STORY_PRESETS[index]) return stamp(DEFAULT_STORY_PRESETS[index]!);
   }
-  const n = Number.parseInt(seed, 36);
-  const index = Number.isFinite(n) ? n % DEFAULT_STORY_PRESETS.length : Math.floor(Math.random() * DEFAULT_STORY_PRESETS.length);
-  return stamp(DEFAULT_STORY_PRESETS[index]!);
+  const fallback = DEFAULT_STORY_PRESETS.find((preset) => preset.id === DEFAULT_STORY_PRESET_ID);
+  return stamp(fallback ?? DEFAULT_STORY_PRESETS[0]!);
 }
 /** Carry the preset's id onto the story it produced. */
 function stamp(preset: DefaultStoryPreset): StorySetup {

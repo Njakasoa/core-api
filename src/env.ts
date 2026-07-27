@@ -53,7 +53,9 @@ const schema = z.object({
   // whatever the front's static voice lines were generated with, or the narrator
   // subtly changes character between a role reveal and the story.
   ELEVENLABS_MODEL: z.string().min(1).default("eleven_multilingual_v2"),
-  ELEVENLABS_VOICE_NARRATOR: z.string().optional(),
+  /** Grandpa Storyteller Oxley — the teller of the recorded legend, so the runtime
+   *  narration and the pack speak with one voice. */
+  ELEVENLABS_VOICE_NARRATOR: z.string().default("0dPqNXnhg2bmxQv1WKDp"),
   /**
    * Pronunciation dictionary applied to every synthesis — Malagasy role names, common
    * words and place names, respelled for a French voice. Held at ElevenLabs and

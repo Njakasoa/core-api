@@ -1,5 +1,5 @@
 import { test, expect } from "bun:test";
-import { sanitizeStory, DEFAULT_STORY, DEFAULT_STORY_PRESETS, pickDefaultStoryPreset } from "./story.ts";
+import { sanitizeStory, DEFAULT_STORY, DEFAULT_STORY_PRESETS, DEFAULT_STORY_PRESET_ID, pickDefaultStoryPreset } from "./story.ts";
 
 // The sanitizer is the anti-desync guarantee: whatever the AI returns, the engine
 // only ever sees catalog roles, clamped counts and bounded text.
@@ -99,6 +99,16 @@ test("ANGANO_STORY_PRESET selects a deterministic local fallback preset", () => 
   expect(pickDefaultStoryPreset("abc").title).toBe(DEFAULT_STORY.title);
   if (prev === undefined) delete process.env.ANGANO_STORY_PRESET;
   else process.env.ANGANO_STORY_PRESET = prev;
+});
+
+test("with nothing requested, the recorded legend is the one that opens", () => {
+  const prev = process.env.ANGANO_STORY_PRESET;
+  delete process.env.ANGANO_STORY_PRESET;
+  // Not a random pick any more: only one legend has a narration pack, and the other
+  // three would open the game in silence.
+  expect(pickDefaultStoryPreset().id).toBe(DEFAULT_STORY_PRESET_ID);
+  expect(pickDefaultStoryPreset().id).toBe(pickDefaultStoryPreset().id);
+  if (prev !== undefined) process.env.ANGANO_STORY_PRESET = prev;
 });
 
 test("long strings are truncated (no unbounded payloads)", () => {
