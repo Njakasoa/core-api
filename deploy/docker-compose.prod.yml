@@ -45,6 +45,15 @@ services:
       # AI gateway (optional) — Angano's story narrator. Unset = feature off.
       AI_BASE_URL: ${AI_BASE_URL:-https://ai.njakasoa.xyz}
       AI_API_TOKEN: ${AI_API_TOKEN:-}
+      # Angano: name a legend and it is told verbatim, with no AI call — which is what
+      # lets the browser play its recorded narration pack (a pack belongs to one preset,
+      # and an AI-written story has no id). Unset = the AI writes.
+      #
+      # This list is exhaustive: a variable that is only in `.env` never reaches the
+      # container. Adding one here is part of shipping it. Empty defaults are only safe
+      # for values the code reads raw — `env.ts` validates the rest, and an empty string
+      # is not "unset" to zod: it fails, and the API refuses to boot.
+      ANGANO_STORY_PRESET: ${ANGANO_STORY_PRESET:-}
     expose:
       - "3000"
     healthcheck:

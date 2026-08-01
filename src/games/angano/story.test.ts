@@ -1,5 +1,5 @@
 import { test, expect } from "bun:test";
-import { sanitizeStory, DEFAULT_STORY, DEFAULT_STORY_PRESETS, DEFAULT_STORY_PRESET_ID, pickDefaultStoryPreset } from "./story.ts";
+import { sanitizeStory, DEFAULT_STORY, DEFAULT_STORY_PRESETS, DEFAULT_STORY_PRESET_ID, pickDefaultStoryPreset, forcedStoryPreset, generateStoryWithMeta } from "./story.ts";
 
 // The sanitizer is the anti-desync guarantee: whatever the AI returns, the engine
 // only ever sees catalog roles, clamped counts and bounded text.
@@ -97,6 +97,28 @@ test("ANGANO_STORY_PRESET selects a deterministic local fallback preset", () => 
   expect(pickDefaultStoryPreset("abc").title).toBe("Le Lac des Jarres Blanches");
   process.env.ANGANO_STORY_PRESET = "0";
   expect(pickDefaultStoryPreset("abc").title).toBe(DEFAULT_STORY.title);
+  if (prev === undefined) delete process.env.ANGANO_STORY_PRESET;
+  else process.env.ANGANO_STORY_PRESET = prev;
+});
+
+// A named legend is an instruction, not a preference. This is what lets a deployment
+// that wants the *recorded* narration actually get it: the pack belongs to one preset,
+// and an AI-written story carries no id, so with the AI answering, no recording would
+// ever play. Naming one also skips the generation entirely — and its ~30 s wait.
+test("ANGANO_STORY_PRESET forces the legend, without asking the AI", async () => {
+  const prev = process.env.ANGANO_STORY_PRESET;
+  process.env.ANGANO_STORY_PRESET = "lac-jarres-blanches";
+  const forced = forcedStoryPreset();
+  expect(forced?.id).toBe("lac-jarres-blanches");
+
+  const result = await generateStoryWithMeta(6, { roles: ["mpisikidy"] });
+  expect(result.story.id).toBe("lac-jarres-blanches"); // the id is what the browser matches its pack on
+  expect(result.ms).toBe(0);                           // no call was made, so no time was spent
+  expect(result.raw).toBeNull();
+
+  process.env.ANGANO_STORY_PRESET = "pas-une-legende";
+  expect(forcedStoryPreset()).toBeNull();              // garbage is ignored, not obeyed
+
   if (prev === undefined) delete process.env.ANGANO_STORY_PRESET;
   else process.env.ANGANO_STORY_PRESET = prev;
 });

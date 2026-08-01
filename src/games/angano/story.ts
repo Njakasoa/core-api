@@ -350,6 +350,29 @@ export async function generateStoryWithMeta(
   const direction = pickStoryDirection(seed);
   const fallbackStory = pickDefaultStoryPreset(seed);
   const feedbackHints = [...new Set((opts.feedbackHints ?? []).map((hint) => hint.trim()).filter(Boolean))].slice(-8);
+  const provider = opts.provider ?? env.AI_PROVIDER ?? DEFAULT_STORY_AI_PROVIDER;
+  const model = opts.model ?? env.AI_MODEL ?? (provider === "codex" ? DEFAULT_STORY_AI_MODEL : undefined);
+  const reasoningEffort = opts.reasoningEffort ?? env.AI_REASONING_EFFORT ?? (provider === "codex" ? DEFAULT_STORY_AI_REASONING_EFFORT : undefined);
+
+  // An explicitly named legend is an instruction, not a preference: tell that one, and
+  // do not spend half a minute asking the AI for another. See `forcedStoryPreset`.
+  const forced = forcedStoryPreset();
+  if (forced) {
+    console.info(`[angano/story] légende imposée "${forced.id}" (ANGANO_STORY_PRESET) — pas d'appel IA`);
+    return {
+      story: sanitizeStory({}, seatCount, activeRoles, forced),
+      raw: null,
+      fallback: true,
+      ms: 0,
+      provider,
+      model,
+      reasoningEffort,
+      seed,
+      direction,
+      feedbackHints,
+    };
+  }
+
   const prompt = [
     `Nouvelle partie : ${seatCount} joueurs.`,
     `Configuration choisie par l'hôte : ${config?.songomby ?? 1} Songomby, rythme ${config?.pace ?? "normal"}, rôles spéciaux activés : ${configuredRoles}.`,
@@ -368,9 +391,6 @@ export async function generateStoryWithMeta(
     "Réponds uniquement en JSON.",
   ].filter(Boolean).join(" ");
   const t0 = Date.now();
-  const provider = opts.provider ?? env.AI_PROVIDER ?? DEFAULT_STORY_AI_PROVIDER;
-  const model = opts.model ?? env.AI_MODEL ?? (provider === "codex" ? DEFAULT_STORY_AI_MODEL : undefined);
-  const reasoningEffort = opts.reasoningEffort ?? env.AI_REASONING_EFFORT ?? (provider === "codex" ? DEFAULT_STORY_AI_REASONING_EFFORT : undefined);
   try {
     // Creative generation is slower than a trivial call — give it real headroom
     // (the player waits on the prep screen only as long as it actually takes).
@@ -464,16 +484,44 @@ function pickStoryDirection(seed: string): string {
  */
 export const DEFAULT_STORY_PRESET_ID = "lac-jarres-blanches";
 
+/** A preset by id, or by index — `undefined` when nothing matches. */
+function resolvePreset(requested: string): DefaultStoryPreset | undefined {
+  const byId = DEFAULT_STORY_PRESETS.find((preset) => preset.id === requested);
+  if (byId) return byId;
+  const index = Number.parseInt(requested, 10);
+  return Number.isFinite(index) ? DEFAULT_STORY_PRESETS[index] : undefined;
+}
+
 export function pickDefaultStoryPreset(seed = ""): StorySetup {
   const requested = process.env.ANGANO_STORY_PRESET?.trim() || seed;
-  if (requested) {
-    const byId = DEFAULT_STORY_PRESETS.find((preset) => preset.id === requested);
-    if (byId) return stamp(byId);
-    const index = Number.parseInt(requested, 10);
-    if (Number.isFinite(index) && DEFAULT_STORY_PRESETS[index]) return stamp(DEFAULT_STORY_PRESETS[index]!);
-  }
+  const chosen = requested ? resolvePreset(requested) : undefined;
+  if (chosen) return stamp(chosen);
   const fallback = DEFAULT_STORY_PRESETS.find((preset) => preset.id === DEFAULT_STORY_PRESET_ID);
   return stamp(fallback ?? DEFAULT_STORY_PRESETS[0]!);
+}
+
+/**
+ * The legend the server has been *told* to tell, if any.
+ *
+ * `ANGANO_STORY_PRESET` used to pick only which preset the AI would fall back to,
+ * which made it useless for the one thing it gets set for: hearing a legend that has
+ * a recorded narration pack. A pack belongs to one preset and an AI-written story
+ * carries no id, so as long as the AI answered, no recording could ever play — the
+ * variable was a promise the server did not keep.
+ *
+ * Naming a legend now means what it says: that one, no AI call, and none of the wait
+ * that comes with it. Leave the variable unset and nothing changes — the AI writes,
+ * and this preset is where it lands if it cannot.
+ */
+export function forcedStoryPreset(): StorySetup | null {
+  const requested = process.env.ANGANO_STORY_PRESET?.trim();
+  if (!requested) return null;
+  const chosen = resolvePreset(requested);
+  if (!chosen) {
+    console.warn(`[angano/story] ANGANO_STORY_PRESET="${requested}" ne correspond à aucune légende — ignoré`);
+    return null;
+  }
+  return stamp(chosen);
 }
 /** Carry the preset's id onto the story it produced. */
 function stamp(preset: DefaultStoryPreset): StorySetup {
