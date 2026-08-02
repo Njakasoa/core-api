@@ -1,0 +1,1244 @@
+{
+ "genere_par": "repparcs/scripts/build_pack_creation.py — ne pas éditer à la main",
+ "avertissement": "Matériau de CRÉATION extrait de contes malgaches attestés. Ne contient aucun texte source : ce sont des motifs et des notions relevés, pas des récits. À utiliser pour inventer une légende NEUVE, jamais pour restituer un conte.",
+ "licence_source": "Renel, Contes de Madagascar, 1910 — domaine public",
+ "motifs": [
+  {
+   "code": "MG-ORD-01",
+   "label": "Deux êtres indiscernables départagés par un signe fixé d'avance",
+   "noyau": "Deux êtres que le texte donne pour indiscernables (l'usurpatrice et la vraie, la mère et la fille, la maîtresse et l'esclave) ; un signe discriminant est fixé AVANT de s'exercer — formule dite, conseil du…"
+  },
+  {
+   "code": "MG-ORD-02",
+   "label": "Épreuve physique imposée à toute l'assemblée pour en faire sortir un seul",
+   "noyau": "Une autorité impose à tous les présents un même acte physique, dans le but déclaré ou manifeste de désigner un individu unique ; un seul décroche, et il est confondu."
+  },
+  {
+   "code": "MG-TAC-01",
+   "label": "Tâche imposée par le détenteur de la fille comme prix du mariage",
+   "noyau": "Celui qui détient la fille (père, vieillard, maître) subordonne le mariage — ou la restitution de l'épouse — à l'accomplissement d'une tâche qu'il énonce ; le prétendant l'entreprend réellement et l'accomplit."
+  },
+  {
+   "code": "MG-TAC-03",
+   "label": "Condition rebutante opposée par la fille à ses prétendants, jusqu'au dernier qui l'accepte",
+   "noyau": "La fille elle-même oppose aux demandeurs successifs une révélation ou une condition qui les fait repartir ; le dernier venu l'accepte telle quelle et l'obtient. Rien n'est à exécuter : les prétendants…"
+  },
+  {
+   "code": "MG-TAC-04",
+   "label": "Le défi lancé au créateur et les épreuves de création qu'il renvoie",
+   "noyau": "le Zanahary, informé, lui envoie une épreuve de création ou de démenti dont l'issue doit établir qui l'a fait."
+  },
+  {
+   "code": "MG-TAC-06",
+   "label": "L'impossible retourné par un impossible symétrique",
+   "noyau": "Sommé de faire ou de subir quelque chose, l'interpellé ne refuse pas : il pose comme préalable une exigence manifestement impossible, de même forme que ce qu'on lui demande. La première demande reste sans…"
+  },
+  {
+   "code": "MG-CNC-01",
+   "label": "Le petit défie le grand à une épreuve de vitesse et la truque",
+   "noyau": "Un animal petit ou lent provoque un grand à une épreuve de vitesse ; le grand accepte en se prévalant de sa taille ; le petit l'emporte sans courir ni nager plus vite, par un artifice de position, et se montre…"
+  },
+  {
+   "code": "MG-CNC-04",
+   "label": "Des compagnons éprouvent tour à tour leur savoir propre sur un même objet",
+   "noyau": "Plusieurs compagnons, que le texte distingue chacun par une compétence, interviennent successivement sur un seul et même objet, chacun n'apportant que son savoir."
+  },
+  {
+   "code": "MG-JUG-02",
+   "label": "Différend soumis à des juges pris sur le chemin",
+   "noyau": "Deux parties en litige soumettent leur affaire à des tiers qui passent là, ni convoqués, ni institués, ni parties à la convention ; ces tiers se prononcent, et leur avis règle l'affaire."
+  },
+  {
+   "code": "MG-JUG-03",
+   "label": "Témoins de la convention produits quand elle est reniée",
+   "noyau": "Une convention a été passée devant des témoins ; elle est ensuite reniée ; on produit les témoins, qui déposent et donnent tort au renieur."
+  },
+  {
+   "code": "MG-JUG-04",
+   "label": "La royauté d'un peuple d'oiseaux mise en jeu, et le plus fort écarté",
+   "noyau": "La royauté d'un peuple d'oiseaux est attribuée, refusée ou retirée ; le prétendant le plus fort n'obtient pas le pouvoir, ou ne le garde pas."
+  },
+  {
+   "code": "MG-PAC-01",
+   "label": "Alliance jurée par le sang entre espèces, invoquée quand elle est violée",
+   "noyau": "Deux êtres d'espèces différentes contractent une alliance jurée du type fatidra (serment du sang, fraternité de sang) ; la suite du récit invoque cette alliance — pour la plaider, la reprocher ou en montrer la…"
+  },
+  {
+   "code": "MG-PAC-02",
+   "label": "Convention dont le prix est un corps : le sien, un organe, ou son enfant",
+   "noyau": "Une convention est passée dont la contrepartie stipulée n'est pas un bien mais un être vivant ou une part de corps — la tête, un organe, la vie du débiteur, son fils aîné — exigible à un terme énoncé ou à la…"
+  },
+  {
+   "code": "MG-PAC-03",
+   "label": "Engagement scellé par l'imprécation d'un châtiment sur soi",
+   "noyau": "L'engagement s'achève sur une clause qui appelle un châtiment nommé sur celui qui manquera à sa parole — le locuteur lui-même ou l'une quelconque des parties présentes."
+  },
+  {
+   "code": "MG-PAC-04a",
+   "label": "Fiançailles conclues avant la naissance",
+   "noyau": "Deux parties conviennent, avant que l'enfant soit né, qu'il épousera l'enfant de l'autre s'il est du sexe voulu ; le récit revient plus tard sur cette convention comme sur un droit acquis."
+  },
+  {
+   "code": "MG-PAC-05",
+   "label": "Alliés d'espèces différentes qui se rendent visite tour à tour, et la visite qui tourne mal",
+   "noyau": "Deux êtres d'espèces différentes, après avoir noué alliance, se reçoivent tour à tour ; au moins une visite est narrée, et c'est chez l'hôte que l'alliance se défait."
+  },
+  {
+   "code": "MG-SAL-01",
+   "label": "Salaire promis pour un service, puis escamoté",
+   "noyau": "Une récompense déterminée est promise en échange d'un service ; le service est rendu ; le créancier n'est pas payé — soit qu'on refuse de payer, soit qu'on lui remette une chose sans valeur ou insultante."
+  },
+  {
+   "code": "MG-SAL-03",
+   "label": "Le prix exigé avant le service, par celui qui va servir",
+   "noyau": "Sollicité d'un secours, celui qui peut le rendre pose la question du prix et veut qu'il soit fixé avant d'agir."
+  },
+  {
+   "code": "MG-SAL-04",
+   "label": "La récompense offerte, déclinée, et remplacée par celle que nomme le bénéficiaire",
+   "noyau": "Le service rendu, une récompense déterminée est offerte ; le bénéficiaire la décline et nomme lui-même ce qu'il veut à la place."
+  },
+  {
+   "code": "MG-NAI-01",
+   "label": "Être trouvé, non engendré, et élevé comme enfant",
+   "noyau": "Le texte dit d'où sort l'être et exclut qu'il ait été engendré ; ceux qui le trouvent le gardent et l'élèvent."
+  },
+  {
+   "code": "MG-NAI-02",
+   "label": "Envie de la femme enceinte, et le départ qu'elle provoque",
+   "noyau": "Le texte dit la femme enceinte et lui prête l'envie d'une chose nommée ; quelqu'un part la chercher."
+  },
+  {
+   "code": "MG-NAI-03",
+   "label": "Le manque d'enfant, et la consigne exécutée qui le lève",
+   "noyau": "Le texte déclare un couple ou un roi sans postérité ; une consigne d'action lui est donnée ; il l'exécute et l'enfant vient."
+  },
+  {
+   "code": "MG-FAM-01",
+   "label": "Exclusion de l'enfant décidée dans la maison, et exécutée",
+   "noyau": "Un parent, les aînés ou le conseil de famille décident l'éloignement définitif d'un enfant de la maison, et l'exclusion est exécutée : l'enfant est emmené, laissé ou chassé. Un enfant qui s'éloigne de lui-même…"
+  },
+  {
+   "code": "MG-FAM-02",
+   "label": "Viatique dérisoire ou trompeur remis à l'exclu",
+   "noyau": "Au moment où quelqu'un est chassé, abandonné ou part sans retour, le texte dit ce qu'on lui donne à emporter, et c'est peu de chose — ou un leurre."
+  },
+  {
+   "code": "MG-FAM-03",
+   "label": "Le dernier-né nommé contre ses aînés",
+   "noyau": "Le texte nomme le rang (faralahy, faravavy, dernier-né, cadet) et désigne des aînés comme tels ; le cadet obtient seul ce que les aînés ont manqué, ou l'emporte après qu'ils l'ont lésé."
+  },
+  {
+   "code": "MG-FAM-04",
+   "label": "Enfant qui parle ou agit avant l'âge",
+   "noyau": "Le texte prête à un enfant à naître ou à un nouveau-né une parole, une exigence ou une force d'adulte."
+  },
+  {
+   "code": "MG-UNI-01",
+   "label": "La maison du mari agit contre l'épouse ou contre les siens",
+   "noyau": "Une personne de la maison du mari — co-épouse, marâtre, belle-mère, beaux-parents — agit contre l'épouse, contre sa parente ou contre son enfant, et le texte dit par quel moyen."
+  },
+  {
+   "code": "MG-UNI-02",
+   "label": "Épouse d'origine non humaine : interdit posé, rompu, départ",
+   "noyau": "Une femme dont le texte donne l'origine non humaine pose au mariage une condition nommée ; le mari la rompt ; elle s'en va."
+  },
+  {
+   "code": "MG-UNI-03",
+   "label": "Guerre, duel ou poursuite pour une femme",
+   "noyau": "L'enlèvement, la demande ou le remariage d'une femme met deux partis en conflit ouvert, et le texte narre l'action engagée pour elle."
+  },
+  {
+   "code": "MG-UNI-04",
+   "label": "La mère dévorante hors du village, sa fille mariée au loin, et son emprise conservée",
+   "noyau": "Une mère que le texte donne pour dévorante ou non humaine vit hors de tout village avec sa fille en âge d'être demandée ; la fille part avec un homme ; la mère demeure ensuite une puissance sur elle — au moins…"
+  },
+  {
+   "code": "MG-PRE-01",
+   "label": "Le dévoreur qui flaire la chair humaine qu'il ne voit pas",
+   "noyau": "Un dévoreur — ogre, bête, mère anthropophage — annonce à voix haute qu'il sent une chair humaine sans la voir, et se met à la chercher."
+  },
+  {
+   "code": "MG-PRE-02",
+   "label": "Monstre qui avale un village entier",
+   "noyau": "Une bête unique avale les habitants d'un lieu, leurs bêtes et leurs biens, jusqu'à le vider."
+  },
+  {
+   "code": "MG-PRE-03",
+   "label": "L'Être qui pille le repas des défricheurs",
+   "noyau": "Pendant que les autres travaillent au tavy, un Être vient trouver celui qui est resté seul à la case pour cuisiner, s'empare du repas et le met hors d'état de nuire ; la scène recommence avec un autre gardien,…"
+  },
+  {
+   "code": "MG-PRE-04",
+   "label": "Le ravageur pris à l'affût ou au piège",
+   "noyau": "Un dommage se répète sur une culture ou une réserve ; le lésé se poste ou pose un piège ; le ravageur est saisi."
+  },
+  {
+   "code": "MG-PRE-05",
+   "label": "Le passeur qui trahit au milieu de l'eau",
+   "noyau": "Un être offre de faire franchir l'eau à quelqu'un en le portant sur son corps ; l'autre monte ; au milieu du passage le porteur se retourne contre lui."
+  },
+  {
+   "code": "MG-PRE-06",
+   "label": "L'exécution différée dont la proie tire son salut",
+   "noyau": "La proie est déjà tenue et sa mise à mort est remise à plus tard ; c'est pendant ce délai, et par lui, qu'elle échappe ou qu'un secours lui vient."
+  },
+  {
+   "code": "MG-PRE-07",
+   "label": "Corps du dévoreur ouvert, avalés rendus vivants",
+   "noyau": "On ouvre le corps du dévoreur et il en sort vivants ceux qu'il avait avalés."
+  },
+  {
+   "code": "MG-PRE-08",
+   "label": "Captif engraissé avant d'être mangé",
+   "noyau": "Le prédateur garde sa proie vivante et la nourrit pour la manger quand elle sera grasse."
+  },
+  {
+   "code": "MG-AUX-01",
+   "label": "Chaîne de secours sollicités, et le dernier qui accepte",
+   "noyau": "Un personnage en détresse adresse la même demande à des êtres qui passent ou qu'il appelle l'un après l'autre ; au moins deux se dérobent ; un dernier accepte et réussit."
+  },
+  {
+   "code": "MG-AUX-02",
+   "label": "Formule conditionnelle de filiation immédiatement suivie d'effet",
+   "noyau": "Un personnage prononce sur sa propre filiation ou origine une clause conditionnelle appelant un signe matériel ; le texte enchaîne aussitôt sur l'accomplissement ou le non-accomplissement du signe."
+  },
+  {
+   "code": "MG-AUX-03",
+   "label": "Tâche démesurée exécutée par des bêtes appelées",
+   "noyau": "Une tâche hors de portée de celui qui la reçoit est accomplie par des bêtes venues à son appel."
+  },
+  {
+   "code": "MG-AUX-05",
+   "label": "Dispositif qui délivre des biens à chaque visite",
+   "noyau": "Un même dispositif est relevé plusieurs fois et livre chaque fois des biens ; le texte marque la répétition."
+  },
+  {
+   "code": "MG-AUX-06",
+   "label": "Le contenant unique qui se déploie en biens et en peuples",
+   "noyau": "Un contenant fermé est ouvert, brisé ou tombe, et il en sort d'un seul coup des biens et des êtres en nombre."
+  },
+  {
+   "code": "MG-AUX-07",
+   "label": "Consultation d'un détenteur de savoir, et prescription suivie d'effet",
+   "noyau": "On consulte un ombiasy, un mpisikidy ou un possesseur d'ody, et il prescrit ce qu'il faut faire ; le récit montre la prescription exécutée et la suite en dépend. Un devin mentionné sans prescription exécutée…"
+  },
+  {
+   "code": "MG-AUX-08a",
+   "label": "L'Être qui vient de nuit prescrire un acte, sans avoir été cherché",
+   "noyau": "Sans avoir été sollicité, un Être s'adresse la nuit ou en songe à un dormeur et lui prescrit un acte ; le dormeur l'exécute."
+  },
+  {
+   "code": "MG-AUX-10a",
+   "label": "Les morts qui répondent aux vivants",
+   "noyau": "Un mort parle à un vivant ou lui répond, et cette parole modifie la conduite du vivant."
+  },
+  {
+   "code": "MG-AUX-10b",
+   "label": "Le message qui nomme l'absent, porté jusqu'aux siens",
+   "noyau": "Une personne séparée des siens et hors d'état de revenir — perdue, enlevée, enterrée, engloutie, morte — fait passer aux siens un message qui LA NOMME et dit son sort ; le message est crié ou chanté jusqu'à ce…"
+  },
+  {
+   "code": "MG-SAN-02",
+   "label": "L'imitateur qui veut la même chance et reçoit le double maléfique",
+   "noyau": "Un personnage voit l'avantage obtenu par un autre et cherche à l'obtenir par le même geste ; le même geste le perd — mort, métamorphose, ou contraire du don."
+  },
+  {
+   "code": "MG-SAN-03",
+   "label": "Le coupable trahi par un signe involontaire de son corps",
+   "noyau": "Un imposteur, un mari-bête ou un voleur est découvert par un trait de son corps qu'il ne maîtrise pas."
+  },
+  {
+   "code": "MG-SAN-04",
+   "label": "La victime qui prescrit elle-même sa mise à mort, sans y échapper",
+   "noyau": "La victime dicte ou réclame elle-même la manière de son exécution ; elle meurt."
+  },
+  {
+   "code": "MG-SAN-05",
+   "label": "Sanction étendue à toute la lignée, attirée un à un par un prétexte",
+   "noyau": "L'offense a été commise par un seul, mais la vengeance porte sur les siens : ils sont attirés ou convoqués par un prétexte, puis tués, et le texte les compte."
+  },
+  {
+   "code": "MG-SAN-06",
+   "label": "Métamorphose punitive",
+   "noyau": "Une faute est commise — orgueil, désobéissance, sottise, tentative de reprendre une femme — et le fautif est aussitôt changé en bête ou en objet, à titre de sanction."
+  },
+  {
+   "code": "MG-SAN-07",
+   "label": "Le dévoreur tué avec un objet du lieu, par ceux qu'il tenait",
+   "noyau": "Le dévoreur est mis à mort non par une arme mais par un objet pris sur place dans la maison, manié par celui ou celle qu'il gardait ou qu'il allait manger."
+  },
+  {
+   "code": "MG-REP-01",
+   "label": "Retour du disparu qu'on croyait mort",
+   "noyau": "Les siens ont tenu le disparu pour mort ; il reparaît vivant."
+  },
+  {
+   "code": "MG-REP-02",
+   "label": "La parenté qui réclame compte au meurtrier",
+   "noyau": "Après la mort d'un des leurs, les parents ou les frères de la victime viennent demander des comptes à celui qu'ils tiennent pour responsable, et il répond."
+  },
+  {
+   "code": "MG-REP-03",
+   "label": "Résurrection et recomposition du corps",
+   "noyau": "Un être que le texte a donné pour mort ou mis en morceaux est rendu à la vie."
+  },
+  {
+   "code": "MG-MET-01",
+   "label": "La bête qui dit son propre malheur et qu'on n'entend pas",
+   "noyau": "Une bête — le plus souvent un oiseau — profère un texte qui dit son propre cas, et l'auditeur ne l'entend pas pour ce qu'il est : il y prend un agrément, il y voit un ordre à exécuter, ou il ne l'identifie…"
+  },
+  {
+   "code": "MG-MET-02",
+   "label": "Ceux qui vivaient ensemble se séparent, et instituent une règle d'évitement",
+   "noyau": "Des êtres qui vivaient ensemble se brouillent et se séparent ; la séparation est close par une règle permanente d'évitement ou de partage, que le texte donne pour observée depuis."
+  },
+  {
+   "code": "MG-MET-03",
+   "label": "La bête chérie livrée par l'appel contrefait, et l'enfant qui s'enfonce en chantant",
+   "noyau": "Un enfant nourrit en secret une bête qu'il appelle par un chant nominal ; un tiers l'espionne, imite l'appel, la bête sort en croyant reconnaître son maître, on la tue. Second temps, facultatif : l'enfant,…"
+  },
+  {
+   "code": "MG-MET-05",
+   "label": "Organe ou objet emprunté à une autre espèce et jamais rendu",
+   "noyau": "Un être en emprunte un autre une chose dont la restitution est attendue — demandée ou promise — et ne la rend pas."
+  },
+  {
+   "code": "MG-OBJ-01",
+   "label": "Objets semés derrière soi que le poursuivant s'arrête à ramasser",
+   "noyau": "Pendant une poursuite, le fugitif répand derrière lui sur le chemin des biens qu'il a emportés ; le poursuivant interrompt sa course pour les ramasser, ce qui donne de l'avance au fugitif."
+  },
+  {
+   "code": "MG-OBJ-03",
+   "label": "L'objet laissé à la place d'un corps, pris pour le corps par ceux qui viennent",
+   "noyau": "Quelqu'un met à la place d'un corps absent un objet matériel qui en tient lieu ; ceux qui surviennent le prennent pour le corps — le frappent, le dévorent, ou le croient endormi — et la substitution est…"
+  },
+  {
+   "code": "MG-OBJ-04",
+   "label": "La plante-témoin laissée au départ, avec sa règle de lecture énoncée",
+   "noyau": "Avant de partir pour une entreprise dangereuse, le partant plante ou remet aux siens un végétal vivant et énonce devant eux la règle qui permettra d'y lire son état à distance ; le texte revient plus tard sur…"
+  },
+  {
+   "code": "MG-OBJ-08",
+   "label": "Le condamné enfermé dans un contenant, qui y fait entrer un tiers à sa place",
+   "noyau": "Une personne enfermée dans un contenant refermé sur elle pour être supprimée (noyée, précipitée, cuite, vendue) obtient par une parole trompeuse qu'un passant l'ouvre, puis fait entrer ce passant à sa place,…"
+  },
+  {
+   "code": "MG-EAU-02",
+   "label": "Le passager qui ronge la coque et coule l'embarcation au milieu de l'eau",
+   "noyau": "Deux ou trois compagnons traversent une eau dans une embarcation ; l'un d'eux, un rongeur, en perce la coque pendant la traversée ; l'embarcation coule au milieu de l'eau et celui qui ne sait pas nager périt…"
+  },
+  {
+   "code": "MG-EAU-04",
+   "label": "L'usurpation du rang par la prise des vêtements et des parures",
+   "noyau": "En chemin ou à l'écart, les vêtements et les parures d'une personne de rang passent à une subordonnée ou à une rivale ; celle-ci est ensuite reçue et traitée pour elle, tandis que la dépossédée, réduite à la…"
+  },
+  {
+   "code": "MG-DEG-01",
+   "label": "La défroque d'une condition méprisée revêtue pour s'introduire ou n'être pas reconnu",
+   "noyau": "Un personnage endosse l'apparence d'une condition inférieure ou repoussante — pauvre, vieille, lépreux — pour être pris pour quelqu'un de cette condition ; le récit dit ce qu'il obtient sous ce couvert."
+  },
+  {
+   "code": "MG-CHA-01",
+   "label": "La parole du dépossédé au poste de garde, entendue, qui le fait reconnaître",
+   "noyau": "Une personne déchue de son rang est envoyée seule à un travail de garde à l'écart du village ; elle y profère à voix haute une parole que le texte cite et qui dit sa vraie condition ou le renversement subi ;…"
+  },
+  {
+   "code": "MG-AUX-08b",
+   "label": "Le chien qui fait lâcher au caïman l'homme qu'il tient",
+   "noyau": "Un caïman tient dans sa gueule ou emporte dans l'eau l'homme qui l'avait pris au piège ; un chien qui se trouve là obtient par la parole qu'il relâche sa prise ; l'homme s'échappe et le chien reste auprès de…"
+  },
+  {
+   "code": "MG-PAC-04b",
+   "label": "Marché entre bêtes gagé sur un prix nommé, renié, et poursuivi en criant",
+   "noyau": "Deux bêtes concluent un marché dont le prix est expressément nommé et fixé d'avance ; le service une fois rendu, le débiteur se dérobe et refuse de payer ; le créancier le poursuit en criant sa réclamation,…"
+  },
+  {
+   "code": "MG-MET-05-1",
+   "label": "Bien ou organe remis à titre temporaire et jamais restitué",
+   "noyau": "Un être obtient d'un autre un bien ou un organe qui doit lui revenir ; il ne le rend pas ; l'état présent des deux espèces — ce que l'une a gardé, ce que l'autre a perdu, et l'inimitié entre elles — est donné…"
+  },
+  {
+   "code": "MG-EPR-06",
+   "label": "Querelle de préséance entre frères, tranchée par le Soleil, qui fixe le rang et le cri de chacun",
+   "noyau": "Deux êtres qui vivent ensemble se disputent la préséance à propos d'une course à faire ; le Soleil arbitre le différend ; la sentence fixe pour toujours le rang de chacun, son heure de sortie et son cri, et le…"
+  },
+  {
+   "code": "MG-AUX-10b-1",
+   "label": "L'oiseau chargé d'un message qui nomme la victime, crié au village",
+   "noyau": "Une victime isolée — abandonnée, enlevée, laissée pour morte — charge un oiseau de passage de porter aux siens un message qui la nomme et dit son sort ; l'oiseau crie ce message au village ; les siens…"
+  },
+  {
+   "code": "MG-ETIO-005",
+   "label": "Le corps d'un être surnaturel converti en éléments du monde utilisable",
+   "noyau": "Le corps d'un être surnaturel — monstre tué et dépecé, ou dieu qui se transforme — se convertit en éléments nommés du monde dont les hommes vivent, et le texte donne cette conversion pour l'origine de ces…"
+  },
+  {
+   "code": "MG-ETIO-008",
+   "label": "Averti avant le feu du défrichement, l'orgueilleux qui refuse de partir et brûle",
+   "noyau": "Avant qu'on mette le feu à un défrichement, un être qui s'y trouve est averti d'avoir à partir ; il refuse par vantardise, en annonçant qu'il arrêtera les flammes ; il brûle, et ses cendres font pousser le riz."
+  }
+ ],
+ "actants": [
+  {
+   "nom": "Andriambahoaka / le roi",
+   "role": "roi d'une direction cardinale : il marie sa fille, impose des épreuves, convoque le kabary, tue des bœufs, promet et se dédit,…"
+  },
+  {
+   "nom": "Andriana",
+   "role": "Noble de naissance ; être est une formule d'efficacité magique et un enjeu de reconnaissance ; les andriana refusent d'épouser…"
+  },
+  {
+   "nom": "Hova",
+   "role": "Roturier ; les filles de roi refusent d'en épouser, ce dont naît le récit qui abolit la distinction"
+  },
+  {
+   "nom": "Menakely",
+   "role": "Serfs et sujets d'un seigneur : on les convoque, ils se plaignent, menacent de révolte, imposent au roi de choisir entre sa fille…"
+  },
+  {
+   "nom": "Fokonolona / peuple assemblé",
+   "role": "Assemblée des gens du lieu, convoquée pour trancher un différend, valider un pacte, assister à une épreuve ou à une exécution"
+  },
+  {
+   "nom": "Esclave (andevo)",
+   "role": "Porte les messages, puise l'eau, fait le sikidy pour son maître, sert de monnaie de réparation ou de salaire ; voit ce que les…"
+  },
+  {
+   "nom": "Ombiasy / mpisikidy / possesseur d'ody",
+   "role": "Devin-guérisseur consulté pour la stérilité, la maladie, la route à suivre ou une identification impossible ; il jette le sikidy,…"
+  },
+  {
+   "nom": "Faralahy (le dernier-né)",
+   "role": "Cadet méprisé, infirme, sale ou désobéissant, rejeté par sa famille ; c'est lui qui devine, qui terrasse l'Être, qui respecte les…"
+  },
+  {
+   "nom": "Faravavy / Ifara (la dernière-née)",
+   "role": "Cadette abandonnée, dépouillée ou réduite en servitude, qui se voit reconnue et épousée par le roi, ou qui s'enfonce sous terre…"
+  },
+  {
+   "nom": "Rangs de naissance comme noms (Andriamatoa, Andrianaivo, Ramatoa, Raivo)",
+   "role": "Les personnages sont désignés par leur rang plutôt que par un nom propre : aîné, puîné, dernier-né, première épouse, deuxième…"
+  },
+  {
+   "nom": "Beaux-parents / belle-mère",
+   "role": "Imposent les travaux impossibles au prétendant, empoisonnent la bru jugée moins noble que leurs ancêtres, envoient des commandes…"
+  },
+  {
+   "nom": "Co-épouses rivales et marâtre",
+   "role": "Se moquent de la nouvelle venue, feignent la maladie, achètent les devins, dépouillent, plantent des plumes, exigent de manger la…"
+  },
+  {
+   "nom": "Frères jaloux",
+   "role": "Envient la fortune soudaine d'un des leurs, l'enivrent, le menacent de mort, coupent la liane, ou l'imitent maladroitement et…"
+  },
+  {
+   "nom": "Marchand / voyageur de passage",
+   "role": "Renseigne, échange, achète des prescriptions rituelles à la tête parlante, vend des fanafody de pays lointain (l'Antaimoro)"
+  },
+  {
+   "nom": "Mpikabary",
+   "role": "Homme expert au discours public, compagnon de voyage qui parle et fait porter la faute à un autre"
+  },
+  {
+   "nom": "Cultivateur défricheur (homme du tavy)",
+   "role": "Avertit ancêtres et bêtes avant de brûler son défrichement, campe en forêt et se relaie pour la cuisine, pose des pièges au…"
+  },
+  {
+   "nom": "Rafotsibe / la vieille femme",
+   "role": "Vieille pauvre ou aveugle : devineresse qui donne la graine et les conseils, gardienne des champs dont on emprunte la peau du…"
+  },
+  {
+   "nom": "Grand-mère nourricière",
+   "role": "Recueille l'enfant difforme ou rejeté, l'élève dans une case isolée, garde son talisman"
+  },
+  {
+   "nom": "Le garçon rusé (Ngano, Iangano)",
+   "role": "Parle par énigmes, retourne toutes les épreuves du roi, s'évade de la natte cousue, devient roi ou souche des gens rusés"
+  },
+  {
+   "nom": "Les fripons appariés (Ikotofetsy et Imahaka, Tangaly et Doso, Kelikanty et Iolombevalana)",
+   "role": "Couples de trompeurs — l'un fin, l'autre nigaud, ou deux égaux alliés après s'être dupés : farces réciproques, escroqueries de…"
+  },
+  {
+   "nom": "Zanahary / Zanaharibe",
+   "role": "Créateur et maître du ciel : il fait les premiers êtres et leur laisse choisir entre l'immortalité stérile et la mort féconde,…"
+  },
+  {
+   "nom": "Andriamanitra / Andriananahary",
+   "role": "Autre nom du dieu, dans les mêmes emplois : il enrichit le pauvre, distribue des ody avec un fady, a fait les formes du corps,…"
+  },
+  {
+   "nom": "Fils ou fille du Zanahary / d'Andriamanitra",
+   "role": "Époux ou épouse surnaturel qui pose un interdit, ressuscite un mort, exige le sang d'un frère, ou remonte au ciel l'interdit rompu"
+  },
+  {
+   "nom": "L'Être (zavatra)",
+   "role": "Puissance anonyme et locale : elle apparaît la nuit ou en songe, donne un piège à richesses, dicte un itinéraire d'interdits,…"
+  },
+  {
+   "nom": "Angatra / ambiroa / razana",
+   "role": "Fantômes, âmes des morts et ancêtres : ils interpellent l'abandonnée en forêt, cachent le voyageur dans le tombeau et livrent des…"
+  },
+  {
+   "nom": "Kaka",
+   "role": "Monstre anthropophage du lac ou de la forêt : il rançonne le pêcheur, tue le voyageur, et rachète sa vie en ressuscitant sa…"
+  },
+  {
+   "nom": "Trimobe",
+   "role": "Ogre de colline, propriétaire d'un champ, de provisions, d'une femme et d'enfants ; il flaire l'odeur humaine, achète une voix…"
+  },
+  {
+   "nom": "Petits êtres du tavy (Hitikalavasomotra, Kotokely, Angidikely, Rangalampona)",
+   "role": ""
+  },
+  {
+   "nom": "La mère anthropophage",
+   "role": "Moitié vache moitié femme, ou monstre de forêt : elle vit hors du village, flaire l'odeur humaine, poursuit sa fille en fuite,…"
+  },
+  {
+   "nom": "Fananimpitoloha (serpent à sept têtes)",
+   "role": "Boa monstrueux, souvent un parent métamorphosé, qui avale un village entier, les troupeaux, l'argent et la famille royale…"
+  },
+  {
+   "nom": "Serpent / boa (Ramambabe, Do, mandotra)",
+   "role": "Emprunteur d'yeux qui ne rend rien, ou fanfaron qui refuse de quitter le tavy en promettant d'éteindre les flammes avec ses…"
+  },
+  {
+   "nom": "Le caïman (Ravoay, Ravoaimena, Ramamba, Baolava)",
+   "role": "Maître du gué : passeur perfide, ravisseur d'enfant qu'il engraisse, aîné arrogant qui contracte et trahit, peuple d'étang qui…"
+  },
+  {
+   "nom": "Le rat (Ravoalavo)",
+   "role": "Petit rusé et rongeur : il vend un fanafody contre du riz blanc, ronge cordes, boîtes, pirogues et coques, se fait ombiasy et se…"
+  },
+  {
+   "nom": "Le chat (Rabosy, Rapiso, Rasaka, Karaka)",
+   "role": "Mangeur de sauterelles à l'origine, incapable de nager : noyé ou brûlé par son compère, il maudit en mourant sa descendance pour…"
+  },
+  {
+   "nom": "Le chien",
+   "role": "Compagnon de l'homme et meute nommée qui déchire le serpent ; il sauve l'homme de la gueule du caïman, tue l'intrus, réclame son…"
+  },
+  {
+   "nom": "Le sanglier / la laie (Lambo)",
+   "role": "Gros, fort, affamé, dupé par plus petit que lui ; auxiliaire qui laboure la rizière du groin, voleur de riz, de cannes et de…"
+  },
+  {
+   "nom": "Bœuf / taureau",
+   "role": "Richesse, prix du mariage, victime du sacrifice, tapis vivant pour les entrées royales, juge qui reconnaît sa vraie maîtresse,…"
+  },
+  {
+   "nom": "La poule et le coq",
+   "role": "Domestiques par choix ou par capture : la poule perd l'aiguille du papango et gratte la terre à jamais, disperse les graines pour…"
+  },
+  {
+   "nom": "La pintade (Rakanga)",
+   "role": "Prudente et méfiante : elle perce la fausse mort du caïman par sommations successives, mange les grosses patates avant de…"
+  },
+  {
+   "nom": "Fody",
+   "role": "Petit oiseau au ventre rouge des rizières : chassé du riz, il refuse ou accepte de porter un message, ramasse le grain perdu,…"
+  },
+  {
+   "nom": "Vorondreo",
+   "role": "Oiseau messager qui transporte l'enfant perdue sous son aile, porte la commission que tous les autres ont refusée, chante la mort…"
+  },
+  {
+   "nom": "Papango",
+   "role": "Rapace créancier et messager : il prête son aiguille à la poule, ne la retrouve jamais, enlève des poussins en compensation et…"
+  },
+  {
+   "nom": "Takatra",
+   "role": "Bâtisseur de la maison chaude, hospitalier, systématiquement dépossédé de son nid par un squatteur ; il promet sauterelles,…"
+  },
+  {
+   "nom": "Tsintsina",
+   "role": "Le plus petit des oiseaux, qui réussit où les grands échouent : il entre par le bec du hibou et lui dévore les entrailles,…"
+  },
+  {
+   "nom": "Voromahery",
+   "role": "Le plus fort des oiseaux : il refuse d'abord la royauté, tue le roi élu et s'empare du pouvoir, mange les œufs de ses sujets…"
+  },
+  {
+   "nom": "Goaika et autres oiseaux sollicités (karako, hitsikitsika, railovy, kibobo, boreta)",
+   "role": "Refusent la commission en rappelant les injures reçues, échouent à déloger l'intrus, arbitrent ou obtiennent la grâce, sont élus…"
+  },
+  {
+   "nom": "Vintsy (oiseau pêcheur)",
+   "role": "Bel oiseau aux plumes brillantes, envié : il brûle la race des caïmans à qui il avait promis la beauté, et vole le lamba du…"
+  },
+  {
+   "nom": "Kankafotra",
+   "role": "Seul à chanter jusqu'au bout aux funérailles du fils de Zanahary ; sa récompense est de ne plus couver et de pondre dans le nid…"
+  },
+  {
+   "nom": "Le fosa",
+   "role": "Ravisseur d'enfant qu'il engraisse dans son trou, maître glouton qui feint le mal de dents pour manger seul, bête qui prend forme…"
+  },
+  {
+   "nom": "La tortue",
+   "role": "Lente, passeuse d'eau et invulnérable : elle noie le chat sauvage qui l'a mal partagée, empale le fosa sur des piquets, et se…"
+  },
+  {
+   "nom": "Le hérisson (Rasokina)",
+   "role": "Petit mangeur de vers et de sauterelles, laid et sans honte, protégé par ses piquants : il se hérisse dans le gosier du caïman et…"
+  },
+  {
+   "nom": "Le caméléon (tangarirana)",
+   "role": "Faible de corps et lent, mais le plus malin : il avertit le serpent du brûlis, gagne la course accroché au dos ou à la queue du…"
+  },
+  {
+   "nom": "Vontsira",
+   "role": "Compagnon de chasse du rat, uni à lui par le fatidra, qui grimpe seul au bananier et ne laisse que les épluchures ; puni par une…"
+  },
+  {
+   "nom": "Mouche / fihitra",
+   "role": "Auxiliaire minuscule enfermé dans un bambou, lâché pour se poser sur la vraie fiancée ou sur le bœuf premier-né et résoudre…"
+  },
+  {
+   "nom": "Crapaud et grenouille (Rabakaka, Raboketra)",
+   "role": "Avale les fugitives dans son ventre gonflé comme une case et les rend au roi leur père ; ou défie le sanglier à la nage en…"
+  },
+  {
+   "nom": "Le moustique (Rekehitsa)",
+   "role": "Frère de sang de l'homme, il trouve son sang exquis, revient le boire à moindres frais et se fait écraser ; depuis, l'homme et…"
+  },
+  {
+   "nom": "Le Soleil, la Lune et les Étoiles",
+   "role": "Frères ou amis intimes avec leurs cadets : ils se brouillent, se séparent, arbitrent l'aînesse, instituent l'alternance du jour…"
+  },
+  {
+   "nom": "Kinaoly (Ndoky)",
+   "role": "Compère du rat, enlisé dans la rizière puis libéré parce qu'il se dit bon mpilalao et sait danser et faire des tours"
+  },
+  {
+   "nom": "Ratsimanola",
+   "role": "sous ce nom, des bêtes obtiennent des épouses qu'elles comptent dévorer"
+  },
+  {
+   "nom": "Le Monpère",
+   "role": "immobilisé tout le jour par l'Être de l'îlot, il fait en vain des signes de croix et implore l'Andriamanitra"
+  },
+  {
+   "nom": "Le vazaha",
+   "role": "L'étranger européen : il qualifie le rhum importé (toaka vazaha) et sert de terme de comparaison (le fosa porte l'enfant )"
+  },
+  {
+   "nom": "Le lépreux",
+   "role": "Voleur de courge dont la piteuse mine désarme le propriétaire ; son apparence sert de modèle au déguisement des fuyardes royales"
+  }
+ ],
+ "realia": [
+  {
+   "terme": "Zanahary / Zanaharibe",
+   "sens": "Le dieu, maître du ciel ; il y en a parfois plusieurs, et un Zanaharibe au-dessus. Il crée, contracte, punit, récompense ; sa mère peut juger un…"
+  },
+  {
+   "terme": "Andriamanitra / Andriananahary",
+   "sens": "Autre appellation de la divinité, dans les mêmes emplois : elle enrichit, distribue des ody, a fait les formes du corps, est père du Soleil, de la…"
+  },
+  {
+   "terme": "andriana",
+   "sens": "Noble ; est une formule qui commande la nature ; les andriana refusent d'épouser les hova ; le voromahery régnait"
+  },
+  {
+   "terme": "hova",
+   "sens": "Roturier, opposé à andriana dans les questions de mariage"
+  },
+  {
+   "terme": "Andriambahoaka",
+   "sens": "Titre du roi, ; il y a un Andriambahoaka du Nord, du Sud, de l'Est, de l'Ouest et du Centre"
+  },
+  {
+   "terme": "menakely",
+   "sens": "Les serfs, les gens de la terre d'un seigneur : on les convoque, ils se plaignent, menacent de révolte, on y prend femme, on les réunit pour le festin"
+  },
+  {
+   "terme": "fokonolona",
+   "sens": "L'assemblée des gens du lieu, réunie pour assister à une épreuve et en garantir le résultat"
+  },
+  {
+   "terme": "kabary",
+   "sens": "Grande assemblée avec discours publics : on y décide de la royauté, de la succession, de l'enjeu d'un combat, de l'élection d'un roi ; chez les…"
+  },
+  {
+   "terme": "mpikabary",
+   "sens": "Homme expert en discours public"
+  },
+  {
+   "terme": "Fanjakana",
+   "sens": "L'autorité, le gouvernement, devant qui l'on menace de porter plainte"
+  },
+  {
+   "terme": "rova",
+   "sens": "Enceinte du chef, où le fripon n'ose pas monter directement en revenant au pays"
+  },
+  {
+   "terme": "sikidy",
+   "sens": "Divination faite avec des grains, qui indique la conduite à tenir ; on la fait faire par un mpisikidy et elle peut être truquée pour tromper"
+  },
+  {
+   "terme": "mpisikidy",
+   "sens": "Faiseur ou faiseuse de sikidy, consulté avant un voyage ou un mariage"
+  },
+  {
+   "terme": "ombiasy",
+   "sens": "Devin-guérisseur qu'on va chercher pour la stérilité, la maladie ou une identification impossible ; peut être une très vieille femme ; les…"
+  },
+  {
+   "terme": "ampanito",
+   "sens": "Glosé par le collecteur : homme célèbre et riche, fils de chef, qui vient demander une femme en mariage"
+  },
+  {
+   "terme": "mpanazary",
+   "sens": "Celui qui possède et manie les ody, fonction attribuée à l'aîné de huit frères"
+  },
+  {
+   "terme": "ody",
+   "sens": "Amulette ou charme : ody pour avoir des enfants, ody-pour-avoir-du-lait, ody du sommeil, ody varatra contre la foudre, ody pour aveugler les regards,…"
+  },
+  {
+   "terme": "odiaina",
+   "sens": "Amulette de vie, prêtée par un frère et servant à ressusciter un cadavre"
+  },
+  {
+   "terme": "tamango / fanjambana",
+   "sens": "Le tamango est un ody qui parle et fait connaître l'avenir"
+  },
+  {
+   "terme": "Rafanovaovao",
+   "sens": "Amulette qui transforme tout ce qu'elle veut et produit à la demande argent, maisons, un corps complet"
+  },
+  {
+   "terme": "fanafody",
+   "sens": "Remède ou charme végétal : feuille suspendue au toit qui parle à la place des fugitifs, plante qui guérit les pieds paralysés, remède acheté pour…"
+  },
+  {
+   "terme": "fady",
+   "sens": "Interdit : ne pas révéler l'origine de sa fortune, ne pas prononcer une insulte, ne pas boire de toaka, ne pas cracher, ne pas élever de cochons, ne…"
+  },
+  {
+   "terme": "fatidra",
+   "sens": "Serment du sang qui fait de deux êtres des frères : on boit le sang l'un de l'autre, on se doit assistance et visites, et l'on doit compte à la…"
+  },
+  {
+   "terme": "razana",
+   "sens": "Ancêtre mort chez qui l'on peut aller demeurer sous la terre ; on rapatrie ses os dans le tombeau des ancêtres et l'on n'en laisse rien en pays…"
+  },
+  {
+   "terme": "angatra",
+   "sens": "Revenant ou esprit : il surgit en forêt et interpelle l'enfant abandonnée, ou habite un tombeau au bord du chemin, réclame des fontsy aux passants et…"
+  },
+  {
+   "terme": "ambiroa",
+   "sens": "Fantôme, âme d'un mort qui parle, cache un vivant dans un tombeau et lui livre des secrets"
+  },
+  {
+   "terme": "zavatra",
+   "sens": "puissance qui réside dans un lieu, à qui les convertis continuent d'adresser des prières et dont on n'ose fouler les herbes ; selon la note du…"
+  },
+  {
+   "terme": "kaka",
+   "sens": "Monstre anthropophage du lac ou de la forêt, qu'on peut affronter et faire parler"
+  },
+  {
+   "terme": "trimobe",
+   "sens": "Ogre qui vit dans une maison au sommet d'une colline, possède champ, provisions, femme et enfants"
+  },
+  {
+   "terme": "fananimpitoloha / fanany",
+   "sens": "Le serpent à sept têtes"
+  },
+  {
+   "terme": "Ramamba / Ramambabe",
+   "sens": ""
+  },
+  {
+   "terme": "kiridy",
+   "sens": ""
+  },
+  {
+   "terme": "lolondrano",
+   "sens": "êtres merveilleux censés habiter les rivières, invoqués comme motif de peur"
+  },
+  {
+   "terme": "kinaoly / Ndoky",
+   "sens": "Être compère du rat, bon mpilalao, qui danse et fait des grimaces pour se faire délier"
+  },
+  {
+   "terme": "Ratsimanola",
+   "sens": ""
+  },
+  {
+   "terme": "Vazimba",
+   "sens": "Selon la note du collecteur, l'identité probable de l'Être qui habite l'îlot et immobilise l'imprudent"
+  },
+  {
+   "terme": "Monpère",
+   "sens": "Nom donné par les Malgaches aux missionnaires catholiques"
+  },
+  {
+   "terme": "vazaha",
+   "sens": "L'étranger européen ; qualifie le rhum importé (toaka vazaha)"
+  },
+  {
+   "terme": "toaka",
+   "sens": "Alcool (rhum) qu'on distribue aux fêtes et qui scelle la sociabilité ; l'ivresse qu'il donne fait parler, perdre ses biens, battre sa femme, ou…"
+  },
+  {
+   "terme": "tavy",
+   "sens": "Défrichement par le feu : on abat, on laisse sécher, on avertit ancêtres et bêtes, puis on brûle pour y cultiver le riz ; les hommes y campent et se…"
+  },
+  {
+   "terme": "angady",
+   "sens": "Bêche-houe pour retourner la terre : outil remis au prétendant pour la tâche impossible, et arme d'occasion"
+  },
+  {
+   "terme": "fantaka",
+   "sens": "Outil dont l'homme se sert, dit le sanglier, pour frapper le rat sur la tête"
+  },
+  {
+   "terme": "tandroho",
+   "sens": "Engin de pêche avec lequel l'enfant difforme prend des poissons qu'il revend"
+  },
+  {
+   "terme": "lamba",
+   "sens": "Étoffe drapée, marque du rang : un lamba neuf sort du piège, un lamba en loques dit la pauvreté, un lamba roulé remplace l'enfant dans le lit, on en…"
+  },
+  {
+   "terme": "lambamena",
+   "sens": "Lamba rouge, superbe ; sert aussi de linceul — ceux dont la famille royale s'enveloppe pour entrer dans la gueule du serpent comme dans un tombeau ;…"
+  },
+  {
+   "terme": "salaka / sadika",
+   "sens": "Bande d'étoffe passée entre les jambes et ceinte aux reins ; le chien s'apprête à le quitter avant de traverser"
+  },
+  {
+   "terme": "akanjo",
+   "sens": "Vêtement acheté par le roi à son fils, qui exige le même pour son frère d'adoption"
+  },
+  {
+   "terme": "mokabe",
+   "sens": "le fripon la réclame pour en voler le contenu"
+  },
+  {
+   "terme": "rabane / rafia",
+   "sens": "Étoffe faite des fibres du rafia et la fibre elle-même : on s'y enveloppe, on la travaille assis, on la lave, la foule, la noue, la tisse et la vend…"
+  },
+  {
+   "terme": "vakoka",
+   "sens": "Chaînes d'argent pour orner chevilles, poignets et cou ; désignent par énigme les chaînes dont on va charger les otages"
+  },
+  {
+   "terme": "filanzane",
+   "sens": "Chaise à porteurs où l'on transporte les personnes de rang, les blessés, ou celle qu'on croit être son épouse"
+  },
+  {
+   "terme": "sobika",
+   "sens": "Grande corbeille de portage : on y met le riz cuit d'une abandonnée, des écorces de déguisement, un prisonnier cousu, des têtes coupées"
+  },
+  {
+   "terme": "garaba",
+   "sens": "Corbeille en osier, avec laquelle les monstres essaient vainement de puiser l'eau"
+  },
+  {
+   "terme": "salazana",
+   "sens": "Claie suspendue au-dessus du foyer, servant de garde-manger"
+  },
+  {
+   "terme": "vata",
+   "sens": "Mesure et caisse : les vatas d'argent font partie du cortège des richesses"
+  },
+  {
+   "terme": "kopy / davenona",
+   "sens": "Le bol en fer-blanc de la maîtresse et l'écuelle en terre de l'esclave ; leur échange dit le renversement du rang"
+  },
+  {
+   "terme": "fandrama",
+   "sens": "le Zanahary y change les deux frères impies, qui restent au gué"
+  },
+  {
+   "terme": "valiha",
+   "sens": "Instrument de musique dont on joue au village royal — qu'il est interdit de s'arrêter pour écouter — et qu'un hôte ingrat emprunte pour chanter que…"
+  },
+  {
+   "terme": "amponga / anjombona",
+   "sens": "Tambour et conque marine : on sonne l'anjombona pour annoncer le retour du héros vivant, l'amponga accompagne les fêtes ; un tambour merveilleux fait…"
+  },
+  {
+   "terme": "tanorona",
+   "sens": "Jeu auquel jouent deux rois qui se rencontrent, et qu'aucun ne peut gagner car ils sont de force égale"
+  },
+  {
+   "terme": "haody",
+   "sens": "Salutation par laquelle on demande la permission d'entrer chez quelqu'un"
+  },
+  {
+   "terme": "fahana",
+   "sens": "Provision offerte à l'hôte"
+  },
+  {
+   "terme": "laoka",
+   "sens": "Ce qu'on achète pour accompagner le riz ; s'en dispenser fait du repas un repas frugal"
+  },
+  {
+   "terme": "kitay",
+   "sens": "Bois de chauffe qu'il faut aller chercher pour faire cuire le riz d'un invité"
+  },
+  {
+   "terme": "tolo",
+   "sens": "Pierres dont on fait le trépied du foyer ; dit qu'on trouve exactement ce dont on a besoin"
+  },
+  {
+   "terme": "hoba",
+   "sens": ""
+  },
+  {
+   "terme": "boto",
+   "sens": "Jeune esclave qu'on achète pour soigner un enfant"
+  },
+  {
+   "terme": "masondrano",
+   "sens": "Glosé : envoyés que le prétendant dépêche chez la jeune fille pour la demande en mariage"
+  },
+  {
+   "terme": "longoza-vola",
+   "sens": "elle représente le mariage, et nul ne peut la briser sauf celui qui a pris la femme"
+  },
+  {
+   "terme": "mpilalao",
+   "sens": "Amuseur, danseur-farceur : le captif se dit bon mpilalao pour obtenir qu'on le délie"
+  },
+  {
+   "terme": "piastre",
+   "sens": "Unité d'argent des récompenses, des dettes et des paris : cinquante piastres au guérisseur, mille au voleur du tambour, trois cents volées, cent…"
+  },
+  {
+   "terme": "zozoro",
+   "sens": "Jonc dont on fait les nattes et les cabanes misérables ; pousse en abondance dans le marais où se dresse l'îlot de l'Être"
+  },
+  {
+   "terme": "harefo",
+   "sens": "le beau-père en envoie à sa bru pour qu'elle lui fasse un chapeau"
+  },
+  {
+   "terme": "vero",
+   "sens": "Hautes herbes où l'on se cache, auxquelles on met le feu, où se perd le riz renversé, et d'où le tsintsina crie"
+  },
+  {
+   "terme": "bozaka",
+   "sens": "Herbe sèche qu'on allume dans le jeu mortel du rat et du chat"
+  },
+  {
+   "terme": "tanety",
+   "sens": "Colline découverte : les guerriers la couvrent, on y va et mettre le feu à l'herbe, le sanglier la traverse dans sa fuite"
+  },
+  {
+   "terme": "ravinala",
+   "sens": "L'arbre du voyageur, dont on coupe les tiges pour glisser et les feuilles pour servir le riz"
+  },
+  {
+   "terme": "oviala",
+   "sens": "Racine comestible d'une liane qu'on va déterrer en forêt quand le riz n'est pas mûr"
+  },
+  {
+   "terme": "ovy",
+   "sens": ""
+  },
+  {
+   "terme": "saonjo",
+   "sens": "Tubercule cultivé, qu'on met dans le pot ou la corbeille avec le prisonnier, qu'un vieil homme cultive presque seul, et qu'on prétend entendre…"
+  },
+  {
+   "terme": "fontsy",
+   "sens": "Fruits de bananier sauvage, cuits dans les cendres chaudes et offerts aux Êtres du tombeau"
+  },
+  {
+   "terme": "trakavola",
+   "sens": "Légumes que mangent ceux qui n'ont pas de riz : signe de pauvreté"
+  },
+  {
+   "terme": "voatavo",
+   "sens": "Courge ; objet neuf et cher, volé par le lépreux, vendu au nigaud comme autonome ; le vent qui s'y engouffre rend un son de conque"
+  },
+  {
+   "terme": "sakay",
+   "sens": ""
+  },
+  {
+   "terme": "moranga",
+   "sens": "Arbuste commun de la forêt de l'Est, qui devient un gros arbre à la parole de la jeune fille"
+  },
+  {
+   "terme": "amihana",
+   "sens": "Arbre dont l'écorce ressemble à la peau des lépreux et sert de déguisement aux fuyardes"
+  },
+  {
+   "terme": "tsingarivary",
+   "sens": "Fleur qui meurt quand on la transplante ; le serpent Do s'y compare pour refuser de quitter sa terre natale"
+  },
+  {
+   "terme": "avoko",
+   "sens": "Fleurs que le hérisson sert à son invité avec quelques sauterelles, et que le caïman juge indignes de ses mâchoires"
+  },
+  {
+   "terme": "ravintsahona",
+   "sens": "Feuilles dans lesquelles le hérisson demande à être enveloppé et déposé sur le chemin ; il y substitue une pierre qui brise la sagaie"
+  },
+  {
+   "terme": "nonoka / ramy / seva / arongana / longoza / ramiavona",
+   "sens": "Arbres et plantes nommés du pays : le nonoka d'ombrage du roi, le ramy au pied duquel est caché l'argent, le seva où l'on égorge, l'arongana où l'on…"
+  },
+  {
+   "terme": "anantsonga",
+   "sens": "Graines à semer dans une rizière puis à retrouver après le piétinement des bœufs, épreuve envoyée par le Zanahary"
+  },
+  {
+   "terme": "vatobe / merabe",
+   "sens": "Le grand rocher et le grand arbre, invoqués comme père et mère par les fugitives"
+  },
+  {
+   "terme": "rano-masina",
+   "sens": ""
+  },
+  {
+   "terme": "boutre",
+   "sens": "Bateau sur lequel le cochon, le canard et le rat jouent à monter au bord de la mer ; le rat en ronge le fond"
+  },
+  {
+   "terme": "jono",
+   "sens": ""
+  },
+  {
+   "terme": "atiatindranomalaly",
+   "sens": "Sorte de squale, dont la femme enceinte a envie"
+  },
+  {
+   "terme": "vily",
+   "sens": "Petits poissons pris entre deux gros prédateurs de la rivière et qui s'en délivrent par de faux messages"
+  },
+  {
+   "terme": "peopeo",
+   "sens": "Grosse espèce d'écrevisse que la mère va pêcher, laissant ses enfants à la maison"
+  },
+  {
+   "terme": "tandraka",
+   "sens": "Petit gibier de forêt qu'on rapporte par vingtaines et qui se réfugie dans un terrier"
+  },
+  {
+   "terme": "sakoririka",
+   "sens": "Petite bête que Mahaka promène en criant , enfermée dans un bambou, et que les poules tuent à coups de bec"
+  },
+  {
+   "terme": "ombimanga",
+   "sens": "Bœuf sauvage de la forêt, lié puis relâché, qui éventre d'un coup de corne"
+  },
+  {
+   "terme": "varika / simpona",
+   "sens": "Lémuriens : le maki à la queue tachetée compté parmi les bêtes du faux dépôt ; l'injure fait partir l'épouse surnaturelle pour toujours"
+  },
+  {
+   "terme": "fanihy",
+   "sens": "La roussette, grosse chauve-souris ; nom que se donne l'enfant qui se dit non fait par le Zanahary"
+  },
+  {
+   "terme": "fositra",
+   "sens": "Insecte qui ronge le bois, appelé en masse pour creuser l'arbre à abattre"
+  },
+  {
+   "terme": "tsiketrika / siketribe",
+   "sens": "Oiseau d'eau dont l'œuf, mis à couver dans l'eau, donne un bœuf merveilleux"
+  },
+  {
+   "terme": "railonga",
+   "sens": "Oiseau qui crie et indique la griffe où se cache le roi avalé ; les descendants du roi tanala ne le mangent pas"
+  },
+  {
+   "terme": "tsintsina",
+   "sens": "Le plus petit des oiseaux ; il chante d'aller chercher au bout des doigts du monstre, entre dans le bec du hibou, aplatit la tête du takatra"
+  },
+  {
+   "terme": "toloho",
+   "sens": "Oiseau dont le cri fait calembour malgache : , ce qui épouvante le voleur"
+  },
+  {
+   "terme": "torotoroka",
+   "sens": "Oiseau dont le cri signifie aussi ; l'épouse l'imite pour terroriser son mari tricheur"
+  },
+  {
+   "terme": "kankafotra",
+   "sens": "Oiseau qui chante seul jusqu'au bout aux funérailles du fils de Zanahary et reçoit de pondre dans le nid des autres"
+  },
+  {
+   "terme": "akoho / fitaikotra",
+   "sens": "Les poules : fitaikotra était leur ancien nom, akoho vient de (levons les enfants du Zanahary), la prière qu'on leur adressa à leur chute du ciel"
+  },
+  {
+   "terme": "hitsikitsika",
+   "sens": "Petit oiseau de proie, parent du takatra, qui obtient la grâce du voromahery ; celui-ci fuit devant lui depuis"
+  },
+  {
+   "terme": "railovy",
+   "sens": "Oiseau élu roi pour sa belle voix dans les kabary et sa taille moyenne"
+  },
+  {
+   "terme": "laidronga",
+   "sens": "Oiseau dont les œufs servent d'épreuve aux trois hommes (tirer, dérober, réparer)"
+  },
+  {
+   "terme": "karako",
+   "sens": "Oiseau sollicité comme messager, qui refuse parce qu'on l'a chassé de la moisson en le traitant de vilain oiseau"
+  },
+  {
+   "terme": "vorombetsivaza",
+   "sens": "Oiseau messager du Zanahary et porteur de nouvelles et de défis entre les royaumes"
+  },
+  {
+   "terme": "vorondolo",
+   "sens": "Le hibou"
+  },
+  {
+   "terme": "menarana",
+   "sens": "Espèce de serpent qui fait un grand bond quand il voit des hommes, et qu'on ne tue pas"
+  },
+  {
+   "terme": "mandotra, antoliolena, maroandavaka, antsiririatra, ankoma, manditra",
+   "sens": "Espèces de serpents nommées une à une : le mandotra sort la nuit ; les autres supplient le boa de quitter le tavy ; ankoma et manditra font bien…"
+  },
+  {
+   "terme": "tangarirana",
+   "sens": "Caméléon femelle, qui prend la ressemblance d'une épouse et se nourrit de sauterelles"
+  },
+  {
+   "terme": "felana",
+   "sens": "Coquillage servant d'ornement aux Bara et aux Sakalava, dont on tire vanité en entrant dans un village en fête"
+  },
+  {
+   "terme": "fanto",
+   "sens": "Écorce de bois dont les pauvres se font un salaka"
+  },
+  {
+   "terme": "rapaka",
+   "sens": "Matériau du plancher sous lequel le chat s'introduit pour chasser les rats"
+  },
+  {
+   "terme": "fihitra",
+   "sens": "Mouche de bœuf qu'on enferme dans un bambou et qu'on lâche pour désigner la fiancée"
+  },
+  {
+   "terme": "zanaborona",
+   "sens": "mot par lequel les bourjanes désignent les femmes d'abord facile"
+  },
+  {
+   "terme": "Ramatoa / Rangahy / Rafotsibe",
+   "sens": "Termes d'adresse : Ramatoa pour une femme, Rangahy pour un homme âgé, Rafotsibe pour la vieille femme"
+  },
+  {
+   "terme": "Zafimisana et Zafindrianambo",
+   "sens": "Groupes chez qui les descendants des trois frères ressusciteurs sont devenus les ombiasy"
+  },
+  {
+   "terme": "Antaimoro",
+   "sens": "Homme venu d'ailleurs, vendeur de fanafody, qui obtient gain de cause sur son salaire"
+  },
+  {
+   "terme": "bengy",
+   "sens": "Nom que les Antankarana donnent au bouc, réponse de la devinette"
+  },
+  {
+   "terme": "Imerina",
+   "sens": "Pays du haut plateau d'où le Betsimisaraka, selon le proverbe, ne rapporte qu'un chien"
+  },
+  {
+   "terme": "Nosy (Sainte-Marie)",
+   "sens": "Lieu où le saindronga va chercher ses habits noirs avant d'aller défier le roi des oiseaux"
+  },
+  {
+   "terme": "kabary",
+   "sens": "art oratoire, discours royal"
+  },
+  {
+   "terme": "fady",
+   "sens": "interdit"
+  },
+  {
+   "terme": "sikidy",
+   "sens": "divination par les graines"
+  },
+  {
+   "terme": "ody",
+   "sens": "charme, amulette"
+  },
+  {
+   "terme": "razana",
+   "sens": "ancêtres"
+  },
+  {
+   "terme": "vazimba",
+   "sens": "premiers occupants"
+  },
+  {
+   "terme": "ambiroa",
+   "sens": "double, âme"
+  },
+  {
+   "terme": "sampy",
+   "sens": "idole protectrice"
+  },
+  {
+   "terme": "fanafody",
+   "sens": "remède, charme"
+  },
+  {
+   "terme": "famadihana",
+   "sens": "retournement des morts"
+  },
+  {
+   "terme": "hasina",
+   "sens": "vertu sacrée, tribut"
+  },
+  {
+   "terme": "fatidra",
+   "sens": "serment du sang"
+  },
+  {
+   "terme": "ombiasy",
+   "sens": "devin-guérisseur"
+  },
+  {
+   "terme": "angatra",
+   "sens": "revenant"
+  },
+  {
+   "terme": "fanahy",
+   "sens": "esprit"
+  },
+  {
+   "terme": "tsiny",
+   "sens": "blâme, reproche"
+  },
+  {
+   "terme": "lolo",
+   "sens": "papillon, âme des morts"
+  }
+ ],
+ "formules": [
+  "ouverture — situation initiale et manque",
+  "transgression — un interdit franchi ou un pacte rompu",
+  "conséquence — la sanction ou la prédation qui suit",
+  "épreuve ou ruse — ce qui permet de s'en sortir",
+  "clôture — étiologie, ou retour à l'ordre"
+ ],
+ "dialectes": [
+  "antankarana",
+  "bara",
+  "betsileo",
+  "betsimisaraka",
+  "marofotsy",
+  "merina",
+  "sakalava",
+  "tanala",
+  "tsimihety"
+ ]
+}

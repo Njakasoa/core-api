@@ -2,6 +2,7 @@ import { aiGenerateJSON } from "../../lib/ai.ts";
 import { env } from "../../env.ts";
 import { ROLES, OPTIONAL_ROLES } from "./roles.ts";
 import storyPresetData from "./default-story-presets.json";
+import corpusPack from "./corpus-pack.generated.json";
 
 /**
  * AI story layer for Angano. Every game can be wrapped in a unique Malagasy
@@ -331,6 +332,72 @@ export async function generateStory(seatCount: number, config?: StoryConfig): Pr
 }
 
 /**
+ * Deterministic pick from a seed, so a run can be replayed exactly.
+ *
+ * The seed already varies per game, so this doubles as diversity: two games draw
+ * different corners of the corpus and cannot converge on the same handful of
+ * motifs — which is the failure the `diversity` check exists to catch.
+ */
+function pickFrom<T>(items: readonly T[], count: number, seed: string): T[] {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) { h ^= seed.charCodeAt(i); h = Math.imul(h, 16777619); }
+  const pool = [...items];
+  const out: T[] = [];
+  for (let i = 0; i < count && pool.length; i++) {
+    h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0;
+    out.push(pool.splice(h % pool.length, 1)[0]!);
+  }
+  return out;
+}
+
+/**
+ * Attested Malagasy material for the prompt, or "" when the feature is off.
+ *
+ * Why this exists: without it the prompt carries no source at all, so the model
+ * furnishes the legend from whatever "Madagascar" means to it — and the fix so
+ * far has been to ban the clichés one at a time as they were spotted ("baobab
+ * noir", the rice paddy, a few lines below). Banning is a poultice; the model
+ * reaches for those because it has nothing else. This gives it something else:
+ * motifs, actants and realia collected from Renel's tales.
+ *
+ * It ships NO source text — no tale, no summary, no quotation. That is the whole
+ * point of the creation index it is built from: a system served only this
+ * material has never seen a tale and cannot give one back. What it writes is new,
+ * which is both the honest cultural position and the safe legal one, since
+ * Malagasy law treats the tales themselves as expressions of folklore rather than
+ * as public-domain works.
+ *
+ * Off by default (`ANGANO_CORPUS=on`), so the ungrounded baseline stays reachable
+ * for comparison rather than being lost the moment this lands.
+ */
+function corpusSection(seed: string): string {
+  if ((process.env.ANGANO_CORPUS ?? "off").trim().toLowerCase() !== "on") return "";
+  const p = corpusPack as {
+    motifs: { code: string; label: string; noyau: string }[];
+    actants: { nom: string; role: string }[];
+    realia: { terme: string; sens: string }[];
+    formules: string[]; dialectes: string[];
+  };
+  // Sized so the material informs without crowding out the instructions: the
+  // whole pack is some 13k tokens, a game sees roughly 1.5k of it.
+  const motifs = pickFrom(p.motifs, 10, seed + "m");
+  const actants = pickFrom(p.actants, 8, seed + "a");
+  const realia = pickFrom(p.realia, 16, seed + "r");
+  const dialecte = pickFrom(p.dialectes, 1, seed + "d")[0];
+  return [
+    "MATÉRIAU MALGACHE ATTESTÉ — relevé dans des contes réels (Renel, 1910, domaine public).",
+    "Sers-t'en pour ancrer la légende : emploie ces notions par leur nom, fais agir ces figures,",
+    "reprends ces ressorts. N'invente PAS de mot malgache qui ne serait pas dans cette liste ;",
+    "il vaut mieux une notion attestée bien employée que dix inventées. Tu écris une légende",
+    "NEUVE nourrie de ce matériau — tu ne racontes aucun conte existant.",
+    dialecte ? `Région de collecte à évoquer si tu situes le récit : ${dialecte}.` : "",
+    `NOTIONS (terme — sens) :\n${realia.map((r) => `- ${r.terme} — ${r.sens}`).join("\n")}`,
+    `FIGURES :\n${actants.map((a) => `- ${a.nom} : ${a.role}`).join("\n")}`,
+    `RESSORTS NARRATIFS :\n${motifs.map((m) => `- ${m.label} : ${m.noyau}`).join("\n")}`,
+  ].filter(Boolean).join("\n");
+}
+
+/**
  * Instrumented story generation used by QA/evaluation scripts. Production callers
  * should keep using generateStory(); this variant returns raw output and timing,
  * and can inject temporary correction hints for recursive prompt tests.
@@ -386,6 +453,7 @@ export async function generateStoryWithMeta(
     feedbackHints.length ? `CORRECTIONS AUTOMATIQUES ISSUES DES RUNS PRÉCÉDENTS À RESPECTER:\n- ${feedbackHints.join("\n- ")}` : "",
     `Invente une légende ORIGINALE et différente à chaque fois (varie le lieu, la menace, le ton). Identifiant interne: ${seed}.`,
     `La composition finale doit rester cohérente avec ${seatCount} joueurs (au moins 1 Songomby, et garde une majorité de villageois).`,
+    corpusSection(seed),
     "Tous les textes français générés doivent conserver les accents et une typographie française correcte.",
     "Adopte une narration de livre de conte rimé : chaque texte d'ambiance doit avoir une cadence orale et au moins une rime ou assonance nette, tout en restant clair pour jouer.",
     "Réponds uniquement en JSON.",
