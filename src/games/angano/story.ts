@@ -101,6 +101,14 @@ const STORY_DIRECTIONS = [
   "Îlot de mangrove et pirogues : centre la légende sur l'eau saumâtre, les racines aériennes, les crabes silencieux et les lanternes qui s'éloignent.",
 ] as const;
 const PUBLIC_PLACEHOLDER_RE = /\{[a-zA-Z][a-zA-Z0-9]*\}/g;
+/**
+ * The attested formulas in the corpus pack carry their blank between angle
+ * brackets — "Voilà pourquoi, dit-on, <trait durable du monde>." A model that
+ * copies a formula instead of filling it would put that blank in front of the
+ * table, and the rule above cannot catch it: it only knows {tokens}. The eval
+ * script reads the AI's raw output, so stripping here hides nothing from QA.
+ */
+const CORPUS_SLOT_RE = /<[^<>]{2,60}>/g;
 const DEATH_PLACEHOLDERS = new Set(["{victim}", "{role}", "{count}"]);
 
 /** Base fallback legend kept for compatibility and as the first local preset. */
@@ -211,10 +219,15 @@ function systemPrompt(maxSongomby: number): string {
     "- narratorScript : 4 à 8 consignes/phrases de lecture pour le narrateur humain, sans secret ni solution.",
     "- Ton folklore malgache doit être sombre et immersif, en FRANÇAIS. Choisis quelques éléments pertinents (lamba, rano masina, tombeaux, zébu, pirogue, ravinala, grotte, cascade, forêt, marché, fady, Razana…), mais ne remets pas systématiquement baobab/rizière/fady au centre.",
     "- Respecte exactement les noms canoniques des rôles si tu les écris : Mponina, Songomby, Mpisikidy, Ombiasy, Fanany, Zazavavindrano, Kalanoro, Kinoly, Mpamosavy.",
-    "- Mode conte rimé OBLIGATOIRE : les champs narratifs doivent sonner comme des vers de conte lus à voix haute.",
-    "- Rimes : dans intro, ambiance, nightSteps, dayProgression, deaths et victoires, ajoute des rimes ou assonances visibles par phrase ou par paire de phrases (nuit/bruit, chemin/destin, peur/cœur, sort/mort).",
-    "- Garde les rimes naturelles et claires : pas de poésie obscure, pas de mot rare seulement pour rimer, pas de retour à la ligne dans les chaînes JSON.",
-    "- Ne force pas la rime dans les noms de rôles, les variables {victim}, {role}, {count}, ni les consignes mécaniques importantes.",
+    // Le chiffre est celui d'un recompte, pas celui d'une recherche : une première
+    // version disait « la quasi-totalité des mots », ce qui reconduisait
+    // l'exagération de Baker (« nineteen-twentieths ») que la mesure corrigeait
+    // justement. 83 %, et deux mots au hasard partagent leur voyelle finale une
+    // fois sur quatre — c'est déjà écrasant, et c'est vrai.
+    "- FORME ORALE, SANS AUCUNE RIME. La poésie orale malgache ne rime pas : plus de huit mots sur dix y finissent sur l'une de quatre voyelles, si bien que deux mots pris au hasard riment déjà une fois sur quatre — une rime n'y distingue donc rien. Et la syllabe qui la porterait est atone et assourdie : elle est inaudible. La rime y est un import missionnaire du XIXe siècle. N'écris aucune rime de fin et ne cherche aucune assonance : sur du matériau malgache, elles sonnent comme une comptine plaquée.",
+    "- Ce qui tient lieu de cadence est la RÉPÉTITION D'UN CADRE : deux membres bâtis pareil, un seul terme qui change de l'un à l'autre. Si deux mots finissent pareil, ce doit être parce que la même construction revient — jamais parce que tu as cherché un écho sonore.",
+    "- Une ligne = une pensée complète : pas d'enjambement, pas de retour à la ligne dans les chaînes JSON, pas d'adjectif ornemental. L'image concrète porte seule le sentiment ; si tu retires la métaphore, il ne doit rien rester.",
+    "- Ne cherche cette forme ni dans les noms de rôles, ni autour des variables {victim}, {role}, {count}, ni dans les consignes mécaniques : elles restent littérales et immédiatement lisibles.",
     "- Ne recopie jamais la graine technique dans l'histoire.",
     "- Respecte l'orthographe française et les accents : écris hôte, rôles, spéciaux, activés, légende, cohérent, majorité, etc.",
     "- Concis : titre ≤ 8 mots ; intro ≤ 4 phrases ; chaque ligne d'ambiance ≤ 1 phrase.",
@@ -360,12 +373,27 @@ function pickFrom<T>(items: readonly T[], count: number, seed: string): T[] {
  * reaches for those because it has nothing else. This gives it something else:
  * motifs, actants and realia collected from Renel's tales.
  *
- * It ships NO source text — no tale, no summary, no quotation. That is the whole
- * point of the creation index it is built from: a system served only this
+ * It ships no TALE — no narrative, no summary, no quotation from one. That is the
+ * whole point of the creation index it is built from: a system served only this
  * material has never seen a tale and cannot give one back. What it writes is new,
  * which is both the honest cultural position and the safe legal one, since
  * Malagasy law treats the tales themselves as expressions of folklore rather than
  * as public-domain works.
+ *
+ * The one thing quoted word for word is the ohabolana — proverbs printed with
+ * their gloss by Houlder in the Antananarivo Annual of the 1890s, long in the
+ * public domain. A proverb is not a tale: it exists by being repeated exactly, so
+ * quoting one is using it correctly. They go in as citations and the prompt says
+ * so — quote one as given or leave it, and never invent one, because an invented
+ * ohabolana is a forged proverb.
+ *
+ * It also ships the FORM, which grounding the vocabulary did not fix. The prompt
+ * used to demand a "rhymed tale" and even supplied the rhymes (chemin/destin);
+ * the model obeyed, and the output came back a French nursery rhyme wearing
+ * Malagasy words. Malagasy oral poetry does not rhyme — four vowels end nearly
+ * every word, so a rhyme selects nothing, and the syllable that would carry it is
+ * unstressed and devoiced. What carries the cadence is parallelism. The devices
+ * below are the attested ones, each shipped with the count that backs it.
  *
  * Off by default (`ANGANO_CORPUS=on`), so the ungrounded baseline stays reachable
  * for comparison rather than being lost the moment this lands.
@@ -377,15 +405,36 @@ function corpusSection(seed: string): string {
     actants: { nom: string; role: string }[];
     realia: { terme: string; sens: string }[];
     formules: string[]; dialectes: string[];
+    procedes: { liste: { cle: string; regle: string; gabarit?: string; mesure?: { rimes_reelles?: number; phrases_examinees?: number; corpus?: string } }[] };
+    formules_ouverture: { liste: { formule: string; emploi: string }[] };
+    formules_cloture: { liste: { formule: string; emploi: string }[] };
+    ohabolana: { liste: { mg: string; en: string; ref: string }[] };
   };
   // Sized so the material informs without crowding out the instructions: the
-  // whole pack is some 13k tokens, a game sees roughly 1.5k of it.
+  // whole pack is some 47k tokens, a game sees roughly 2.5k of it.
   const motifs = pickFrom(p.motifs, 10, seed + "m");
   const actants = pickFrom(p.actants, 8, seed + "a");
   const realia = pickFrom(p.realia, 16, seed + "r");
   const dialecte = pickFrom(p.dialectes, 1, seed + "d")[0];
+  // The devices rotate like the rest, so two games do not lean on the same figure
+  // — except the ban on rhyme, which is pinned. A prohibition is not a device to
+  // vary: leave it out of a draw and that game rhymes again.
+  const sansRime = p.procedes.liste.find((x) => x.cle === "pas_de_rime");
+  const procedes = pickFrom(p.procedes.liste.filter((x) => x.cle !== "pas_de_rime"), 4, seed + "p");
+  const ouvertures = pickFrom(p.formules_ouverture.liste, 2, seed + "o");
+  const clotures = pickFrom(p.formules_cloture.liste, 2, seed + "c");
+  const proverbes = pickFrom(p.ohabolana.liste, 3, seed + "h");
+  // Only the measurement of `pas_de_rime` is injected, never its `regle`: that
+  // field spells out the rhymes to avoid (chemin/destin, sort/mort), and those
+  // exact pairs came back in the generated legends the last time the prompt named
+  // them. The ban itself is already in the system prompt, where no example is
+  // given — a rhyme written down is a rhyme offered, forbidden or not.
+  const mesureRime = sansRime?.mesure;
+  const preuveSansRime = mesureRime?.rimes_reelles !== undefined && mesureRime.phrases_examinees !== undefined
+    ? `Mesuré sur la source : ${mesureRime.rimes_reelles} rimes réelles pour ${mesureRime.phrases_examinees} phrases (${mesureRime.corpus ?? "corpus attesté"}). La source ne rime pas.`
+    : "";
   return [
-    "MATÉRIAU MALGACHE ATTESTÉ — relevé dans des contes réels (Renel, 1910, domaine public).",
+    "MATÉRIAU MALGACHE ATTESTÉ — relevé dans des corpus réels (Renel 1910, Callet 1908, Antananarivo Annual 1875-1897 ; domaine public).",
     "Sers-t'en pour ancrer la légende : emploie ces notions par leur nom, fais agir ces figures,",
     "reprends ces ressorts. N'invente PAS de mot malgache qui ne serait pas dans cette liste ;",
     "il vaut mieux une notion attestée bien employée que dix inventées. Tu écris une légende",
@@ -394,6 +443,17 @@ function corpusSection(seed: string): string {
     `NOTIONS (terme — sens) :\n${realia.map((r) => `- ${r.terme} — ${r.sens}`).join("\n")}`,
     `FIGURES :\n${actants.map((a) => `- ${a.nom} : ${a.role}`).join("\n")}`,
     `RESSORTS NARRATIFS :\n${motifs.map((m) => `- ${m.label} : ${m.noyau}`).join("\n")}`,
+    [
+      "PROCÉDÉS DE FORME ATTESTÉS — c'est ce qui remplace la rime, et ce n'est pas décoratif.",
+      preuveSansRime,
+      "Fais porter la cadence par ces procédés :",
+      procedes.map((x) => `- ${x.regle}${x.gabarit ? `\n  ex. ${x.gabarit}` : ""}`).join("\n"),
+    ].filter(Boolean).join("\n"),
+    `OUVERTURE — formules relevées dans au moins deux récits distincts. Ouvre sur ce geste :\n${ouvertures.map((f) => `- « ${f.formule} » — ${f.emploi}`).join("\n")}`,
+    `CLÔTURE — même règle. Ferme sur ce geste, jamais sur une pointe rimée :\n${clotures.map((f) => `- « ${f.formule} » — ${f.emploi}`).join("\n")}`,
+    "Ce qui est entre chevrons dans ces formules est un emplacement à remplir par toi ; ne recopie jamais les chevrons.",
+    `OHABOLANA — proverbes publiés (Houlder, The Antananarivo Annual, domaine public), avec le sens donné par la source :\n${proverbes.map((o) => `- ${o.mg}\n  sens : ${o.en}`).join("\n")}`,
+    "Tu peux en faire dire UN par une figure ancienne, puis en éclairer le sens en français dans la phrase suivante : c'est une citation sourcée, pas du texte de conte. Recopie le malgache mot pour mot, ou ne le cite pas — n'en change aucun mot, n'en fabrique aucune variante, et n'invente JAMAIS de proverbe malgache. Le sens t'est donné en anglais parce que la source l'est : l'anglais ne doit jamais apparaître dans le jeu. Ce malgache est une lecture OCR d'une impression des années 1890 ; si une ligne te paraît abîmée, laisse-la et n'en cite aucune.",
   ].filter(Boolean).join("\n");
 }
 
@@ -455,7 +515,7 @@ export async function generateStoryWithMeta(
     `La composition finale doit rester cohérente avec ${seatCount} joueurs (au moins 1 Songomby, et garde une majorité de villageois).`,
     corpusSection(seed),
     "Tous les textes français générés doivent conserver les accents et une typographie française correcte.",
-    "Adopte une narration de livre de conte rimé : chaque texte d'ambiance doit avoir une cadence orale et au moins une rime ou assonance nette, tout en restant clair pour jouer.",
+    "FORME : aucune rime, aucune assonance cherchée. La cadence vient de la reprise d'un même cadre avec un seul terme changé, et d'une image concrète par ligne — chaque texte doit s'entendre du premier coup, lu à voix haute.",
     "Réponds uniquement en JSON.",
   ].filter(Boolean).join(" ");
   const t0 = Date.now();
@@ -614,6 +674,7 @@ function fillPublicPlaceholders(
     .replaceAll("{villageName}", ctx.villageName)
     .replaceAll("{storyTitle}", ctx.title)
     .replace(PUBLIC_PLACEHOLDER_RE, (token) => allowedPlaceholders.has(token) ? token : "")
+    .replace(CORPUS_SLOT_RE, "")
     .replace(/\s{2,}/g, " ")
     .replace(/\s+([,.;:!?])/g, "$1")
     .trim();

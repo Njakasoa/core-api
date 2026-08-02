@@ -1,7 +1,7 @@
 {
  "genere_par": "repparcs/scripts/build_pack_creation.py — ne pas éditer à la main",
- "avertissement": "Matériau de CRÉATION extrait de contes malgaches attestés. Ne contient aucun texte source : ce sont des motifs et des notions relevés, pas des récits. À utiliser pour inventer une légende NEUVE, jamais pour restituer un conte.",
- "licence_source": "Renel, Contes de Madagascar, 1910 — domaine public",
+ "avertissement": "Matériau de CRÉATION extrait de corpus malgaches attestés. Ne contient aucun texte de conte : ce sont des motifs, des notions et des procédés de forme relevés, plus des proverbes publiés cités avec leur source. À utiliser pour inventer une légende NEUVE, jamais pour restituer un conte.",
+ "licence_source": "Renel, Contes de Madagascar, 1910 · Callet, Tantara ny Andriana, 1908 · The Antananarivo Annual, 1875-1897 (dont les ohabolana de Houlder) — domaine public",
  "motifs": [
   {
    "code": "MG-ORD-01",
@@ -1240,5 +1240,2065 @@
   "sakalava",
   "tanala",
   "tsimihety"
- ]
+ ],
+ "procedes": {
+  "objet": "Procédés de FORME attestés. Ils remplacent la consigne de « conte rimé » : la poésie orale malgache ne rime pas, et la rime y est décrite dès 1832 comme d'un effet dur et contre nature. Ce qui tient lieu de cadence est le parallélisme.",
+  "methode": "Aucune citation n'est saisie à la main : chaque preuve déclare une ancre, le script la retrouve dans le corpus et extrait le texte. Les mesures sont recalculées à chaque build.",
+  "lecture_des_citations": "`citation_ocr` est le texte BRUT tel que l'OCR de 1908 le rend, découpé autour de l'ancre : il peut porter une lettre parasite en tête et des mots déformés (« iiaho » pour « izaho »). Ces citations PROUVENT le procédé, elles ne sont pas des modèles de graphie et ne doivent pas être recopiées.",
+  "liste": [
+   {
+    "cle": "pas_de_rime",
+    "regle": "N'écris AUCUNE rime et aucune assonance décorative. En malgache la quasi-totalité des mots finit par l'une de quatre voyelles : la rime n'y distingue rien, et la syllabe finale, atone, s'assourdit. Une rime française (chemin/destin, sort/mort) plaquée sur du matériau malgache sonne comme une comptine coloniale.",
+    "mesure": {
+     "phrases_examinees": 6914,
+     "rimes_reelles": 41,
+     "taux": 0.0059,
+     "corpus": "Renel 1910, 155 contes",
+     "lecture": "41 paires pour près de 7 000 phrases : la source ne rime pas. Une consigne de rime fabrique un trait d'oralité qui n'existe nulle part chez le collecteur."
+    },
+    "preuves": [
+     {
+      "segment": "annual_0703",
+      "citation_ocr": "a total averseness to rhyme",
+      "ancre_verifiee": "a total averseness to rhyme",
+      "distance_ocr": 0,
+      "ancre_unique": true
+     },
+     {
+      "segment": "annual_0703",
+      "citation_ocr": "the extreme paucity of the language in terminations",
+      "ancre_verifiee": "the extreme paucity of the language in terminations",
+      "distance_ocr": 0,
+      "ancre_unique": true
+     },
+     {
+      "segment": "annual_0703",
+      "citation_ocr": "an unnatural and harsh effect",
+      "ancre_verifiee": "an unnatural and harsh effect",
+      "distance_ocr": 0,
+      "ancre_unique": true
+     },
+     {
+      "segment": "annual_0104",
+      "citation_ocr": "not rhymed or metrical",
+      "ancre_verifiee": "not rhymed or metrical",
+      "distance_ocr": 0,
+      "ancre_unique": true
+     },
+     {
+      "segment": "annual_0399",
+      "citation_ocr": "the original has neither rhythm nor rhyme",
+      "ancre_verifiee": "the original has neither rhythm nor rhyme",
+      "distance_ocr": 0,
+      "ancre_unique": true
+     }
+    ]
+   },
+   {
+    "cle": "parallelisme",
+    "regle": "La cadence vient du PARALLÉLISME, pas du son. Construis par membres appariés : même cadre syntaxique répété, un seul terme substitué d'un membre à l'autre. Si des mots finissent pareil, ce doit être parce que la même construction revient — jamais parce que tu as cherché un écho.",
+    "gabarit": "Le lamba couvre le vivant, le lamba couvre le mort.",
+    "preuves": [
+     {
+      "segment": "annual_0104",
+      "citation_ocr": "a parallelism of structure",
+      "ancre_verifiee": "a parallelism of structure",
+      "distance_ocr": 0,
+      "ancre_unique": true
+     },
+     {
+      "segment": "annual_0104",
+      "citation_ocr": "couplets and stanzas",
+      "ancre_verifiee": "couplets and stanzas",
+      "distance_ocr": 0,
+      "ancre_unique": true
+     },
+     {
+      "segment": "annual_0020",
+      "citation_ocr": "pazallelisms so characteristic of Oriental",
+      "ancre_verifiee": "parallelisms so characteristic of Oriental",
+      "distance_ocr": 1,
+      "ancre_unique": true
+     },
+     {
+      "segment": "callet_0099",
+      "citation_ocr": "Hiahy ny vady nay",
+      "ancre_verifiee": "hiahy ny vady nay",
+      "distance_ocr": 0,
+      "ancre_unique": true
+     },
+     {
+      "segment": "callet_0099",
+      "citation_ocr": "HÌahy ny tena nay",
+      "ancre_verifiee": "hiahy ny tena nay",
+      "distance_ocr": 0,
+      "ancre_unique": true
+     }
+    ]
+   },
+   {
+    "cle": "poser_nier_rectifier",
+    "regle": "Procédé central : on pose, on nie, on rectifie — patron malgache « Tsy X no Y, fa Z no Y ». Le prédicat se répète À L'IDENTIQUE, seul le sujet change. Ne cherche jamais à varier le mot répété : la répétition EST la figure.",
+    "gabarit": "Ce n'est pas la nuit qui tue au village : c'est ce qui marche dedans.",
+    "mesure": {
+     "occurrences": 28,
+     "segments": 28,
+     "sur": 674,
+     "corpus": "Callet 1908",
+     "exemples": [
+      "callet_0026",
+      "callet_0047",
+      "callet_0049",
+      "callet_0059",
+      "callet_0078",
+      "callet_0081"
+     ]
+    },
+    "preuves": [
+     {
+      "segment": "callet_0153",
+      "citation_ocr": "H Tsy iiaho no tompo ny kabary",
+      "ancre_verifiee": "tsy izaho no tompon'ny kabary",
+      "distance_ocr": 3,
+      "ancre_unique": true
+     },
+     {
+      "segment": "callet_0005",
+      "citation_ocr": "Tsy Andrinriilra no saro-javalra",
+      "ancre_verifiee": "tsy Andringitra no saro-javatra",
+      "distance_ocr": 4,
+      "ancre_unique": true
+     }
+    ]
+   },
+   {
+    "cle": "merisme",
+    "regle": "Totalise une chose en nommant ses deux pôles (patron « na X na Y ») : « ni jour ni nuit », « ni homme ni femme », « ni haut ni bas », « ni vivant ni mort ». C'est le procédé le plus dense du corpus.",
+    "gabarit": "Ni le jour ni la nuit ne l'ont vu passer.",
+    "couples_attestes": [
+     {
+      "malgache": "na lahy na vavy",
+      "sens": "mâle ou femelle",
+      "occurrences": 15,
+      "segments": 14,
+      "exemple": "callet_0009"
+     },
+     {
+      "malgache": "na andro na alina",
+      "sens": "jour ou nuit",
+      "occurrences": 6,
+      "segments": 6,
+      "exemple": "callet_0043"
+     },
+     {
+      "malgache": "na maty na velona",
+      "sens": "mort ou vif",
+      "occurrences": 4,
+      "segments": 4,
+      "exemple": "callet_0005"
+     },
+     {
+      "malgache": "na kely na lehibe",
+      "sens": "petit ou grand",
+      "occurrences": 5,
+      "segments": 5,
+      "exemple": "callet_0015"
+     },
+     {
+      "malgache": "na soa na ratsy",
+      "sens": "bon ou mauvais",
+      "occurrences": 3,
+      "segments": 3,
+      "exemple": "callet_0012"
+     },
+     {
+      "malgache": "na andriana na vahoaka",
+      "sens": "souverain ou peuple",
+      "occurrences": 9,
+      "segments": 9,
+      "exemple": "callet_0037"
+     },
+     {
+      "malgache": "na omby na ondry",
+      "sens": "bœuf ou mouton",
+      "occurrences": 3,
+      "segments": 3,
+      "exemple": "callet_0090"
+     },
+     {
+      "malgache": "na mena na mainty",
+      "sens": "rouge ou noir",
+      "occurrences": 1,
+      "segments": 1,
+      "exemple": "callet_0016"
+     },
+     {
+      "malgache": "na ambony na ambany",
+      "sens": "haut ou bas",
+      "occurrences": 2,
+      "segments": 2,
+      "exemple": "callet_0032"
+     }
+    ],
+    "mesure": {
+     "occurrences_brutes": 447,
+     "occurrences_hors_interrogatifs": 268,
+     "segments": 196,
+     "sur": 674,
+     "corpus": "Callet 1908",
+     "note": "Les tournures interrogatives « na inona na inona » (quoi que ce soit) et « na iza na iza » (qui que ce soit) ont la forme du mérisme sans en être : elles sont retirées du compte."
+    }
+   },
+   {
+    "cle": "refrain",
+    "regle": "Une phrase dite une fois se redit PLUS TARD, mot pour mot. Ne la reformule pas, ne la varie pas : c'est sa reprise littérale qui la rend rituelle.",
+    "mesure": {
+     "recits_avec_refrain": 69,
+     "sur": 155,
+     "corpus": "Renel 1910",
+     "lecture": "Le procédé le plus massif du corpus, et il ne doit rien au son."
+    }
+   },
+   {
+    "cle": "triade",
+    "regle": "Escalade par groupes de trois, du lointain vers l'intime, en termes concrets : trois frères, trois épreuves, trois pertes. L'armature du corpus est ternaire ; sept y est rare.",
+    "gabarit": "Il a pris le zébu. Il a pris l'enfant. Il a pris le nom.",
+    "mesure": {
+     "recits_avec_trois": 56,
+     "occurrences_trois": 198,
+     "recits_avec_sept": 7,
+     "sur": 155,
+     "corpus": "Renel 1910",
+     "lecture": "L'armature est ternaire ; sept est marginal."
+    }
+   },
+   {
+    "cle": "laconisme",
+    "regle": "Une ligne = une pensée complète. Pas d'enjambement, pas de phrase qui coule sur la suivante. Zéro adjectif ornemental : l'image porte seule le sentiment, et si tu retires la métaphore il ne doit rien rester. Juxtapose les images sans connecteur logique.",
+    "preuves": [
+     {
+      "segment": "annual_0705",
+      "citation_ocr": "more pithy, figurative, and smart",
+      "ancre_verifiee": "more pithy, figurative, and smart",
+      "distance_ocr": 0,
+      "ancre_unique": true
+     }
+    ]
+   },
+   {
+    "cle": "quaternaire_cardinal",
+    "regle": "Pour dire l'étendue, énumère les quatre points cardinaux plutôt que de qualifier : le nord, le sud, l'est, l'ouest, dans une seule phrase.",
+    "gabarit": "Le malheur vient du nord, du sud, de l'est, de l'ouest.",
+    "mesure": {
+     "phrases_quaternaires": 4,
+     "recits": 3,
+     "sur": 155,
+     "corpus": "Renel 1910",
+     "lecture": "Rare mais frappant, et absent des générations mesurées : l'étendue se dit par ses quatre bornes, pas par un adjectif."
+    },
+    "preuves": [
+     {
+      "segment": "annual_0705",
+      "citation_ocr": "To the south of Ambatondrafandana",
+      "ancre_verifiee": "to the south of Ambatondrafandana",
+      "distance_ocr": 0,
+      "ancre_unique": true
+     }
+    ]
+   },
+   {
+    "cle": "couple_lahy_vavy",
+    "regle": "Nomme les figures par couples appariés sur le suffixe de genre — -lahy (mâle) et -vavy (femelle) sur le même radical. L'écho final est grammatical, il n'est pas une rime.",
+    "gabarit": "Faralahy et Faravavy.",
+    "mesure": {
+     "recits_avec_couple": 6,
+     "sur": 155,
+     "corpus": "Renel 1910",
+     "lecture": "L'écho final vient du suffixe de genre, jamais d'une recherche sonore."
+    }
+   }
+  ]
+ },
+ "formules_ouverture": {
+  "regle_admission": "Relevée dans au moins 2 récits distincts de Renel. En dessous, c'est une phrase de conte et non une formule du genre : elle est écartée.",
+  "liste": [
+   {
+    "formule": "…, dit-on, …",
+    "emploi": "Le réportatif. Le conteur refuse d'endosser son récit et renvoie la parole aux anciens, dès la première phrase. C'est le geste d'ouverture malgache — il n'y a pas de « il était une fois ». Calque du malgache hono.",
+    "recits": 105,
+    "occurrences": 147,
+    "sur": 155,
+    "chaine_mesuree": "dit-on,"
+   },
+   {
+    "formule": "Un jour, dit-on, …",
+    "emploi": "Entre par une action déjà partie.",
+    "recits": 20,
+    "occurrences": 20,
+    "sur": 155,
+    "chaine_mesuree": "un jour, dit-on,"
+   },
+   {
+    "formule": "Il y avait, dit-on, …",
+    "emploi": "Pose un état, jamais une ambiance.",
+    "recits": 9,
+    "occurrences": 9,
+    "sur": 155,
+    "chaine_mesuree": "il y avait, dit-on,"
+   },
+   {
+    "formule": "Deux époux avaient, dit-on, …",
+    "emploi": "Ouverture par le numéral : le compte des personnages avant tout le reste.",
+    "recits": 3,
+    "occurrences": 3,
+    "sur": 155,
+    "chaine_mesuree": "deux epoux avaient, dit-on,"
+   }
+  ],
+  "ecartees": [
+   {
+    "cle": "il_etait_une_fois",
+    "recits": 1,
+    "motif": "relevée dans moins de deux récits : c'est une phrase de conte, pas une formule du genre — le texte reste dans build_pack_creation.py"
+   },
+   {
+    "cle": "on_raconte_que",
+    "recits": 1,
+    "motif": "relevée dans moins de deux récits : c'est une phrase de conte, pas une formule du genre — le texte reste dans build_pack_creation.py"
+   }
+  ]
+ },
+ "formules_cloture": {
+  "regle_admission": "Même règle : au moins 2 récits distincts. Les segments entre chevrons sont des emplacements à remplir, pas du texte à recopier.",
+  "liste": [
+   {
+    "formule": "C'est pourquoi <trait durable du monde>.",
+    "emploi": "Même clôture étiologique, forme brève.",
+    "recits": 15,
+    "occurrences": 18,
+    "sur": 155,
+    "chaine_mesuree": "c'est pourquoi"
+   },
+   {
+    "formule": "Voilà pourquoi, dit-on, <trait durable du monde>.",
+    "emploi": "Clôture étiologique : le récit se ferme sur un trait du monde qu'il explique — un bec qui sent mauvais, une tête plate, une inimitié. Le réportatif revient DANS la clôture : la conséquence est rapportée avec la même prudence que l'ouverture.",
+    "recits": 7,
+    "occurrences": 7,
+    "sur": 155,
+    "chaine_mesuree": "voila pourquoi, dit-on,"
+   },
+   {
+    "formule": "Depuis ce temps, dit-on, <état durable>.",
+    "emploi": "Étiologie datée : l'état dure encore au moment où l'on parle.",
+    "recits": 4,
+    "occurrences": 4,
+    "sur": 155,
+    "chaine_mesuree": "depuis ce temps, dit-on,"
+   },
+   {
+    "formule": "Conte ! Conte ! Sornette ! Sornette !",
+    "emploi": "Scansion redoublée, criée. Le corpus n'est pas rimé : il est crié et répété.",
+    "recits": 3,
+    "occurrences": 3,
+    "sur": 155,
+    "chaine_mesuree": "conte ! conte ! sornette ! sornette !"
+   },
+   {
+    "formule": "À partir de cette époque, dit-on, <état durable>.",
+    "emploi": "Étiologie sociale : ce qui a changé entre les hommes, pas dans la nature.",
+    "recits": 2,
+    "occurrences": 2,
+    "sur": 155,
+    "chaine_mesuree": "a partir de cette epoque, dit-on,"
+   }
+  ],
+  "ecartees": [
+   {
+    "cle": "etiologie_datee_breve",
+    "recits": 1,
+    "motif": "relevée dans moins de deux récits : c'est une phrase de conte, pas une formule du genre — le texte reste dans build_pack_creation.py"
+   },
+   {
+    "cle": "denegation",
+    "recits": 0,
+    "motif": "relevée dans moins de deux récits : c'est une phrase de conte, pas une formule du genre — le texte reste dans build_pack_creation.py"
+   },
+   {
+    "cle": "clausule_petit",
+    "recits": 0,
+    "motif": "relevée dans moins de deux récits : c'est une phrase de conte, pas une formule du genre — le texte reste dans build_pack_creation.py"
+   },
+   {
+    "cle": "clausule_grand",
+    "recits": 1,
+    "motif": "relevée dans moins de deux récits : c'est une phrase de conte, pas une formule du genre — le texte reste dans build_pack_creation.py"
+   },
+   {
+    "cle": "devinette",
+    "recits": 0,
+    "motif": "relevée dans moins de deux récits : c'est une phrase de conte, pas une formule du genre — le texte reste dans build_pack_creation.py"
+   },
+   {
+    "cle": "passation",
+    "recits": 1,
+    "motif": "relevée dans moins de deux récits : c'est une phrase de conte, pas une formule du genre — le texte reste dans build_pack_creation.py"
+   },
+   {
+    "cle": "polarite_doublee",
+    "recits": 0,
+    "motif": "relevée dans moins de deux récits : c'est une phrase de conte, pas une formule du genre — le texte reste dans build_pack_creation.py"
+   }
+  ]
+ },
+ "ohabolana": {
+  "objet": "Proverbes publiés, cités avec leur source. Modèle de forme brève : deux membres, cadre répété, image concrète, aucune rime. À citer tels quels dans la bouche d'un ancien, ou à imiter dans la structure.",
+  "avertissement": "Le malgache est une LECTURE OCR d'une impression des années 1890, non une orthographe normalisée. Cite un proverbe tel qu'il est donné ; n'en fabrique pas de variante.",
+  "compte": {
+   "lus": 904,
+   "douteux_ecartes": 108,
+   "ecartes_ocr": 257,
+   "ecartes_tete_cassee": 34,
+   "ecartes_phonotactique": 147,
+   "ecartes_tronques": 31,
+   "retenus": 327,
+   "residu_connu": "le filtre ne voit pas une lettre substituée au milieu d'une GLOSE anglaise, ni une substitution malgache qui produit par hasard un groupe légal (j/i, h/f, e/a). Le taux résiduel n'est donc pas nul, seulement borné."
+  },
+  "liste": [
+   {
+    "mg": "Lasan-ko raviny, ka tsy misy voany.",
+    "en": "‘All leaf and no fruit.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0006"
+   },
+   {
+    "mg": "Aza tsy mahalava amalona.",
+    "en": "Don’t shorten an eel.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0009"
+   },
+   {
+    "mg": "Miteny ny tray toa novankonina ; miteny ny tray toa nampalesina.",
+    "en": "One speaker smoothes like a plane, and the other like sand-paper.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0010"
+   },
+   {
+    "mg": "Ne mahay mandrasa aza hianao, ny hoditra tsy azo ampombaina atiny.",
+    "en": "Although you are well able to cut up, the skin can’t be made to go with the inside (or liver) only.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0020"
+   },
+   {
+    "mg": "Aea manao gisalahy homan-ketsa, ka ny homana ny an’ olona no avo feo.",
+    "en": "Don’t do as the gander does when eating young rice plants, quack loudly whilst eating what doesn’t belong to him.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0043"
+   },
+   {
+    "mg": "Mitery omby tsy mirohy hoatra an-dRabenalo, ka ny ho fatin' ny daka no farany.",
+    "en": "Milk a cow not tied up like Mr. Timidity, and you'll end your life by a kick.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0058"
+   },
+   {
+    "mg": "Toy my akoholahy an-drova : samy ta-haneno avokoa.",
+    "en": "Like the cocks in the courtyard: they all want to crow.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0078"
+   },
+   {
+    "mg": "Aza mivadibadika toy ny lela may.",
+    "en": "Don’t turn over and over like a burnt tongue.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0090"
+   },
+   {
+    "mg": "Raha lany ny harena, lany haingo. .",
+    "en": "When there is no more money, there is no more finery.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0107"
+   },
+   {
+    "mg": "Aza ny andro iray tsy iasana no anaovana ahy amboalambo.",
+    "en": "Don’t call me an idle vagabond for one day’s holiday.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0111"
+   },
+   {
+    "mg": "Aza manao takorobabon’ akoho; ny tray fisiam-potsim-bary, ary ny iray fisian’ akotry.",
+    "en": "Don't be like a fowl’s craw; have one place for white rice, and another for unhusked rice.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0120"
+   },
+   {
+    "mg": "A faovy anatra imaso ifanatrehana; fa raha takona tonga fosa.",
+    "en": "Let it be advice given in public ; for if given in private it becomes scandal.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0121"
+   },
+   {
+    "mg": "Faran’ ny omby hena, faran’ ny teny ifanatrehana.",
+    "en": "The end of the ox is beef, and the end of a lie is exposure.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0124"
+   },
+   {
+    "mg": "Arivo teny, zato kabary; faran’ ny teny ifanatrehana.",
+    "en": "A thousand words, a hundred speeches ; the end of the dispute is bringing the parties face to face.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0125"
+   },
+   {
+    "mg": "Ratsy tokoa ny lainga, fa ny mpandainga aza tsy tia azy.",
+    "en": "Lying is bad indeed, for the liar himself dislikes it.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0127"
+   },
+   {
+    "mg": "Ny lainga tahaka ny fasika : ku mora ama-mandry, fa sarotra ama-mifoha.",
+    "en": "Lying is like the sand : easy to Tie down on, but hard to get up on,",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0128"
+   },
+   {
+    "mg": "Ny lainga toy ny nify lanin’ ny olitra, ka ny esorina no mahasoa ny tena.",
+    "en": "A lie is like an aching tooth, there's nothing for it but taking it out.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0129"
+   },
+   {
+    "mg": "Aleo mifanena amin’ ny mpamosavy toy izay mifanena amin ny mpandainga.",
+    "en": "Better meet with a witch than a liar.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0133"
+   },
+   {
+    "mg": "Ny lainga volom-bodin' ny mosavy.",
+    "en": "Lying is the tail of whitchcraft— It can’t be separated from it,",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0134"
+   },
+   {
+    "mg": "Ny ainga mora atentina, fa sarotra ialana.",
+    "en": "Lying is easy fo put on, but hard to put off.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0135"
+   },
+   {
+    "mg": "Toy ny parakin' Amboatany: misy ihany, fa hampandozaina. .",
+    "en": "Like the tobacco of Ambéatany: there is some, but they swear they have'nt any.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0140"
+   },
+   {
+    "mg": "Ny fanahim-potsiny tsy fanahin-delany.",
+    "en": "‘The foolish mind is not the ready tongue.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0143"
+   },
+   {
+    "mg": "Zoy ny voara izy: jerena, toa mandina, fa raha verahina, vitsika dahaolo no ao anatiny.",
+    "en": "He is like the vodra (fruit): beautiful outside, but full of ants inside.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0144"
+   },
+   {
+    "mg": "Aleo manda tsy handeha toy izay manaiky tsy ho lasa.",
+    "en": "Better refuse to go than agree and not go.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0146"
+   },
+   {
+    "mg": "Fanirim-bomanga; vao lasa kely dia miolaka.",
+    "en": "The growing of a sweet-potatoe ; when it’s just begun it turns about ;",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0147"
+   },
+   {
+    "mg": "Omaly hianao nisolanga ho tandrony, ary anio hianao misafelika ho sofiny.",
+    "en": "‘Yesterday you grew up to be its horns, and to-day you are turning down to be its ears.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0148"
+   },
+   {
+    "mg": "Manantsafa mahita, toy ny mpaka afo.",
+    "en": "To ask about (r) yet see, like the fetcher of fire,",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0150"
+   },
+   {
+    "mg": "Ny anarana mampody mandry, fa ny tarehy mampitampody.",
+    "en": "The word invites you to stay the night, but the countenance sends you home again the same day.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0153"
+   },
+   {
+    "mg": "Nomen’ ny am-bava tsy ratsy, ka ny ao an-trano no asian-dratsy.",
+    "en": "According to his word it was not bad, but the people in the house are made bad.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0154"
+   },
+   {
+    "mg": "Madio tsy mangarangarana, toy ny rano volamandry amimpanasina.",
+    "en": "Clean but not clear, like salted rice-water.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0157"
+   },
+   {
+    "mg": "A ny milefona omby hianao, ary aty mively rano.",
+    "en": "You kill the ox there, and strike the water here.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0161"
+   },
+   {
+    "mg": "Aty milelaka lefona ; any mamaky ampinga.",
+    "en": "Here you lick the spear ; there you break the shield.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0162"
+   },
+   {
+    "mg": "Aza manao manga miolaka.",
+    "en": "Don’t turn and twist about.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0164"
+   },
+   {
+    "mg": "Aza manao bolokilahy homam-boan-tseva: fy ny atsy, fy ny aroana.",
+    "en": "Don't do like a parrot eating séva (x) fruit: a dainty bit here, a dainty bit there.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0166"
+   },
+   {
+    "mg": "Aza manao fy ny voalavo, fy ny trandraka.",
+    "en": "Don’t say the rat is delicious, the hedgehog is delicious.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0167"
+   },
+   {
+    "mg": "Aza ilazanao ny mahalam-be fototra, fandroa miava tany maina.",
+    "en": "Don't speak of its holding many roots, lest you have to weed the land only (or dry land), “This refers to the planting of manioc roots. If planted too near each other they will come to nothing,",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0169"
+   },
+   {
+    "mg": "Aza manao joko tsoriaka mahasambo-kary.",
+    "en": "Don't be mild in look, and fierce in act.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0171"
+   },
+   {
+    "mg": "Aza manao siaka mampandry ny adrisa.",
+    "en": "Don't whistle to settle the locusts.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0172"
+   },
+   {
+    "mg": "Aza manao tantanan-droa lela. :",
+    "en": "Don't do like a double-headed hammer,",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0173"
+   },
+   {
+    "mg": "Aza milevin-ko fondrana rehefa mivelatra ho ravina.",
+    "en": "Don’t sink into a stump when yon have spread out as a leaf.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0174"
+   },
+   {
+    "mg": "Aza madio fitafiana, ka mitsindroka am-pihinanana, hoatra ny vorompotsy.",
+    "en": "Don’t have a clean coat and dirty food, like the white-bird (the egret).",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0175"
+   },
+   {
+    "mg": "Aza miovaova : ka anto ho ondry bobo, ary rahampitso ho mena loha.",
+    "en": "Don’t be given to change: to day be a white-(faced) sheep, and to-morrow a red-headed (one).",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0177"
+   },
+   {
+    "mg": "Aza manome toky an-kamorana, ka manary an-kasarotana.",
+    "en": "Don't love me in prosperity, and leave me in adversity ;",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0178"
+   },
+   {
+    "mg": "Aza mijokojoko mampzseho vombona.",
+    "en": "Don't bend your neck to show your mane,",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0179"
+   },
+   {
+    "mg": "Aza misomidika amboniny toa menaka: fa ataovy tapaka ao anatiny toa tsoka.",
+    "en": "Don’t be on the outside (or top) like floating fat, but be inside like marrow.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0180"
+   },
+   {
+    "mg": "Aza be henatra imaso, fa be fosa ivoho.",
+    "en": "Don’t be full of respect before one's eyes, and full of abuse behind one’s back.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0181"
+   },
+   {
+    "mg": "Aza tsara vava ririnina toy ny mpamboly voalobok’ A mbohidrano.",
+    "en": "Don't speak fair in the winter like the vine-planter at Ambohidrano.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0182"
+   },
+   {
+    "mg": "Aza manao loha-teny tsy mitoy.",
+    "en": "Don’t say two things that don’t agree with one another.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0183"
+   },
+   {
+    "mg": "Aza mody maty toa voamitohy.",
+    "en": "Don’t pretend to be dead like a véamitéhy beetle.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0184"
+   },
+   {
+    "mg": "Azy mody torana hihinana ny kitozan’ ny marary.",
+    "en": "Don’t pretend to faint that you may eat invalid’s food.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0186"
+   },
+   {
+    "mg": "Vava soa sakafo, teny ratsy adidy.",
+    "en": "Good words are food: bad words poison.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0194"
+   },
+   {
+    "mg": "Ny vava toy ny voro-damba, ka mitsiaka etsy, mitsiaka eroa.",
+    "en": "The mouth is like a rag: it tears here and tears there.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0196"
+   },
+   {
+    "mg": "Anaran’ ahitra no misy tsy hita fototra; anaram-biby no misy anoano ; fa ny teny tsy mba misy anoano.",
+    "en": "The names of some grasses are not known ; the names of some creatures are guessed at, but there’s nothing guessed at about words.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0200"
+   },
+   {
+    "mg": "Hevitro ; ka raha mety dia atao, fa raha tsy mety dia avela: nefa aza ny tenako no ariana, fa ny teniko no ario.",
+    "en": "My opinion : if proper, take it, if improper, leave it; but don’t, reject me, reject my words only.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0203"
+   },
+   {
+    "mg": "Aza miteny lango imason’ ny vary.",
+    "en": "‘Don’t speak evil of people before their friends.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0206"
+   },
+   {
+    "mg": "A taovy sotro ranon' akoho: kely azo jonjonina, be azo jonjonina.",
+    "en": "Receive as a chicken drinks water ; little or much, it lifts up the head, ze.,",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0208"
+   },
+   {
+    "mg": "Famaky tsy miambozon-kena ; ny tompony indray no tsy omemboninahitra. .",
+    "en": "An axe with no meat hung round the handle: the owner gets no honour.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0209"
+   },
+   {
+    "mg": "Aza tomany homana, toy ny akohohely.",
+    "en": "Don't cry when you are eating, like a chicken.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0211"
+   },
+   {
+    "mg": "Aza mitsipa-doha-laka-nitana.",
+    "en": "Don't kick the bow of the canoe that has carried you over.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0213"
+   },
+   {
+    "mg": "Aza isy mahavaly soa, toa zaza.",
+    "en": "Don’t be ungrateful, like a child.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0214"
+   },
+   {
+    "mg": "Zahom-boanjo; ka ny nahitana no akifikifika.",
+    "en": "An earth-nut stem ; what you found them on is shaken off.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0216"
+   },
+   {
+    "mg": "Zoy ny Atapo afaka entana, ka tsy tsaroan’ ny olona intsony.",
+    "en": "Like an empty bag, no one rergembers it again ;",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0217"
+   },
+   {
+    "mg": "My havana aza mba hadinoina, toy ny kitapo nahafahanaentana.",
+    "en": "Don't forget your friends, like a bag from which the goods have been taken.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0218"
+   },
+   {
+    "mg": "Vilanibe nanatoana; ka na dia vaky sy torotoro aza, azaariandavi-doatra, fa namela soa ho anareo izy.",
+    "en": "‘A dyeing-pot : although it is broken and crushed to pieces, don’t throw it far away, for it has done you good service.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0219"
+   },
+   {
+    "mg": "Aza atao toy ny vato tsindry hahazana, ka raha maloka ny andro atsipiny.",
+    "en": "Don’t treat me as you do a stone used for keeping down the clothes when drying, and thrown away on a cloudy day,",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0220"
+   },
+   {
+    "mg": "Aza homa-maina, toy ny tsofaben’ Andohalo.",
+    "en": "Don't eat for nothing, like the big saw at Andohalo (an open space in the centre of the Capital).",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0221"
+   },
+   {
+    "mg": "Zokam-pilana, ka tsy manam-fo afa tsy ny rano.",
+    "en": "To have one want, like the water-pot, und look for nothing but water.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0223"
+   },
+   {
+    "mg": "Raha mitsangan-ko mavo toa valanirana, aleo mipetraka ho sampan-javatra.",
+    "en": "Better sit down to be a branch of anything than rise up to be brown like a vddanirana(:) tree.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0225"
+   },
+   {
+    "mg": "Aza dongidongy miendrika androngo, ka mandany ny tsaramasom-bahoaka.",
+    "en": "Don’t be sulky like a lizard, and consume the people’s beans.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0226"
+   },
+   {
+    "mg": "Katsaka maniry an-tany mena: ka zara raha mahatana ny aina, fa ny baby telo no tsy misy.",
+    "en": "Indian-corn growing in red land: you are lucky if it support life, for there are not three ears (on one stalk).",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0227"
+   },
+   {
+    "mg": "Maka kitay manana ankizy; misorona afo manan-jiro; homamaizina ao am-pototry ny mazava.",
+    "en": "To fetch fuel having’a slave, to feed the fire having a lamp, to eat in the dark at the foot of the light,",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0228"
+   },
+   {
+    "mg": "Mpiasa tsy mahavoky tena.",
+    "en": "A labourer who does'nt fill his belly.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0229"
+   },
+   {
+    "mg": "Mena maso an-daoka, ka manao fatra-maina.",
+    "en": "Ashamed about the meat, he deals out the rice without it.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0231"
+   },
+   {
+    "mg": "Mateti-pihavy, toa sotro kely izy.",
+    "en": "He comes often, like a little spoon.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0233"
+   },
+   {
+    "mg": "Zonon-kena lasan-tsaka ; omby an-tanan' ny ory.",
+    "en": "A piece of roast beef taken by a cat; it has got into the hands of the oor,",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0237"
+   },
+   {
+    "mg": "Nofon-kena omby an-tanan-tsaka, ka raha tsy didiana tsy azo.",
+    "en": "Meat in the paws of the cat, unless cut it can’t be got.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0238"
+   },
+   {
+    "mg": "Lasa tsy miverina, toy ny hena lasan-tsaka.",
+    "en": "Gone for good, like the meat taken by the cat.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0239"
+   },
+   {
+    "mg": "Omby an-tana-mamba izy.",
+    "en": "It has got into the clutches of the crocodile.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0240"
+   },
+   {
+    "mg": "Aza manao am-pihi-mamba.",
+    "en": "Don't clutch like a crocodile.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0241"
+   },
+   {
+    "mg": "Ny an' ny tena ratsy tsy azo atakalo ny an’ olon-tsoa.",
+    "en": "The bad things that belong to yourself shouldn't be exchanged for the good things of another.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0243"
+   },
+   {
+    "mg": "Moramorain’ ny an' olona, fa sarotsarotin’ ny an-tena.",
+    "en": "He is careless about other people’s things, but particular about his own.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0246"
+   },
+   {
+    "mg": "Raha hanao zavatra, aza manao hoe: “Dombo ny angady ;\" nefa raha hihinana manao hoe : “‘Maranitra ny sotro.”",
+    "en": "When going to dig, don’t say: ‘The spade is blunt ;” but when going to eat: “The spoon is sharp.””",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0250"
+   },
+   {
+    "mg": "Avoivoin’ ny vavany, ha sahalain’ ny vintany.",
+    "en": "Led wrong by his mouth, but put right by his lot (or destiny).",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0251"
+   },
+   {
+    "mg": "Aza maniry ombin-tena.",
+    "en": "Don’t wish for your own ox,",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0256"
+   },
+   {
+    "mg": "Ny Andriandahy mpanao didy fisaka, koa ny Hovalahy manantoana tsy voky.",
+    "en": "The master is stingy, so the servant starves.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0257"
+   },
+   {
+    "mg": "Aza manao tombo ho an-tena.",
+    "en": "Don’t take something extra for yourself.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0259"
+   },
+   {
+    "mg": "Aza manao be kibo mahihitra.",
+    "en": "Don’t do like the niggardly big belly,",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0262"
+   },
+   {
+    "mg": "Vitsika nahazo valala; tonga ny entana, fa ny vava no ty omby.",
+    "en": "The ants that caught the locust ; the burden is come, but the mouth is too small for it.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0265"
+   },
+   {
+    "mg": "Natao ihany ny mandevina loh' angidina, fa tsy tonga vakankaranana.",
+    "en": "The head of the dragon-fly was buried sure enough, but it did of become a bright and shining bead,",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0266"
+   },
+   {
+    "mg": "Rehefa mahafoy erany, mahafoy hintsany.",
+    "en": "When you give it full, give it brimful.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0271"
+   },
+   {
+    "mg": "Lel omby, ka miraoka ahitra ho an' ny trafony.",
+    "en": "The tongue of the ox: it gathers grass for the hump.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0272"
+   },
+   {
+    "mg": "Vary lena voatoto: ka samy te-ho lohany.",
+    "en": "Damp rice already pounded; each wants to be top.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0274"
+   },
+   {
+    "mg": "Aza mitomany hena momba famaky.",
+    "en": "Don’t grieve over the meat that goes with the axe.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0276"
+   },
+   {
+    "mg": "Aza manao fono vomanga sendra vahiny, ka manoto-davenona tsy ho hitany.",
+    "en": "Don’t do like the man who was roasting potatoes when surprised by a stranger, and covered them over with ashes to prevent him seeing them.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0277"
+   },
+   {
+    "mg": "Aza manao mamy fo velona.",
+    "en": "Don't attend only to your own interests.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0278"
+   },
+   {
+    "mg": "Aza manao hata-dava hoatra ny saka.",
+    "en": "Don't be ever begging like a cat.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0279"
+   },
+   {
+    "mg": "Zongo-dava ahitan-kanina.",
+    "en": "Long feet will find food.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0284"
+   },
+   {
+    "mg": "Vary iray no nafafy, ka vary zato no niakatra.",
+    "en": "One measure ofr rice was sown, but a hundred measures have been reaped.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0290"
+   },
+   {
+    "mg": "Ny zoto handrahoana ; ny laina itonoana.",
+    "en": "A Rood meal for diligence, a bad one for idleness.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0293"
+   },
+   {
+    "mg": "Aiza no dia ho anao avokoa ny valala manatody sy ny fandriamaraina ?",
+    "en": "How can you have both the locust laying its eggs and the lying in bed in the morning ?",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0296"
+   },
+   {
+    "mg": "Raha maharary aza ny tanana, jereo aloha ny hibo sy misy hanina.",
+    "en": "Even though the hands are painful, look first at the empty stomach.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0300"
+   },
+   {
+    "mg": "Mandehana dieny malaina, fa raha mazoto,angamba tsy afaka.",
+    "en": "O when you don’t want; for when you do, you may not be able.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0301"
+   },
+   {
+    "mg": "Aza malaina manao zavatra; fa ny mosary indray maraina tsy efa foana.",
+    "en": "Don’t be an idle worker; for food for one ‘uorning's famine isn’t easily found.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0303"
+   },
+   {
+    "mg": "Aza manao tsinjo voro-mazoto.",
+    "en": "Don't take a mere look at a diligent bird; i.e. Be diligent likewise.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0304"
+   },
+   {
+    "mg": "Aza manao tsidi-pahitra.",
+    "en": "Don’t take a mere look into the cattle-pen,",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0305"
+   },
+   {
+    "mg": "Aza miala safay.",
+    "en": "Don’t shirk work.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0306"
+   },
+   {
+    "mg": "Aza kely faka hitay, ka be bahana.",
+    "en": "Don’t fetch but little fuel and scarcely get a warm.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0307"
+   },
+   {
+    "mg": "Aza manao hamo be tenda.",
+    "en": "Don’t be an idle fellow with a big throat.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0308"
+   },
+   {
+    "mg": "Aza mitoe-foana hoatra ny vato: ny lehibe tsy miteny, ny kely sy misy mpananaira.",
+    "en": "Don’t sit still like a stone : the big not speaking, and the little having no advisers.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0309"
+   },
+   {
+    "mg": "Aza manjenjena toy ny valala manatody.",
+    "en": "Don’t skip about like a locust laying its eggs.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0310"
+   },
+   {
+    "mg": "Aza manantena ny ‘Aza mandry, fa anateran-kena!",
+    "en": "Don't hope for ‘Don't lie down, here's a present of teef.’",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0314"
+   },
+   {
+    "mg": "Zana-dambo, mitrongy vao homana.",
+    "en": "‘A young boar: he turns up the earth before eating.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0327"
+   },
+   {
+    "mg": "Fela-tanam-papango : tsy manjaitra ny rovitra.",
+    "en": "A Kite’s claws: it doesn’t sew up what is torn.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0328"
+   },
+   {
+    "mg": "Tongo-boromahery tsy maka ny ankasarotana.",
+    "en": "A Falcon’s claw: it doesn’t take hold of the difficult parts.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0331"
+   },
+   {
+    "mg": "Ny vola tsy mandry lalana toy ny rano: tonga anio, fa lasa rahampitso.",
+    "en": "Money doesn’t lie in the road like water: it comes to-day, but goes tomorrow.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0335"
+   },
+   {
+    "mg": "Ny harena toy ny volon’ orona, ka be alana maharary, kely alana maharary.",
+    "en": "Wealth is like hair in the nose: if much is pulled out, it is painful, if little, it is painful.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0336"
+   },
+   {
+    "mg": "Ny fotsy tsy mihoatra ny bobo, ary ody fitia tsy mihoatra ny vola.",
+    "en": "‘There’s no whiteness exceeding that of an albino, and no love-charm surpassing money.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0337"
+   },
+   {
+    "mg": "Toko no tadiavina, ka vato no hita.",
+    "en": "A trivet is sought, and stones are found.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0339"
+   },
+   {
+    "mg": "Kitoatoa vary amana anana: ao ny sendra hena, fa ny sendra sakay dia misioka.",
+    "en": "A dab into a dish of rice and herbs: some perchance hit on meat, but those who hit on chillies whistle.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0346"
+   },
+   {
+    "mg": "Manan-kantenainatoa an-dRandranobe mandevina eranambatry.",
+    "en": "‘Having something to fall back off, like the old woman that buries three farthings.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0350"
+   },
+   {
+    "mg": "Firain’ ny vava fito saha ; firain' ny harem-boantondro.",
+    "en": "Marked out by his mouth seven fields ; marked out by his means a fingerbreadth.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0361"
+   },
+   {
+    "mg": "Lasan-ko vavany toy ny haron-tabebaka.",
+    "en": "All Fone, to mouth like a wide shallow basket.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0362"
+   },
+   {
+    "mg": "Ombilahy tanimanga, ka ny tompony ihany no mitrena.",
+    "en": "A clay ox ; it’s only the owner who bellows.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0367"
+   },
+   {
+    "mg": "Kary mihomehy vorondolo: ka ny mandady indray no mihomehy ny manidina.",
+    "en": "‘A wild cat laughing at an owl: it’s the creeper laughing at the flier.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0374"
+   },
+   {
+    "mg": "Ketsa va aho, ka ho antitra tray taona P",
+    "en": "Am I a young rice plant to become old in a year?",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0376"
+   },
+   {
+    "mg": "Fanasina va aho ka ho levona vetivety ?",
+    "en": "Am I salt quickly to come to nothing ?",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0377"
+   },
+   {
+    "mg": "Malady tompony toy ny mpihambo.",
+    "en": "You are soon its master, like the braggart.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0378"
+   },
+   {
+    "mg": "Ny amboa no be aina; fa raha voky ron’ kena, mandry ilalana.",
+    "en": "A dog is full of life ; but when full of food(:), it lies in the road.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0379"
+   },
+   {
+    "mg": "Aza be filaza, ka kely fitondra mody.",
+    "en": "Don’t promise much and bring home little.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0381"
+   },
+   {
+    "mg": "Aza manao toton-omby bory.",
+    "en": "Don’t butt like a hornless ox.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0383"
+   },
+   {
+    "mg": "Aza manao akohovavy maneno.",
+    "en": "Don't be a crowing hen.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0388"
+   },
+   {
+    "mg": "A Aohovany maneno, ka lazain’ ny avoaky ny vavany.",
+    "en": "A hen that crows declares itself by its mouth.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0389"
+   },
+   {
+    "mg": "Aza manao herim-boantay.",
+    "en": "Don’t boast (i.e. buzz) like a scavenger beetle.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0390"
+   },
+   {
+    "mg": "Aza mianjonanjona toy ny akoho mihinam-biby.",
+    "en": "Don't boast like the fowl eating an insect.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0391"
+   },
+   {
+    "mg": "Aza mietaketaka toy ny akoho hely vidin-drindra.",
+    "en": "Don’t be conceited like a little fowl bought for a few rushes.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0392"
+   },
+   {
+    "mg": "Aza tefitra loatra ka mibaby laona.",
+    "en": "Don’t be so fond of praise as to carry a rice mortar on your back.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0394"
+   },
+   {
+    "mg": "Aza mitompo teny fantatra, toa antsy Rely be zarana.",
+    "en": "Don't be too sure, like a little knife with a big handle.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0399"
+   },
+   {
+    "mg": "Lamban' Ikaladedaka : kirobo raviny, venty am-pantaka, roanambatry vita. .",
+    "en": "The cloth of Miss Boaster : a shilling for a strip of it, eightpence whilst still on the loom, three farthings when it is finished.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0408"
+   },
+   {
+    "mg": "Doradora vava any ivelany, fa toa olo-moana ao an-trano.",
+    "en": "A great boaster outside the house, but apparently dumb inside.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0409"
+   },
+   {
+    "mg": "Miriorio foana ny angidina, fa any an-kady no farany.",
+    "en": "The dragon-fly roams about in vain, for it will end its days in the ditch.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0410"
+   },
+   {
+    "mg": "Nahoana no samy mpanefy ka hifampidera taim-by.",
+    "en": "How is it that both being smiths, you praise each other's slag ?",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0411"
+   },
+   {
+    "mg": "Zoy ny fandrony, aron’ ny vozony.",
+    "en": "Like its horns, a guard to its neck.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0413"
+   },
+   {
+    "mg": "Herin' ny ziro menaka, fahosan' ny ago rano.",
+    "en": "Fat is the strength of the lamp, water the weakness of fire.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0415"
+   },
+   {
+    "mg": "Ketsa mahafehy tena.",
+    "en": "Le, they are bound in bundles ready for transplanting.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0420"
+   },
+   {
+    "mg": "Voalavo mitety vazan-trano misy saka, ka fohy andro andehanana.",
+    "en": "A rat in the house(r) with a cat, it won’t be for long.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0425"
+   },
+   {
+    "mg": "Akanga mandry andro, ka tsy mahalala voin-ko avy.",
+    "en": "A guinea-fowl lying asleep in the day-time: he knows not of coming danger.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0430"
+   },
+   {
+    "mg": "Sendra hianao, sendra ahy ; tohatra hianao, tohatra ahy.",
+    "en": "‘We are well met, so come on!",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0433"
+   },
+   {
+    "mg": "Maty am-pandiovana toy ny hifafa.",
+    "en": "Dying in cleaning, like the broom.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0434"
+   },
+   {
+    "mg": "Manao vy very ny ainy.",
+    "en": "To risk one’s life.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0437"
+   },
+   {
+    "mg": "Mana-boa-maty.",
+    "en": "To defy death.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0438"
+   },
+   {
+    "mg": "Iinia maty ho maimbo.",
+    "en": "To dare death.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0439"
+   },
+   {
+    "mg": "Manary tena, toy ny vomanga miseho amoron-dalana.",
+    "en": "Throwing oneself away, like the sweet-potato growing on the roadside.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0440"
+   },
+   {
+    "mg": "Ombilahy tsy zehen’ tandroka.",
+    "en": "A bull is not measured by his horns.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0442"
+   },
+   {
+    "mg": "Nahoana no sahisahy tsy mahay sakiratsy ?",
+    "en": "Why are you daring and yet unable to handle a wooden shovel ?",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0450"
+   },
+   {
+    "mg": "Vavan-hisoa misy sira: ka eranao hihinana azy.",
+    "en": "A salted pig’s mouth : you can please yourself about eating it.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0451"
+   },
+   {
+    "mg": "Raka dobo tsy ho sahy siny ako, dia miketraka ho renirano.",
+    "en": "If I am a pond afraid of a water-pot, let me sink down into a brook.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0452"
+   },
+   {
+    "mg": "Malaza ho lahy, ka tsy mandry an-efitra.",
+    "en": "Thought to be a brave man, but dares not sleep in the desert.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0455"
+   },
+   {
+    "mg": "Zoy ny saobakaka mitoetra ao am-body riana, ka tsy manana andro tsy ahatairana.",
+    "en": "Like a frog that lives at the foot of a waterfall, he lives amid ceaseless alarms.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0457"
+   },
+   {
+    "mg": "Aza manao toy ny valala : ny vavy no manaizana, ka ny lahyno tomamotamo.",
+    "en": "Don’t be like the locusts: the female becomes pregnant, and the male appears of a yellow colour.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0460"
+   },
+   {
+    "mg": "Aza manary tena: tsy vazan-tsinona, ka homan-katsa-maina.",
+    "en": "Don't destroy yourself: you are not a double tooth, yet you can chew dry and hard Indian corn.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0461"
+   },
+   {
+    "mg": "Aza manao rano lalina ila; ka raha marivo, hotsobohina, fa raha lalina, hihemorana.",
+    "en": "Don’t let it be a case of the water being deep on one side ; if shallow, you'll step into it ; but if deep, you'll step away from it.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0465"
+   },
+   {
+    "mg": "Aza manao fodilahy mena vary ka manandrana alohan’ ny tompony.",
+    "en": "Don’t do like the cock finch in harvest time and taste the rice before its master.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0466"
+   },
+   {
+    "mg": "Papango amam-borona : tray toerana, fasamy hafa faniry.",
+    "en": "Res nd Corker) birds: of one place, but different desires.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0479"
+   },
+   {
+    "mg": "Ny olombelona mora soa sy mora ratsy.",
+    "en": "Men are easily good and easily bad.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0500"
+   },
+   {
+    "mg": "Ny olombelona tsy fo vato, fa fo emboka.",
+    "en": "Men are not stone hearts, but gum hearts.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0505"
+   },
+   {
+    "mg": "Ny olombelona voatr’ ampangoro, ka mifandimby ambony sy ambany.",
+    "en": "Men are (like) the boiling rice, and move up and down.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0512"
+   },
+   {
+    "mg": "Ny olombelona tsy ary mitovy.",
+    "en": "Men are not made alike.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0516"
+   },
+   {
+    "mg": "Ny takatra no fisa-doha, marary tsy misy mpanondana.",
+    "en": "The éakatra has a flat head because there is none to pillow it in sickness.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0519"
+   },
+   {
+    "mg": "Ny olombelona toy ny omby : indray mandry, fa tsy indray mifoha.",
+    "en": "Men are like the oxen: they lie down together, but don’t get up together.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0523"
+   },
+   {
+    "mg": "Vy olombelona hoatra ny ladim-boatavo, ka raha Sotorana, tray hiany.",
+    "en": "Men are like the creeping stem of the pumpkin, and if traced, are found to be one.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0532"
+   },
+   {
+    "mg": "My olombelona toy ny akondro : raha manondro ny lanttra, tray hiany ; fa raha miondrtka, samy manana ny lafiny.",
+    "en": "Men are like banana trees: when they point to the sky (i.e. the leaves), they are one; but when they bend down, each has its own place.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0533"
+   },
+   {
+    "mg": "Tsthy be lambana ny ambantlanttra.",
+    "en": "Men are a large mat.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0535"
+   },
+   {
+    "mg": "Aza ny lohasaha mangingina no heverina, fa Andriamanitra no ambontn’ ny loha.",
+    "en": "Don’t think of the silent valley, for it is God who is overhead.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0540"
+   },
+   {
+    "mg": "Tsy misy tsy fantatr’ Andriamanitra, saingy minta miondrtka Izy.",
+    "en": "There is nothing unknown to God, but He determines to bend down (as if to see).",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0541"
+   },
+   {
+    "mg": "Andriamanttra tsy an’ ny irery.",
+    "en": "God does not belong to one (alone).",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0546"
+   },
+   {
+    "mg": "Andriamanitra tsy andrin’ ny olona andriko hiany.",
+    "en": "God who is not waited for by others is waited for by me.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0552"
+   },
+   {
+    "mg": "Toy ny akoho kely misotro rano, ka ny Andriamanitra no andrandrainy.",
+    "en": "Like the chicken drinking water, it lifts its head to God alone.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0555"
+   },
+   {
+    "mg": "Na dia manarona akoho aza, raka mby amin’ ny omen’ Andriamanttra, dia manana.",
+    "en": "Even as to the covering over of the fowls, if God wills it, you will prosper.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0558"
+   },
+   {
+    "mg": "Aza mandidy alohan’ Andriamanitra toy ny mpanotrika akoho.",
+    "en": "Don’t reckon your chickens before they are hatched.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0560"
+   },
+   {
+    "mg": "Aza manao vava azon’ Andrtamanttra.",
+    "en": "Don’t make out that what you say is heard by God.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0562"
+   },
+   {
+    "mg": "Aza mandtka ny soan-Fanahary.",
+    "en": "Don’t change the good things of God.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0563"
+   },
+   {
+    "mg": "Tarehy ratsy nataon-Fanahary, ka tsy vanon-kisarondoha.",
+    "en": "When God has made a face plain, covering the head won’t make it handsome.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0564"
+   },
+   {
+    "mg": "Fatra-piahiahy mamosavy ; fatra-pifehy trano fangalarina.",
+    "en": "Too suspicious proves you a witch; too careful to fasten up the house proves you a thief.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0571"
+   },
+   {
+    "mg": "Lamba mena nenti-nanttsaka, ka babon’ ny mptsambotra.",
+    "en": "A red robe taken to dance (on tombs) with and taken away by the one that catches (the wearer).",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0572"
+   },
+   {
+    "mg": "Aza faly am-panaovan-dratsy hoatra mpamosavy.",
+    "en": "Don't rejoice in doing evil like a witch.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0575"
+   },
+   {
+    "mg": "Tsy tia maro toa mpamosavy.",
+    "en": "To dislike many like a witch.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0576"
+   },
+   {
+    "mg": "Aza mandrara homana, toa fody.",
+    "en": "Bone forbid another to eat, like the weaver-finch.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0582"
+   },
+   {
+    "mg": "Mpamosavy natakalo omby mahery: lasa ny loza, fa tonga ny antambo.",
+    "en": "A witch exchanged for a wild ox: one evil has gone, but another has come.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0585"
+   },
+   {
+    "mg": "Raha mpamosavy azo nanttsaka, ataovy toy ny anana, ka raha mantry, tsongoy.",
+    "en": "If she is a witch caught treading (on the tombs), serve her as you do herbs,—pluck (them) up when they grow.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0587"
+   },
+   {
+    "mg": "Ramahaimanana no voatora-trano, ka Raintkotoamboa no lava hoho. :",
+    "en": "One has his house pelted at, so the other has long nails.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0589"
+   },
+   {
+    "mg": "Fantatro fa tohon-gavatra, fa intako jonoin-kankarary.",
+    "en": "I know that it is a spirit’s ¢oho, but I will angle for it, though it makes me ill.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0592"
+   },
+   {
+    "mg": "Miteny trery toy ny miresaka amim-bazimba.",
+    "en": "To speak to oneself, like him who talks to a Vazimba.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0593"
+   },
+   {
+    "mg": "Miangatra hianao ; taolan-doha hivolana va ?",
+    "en": "You are mocking ; shall a skull speak ?",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0594"
+   },
+   {
+    "mg": "Ny Vazimba no mankarary, ka ny akoho no mihanton-doha.",
+    "en": "It is the Vazimba that makes ill, so the fowl has its head hung up.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0595"
+   },
+   {
+    "mg": "Harem-bery foana, toy ny menaka ahoso-bazimba.",
+    "en": "Lost wealth, like the grease used to anoint the Vazimba, i.e. their tombs or sacred stones.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0598"
+   },
+   {
+    "mg": "Misakaiza amim-bazimba malahelo : ka ny akoholahy lany, ny fitahiana tsy misy.",
+    "en": "Making friends with a poor Vazimba: the cock is gone, and there is no blessing.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0599"
+   },
+   {
+    "mg": "Lolo mamoha angatra.",
+    "en": "A ghost that wakes a spirit.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0602"
+   },
+   {
+    "mg": "Ny papelika no maro vava, mitana ny hafatry ny ntaolo.",
+    "en": "The papeltka chatters much because it holds the will (messages or requests) of the ancients.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0604"
+   },
+   {
+    "mg": "Ny maty no tsy alevina Alakamisy sy Alahady, ny velona no tandrovina.",
+    "en": "The dead are not buried on Thursdays and Sundays because the living are cared for.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0605"
+   },
+   {
+    "mg": "Ny handrina no tsy mantry volo, ny henatra.",
+    "en": "No hair grows on the forehead because of shame.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0606"
+   },
+   {
+    "mg": "Boka mitoraka Alahamady, ka hitan’ Andriamanttra ny tarehiny.",
+    "en": "The leper throws in Alahamady, so God sees his face.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0610"
+   },
+   {
+    "mg": "Sendra mandalo Ramaka, ka may ny tanana.",
+    "en": "Mr. Fetch happens to pass, and the town gets on fire.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0613"
+   },
+   {
+    "mg": "Kaha ny tianao no hatao, hetstka Andriananahary ; fa raha ho an' olona, tangena ambontin’ ny varavarana.",
+    "en": "If what you wish is to be done, then God moves; but if for another, poison is over the door.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0615"
+   },
+   {
+    "mg": "Natao kitstkitsika hivavahana, kanjo voromahery hipaoka ny akoho.",
+    "en": "You were thought to be a Avfsikitstkha to pray to, but you are a voromahery which swoops down on the fowls.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0617"
+   },
+   {
+    "mg": "Tsy nisy nivavaka niankandrefana, fa samy nianavaratra hiany ; fa ny harena mila vintana, ka raha tsy. angara, tsy longa.",
+    "en": "No one prayed towards the west, but all prayed towards the north, yet wealth needs luck (or destiny), and if it isn’t your lot, it doesn’t come.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0618"
+   },
+   {
+    "mg": "Misorona ondry tsy volony, ka mankaloza ny aretina.",
+    "en": "To offer in sacrifice a bad sheep and intensify the disease.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0621"
+   },
+   {
+    "mg": "Toy ny atodin’ anganga : ka avela, mahafaty raibe ; entina, mahafaty renibe.",
+    "en": "Like the eggs of the anganga (a fabulous bird): left alone, they kill your grandfather; taken away, they kill your grandmother.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0624"
+   },
+   {
+    "mg": "Avoaroin’ ny vava ka sahalain’ ny vintana.",
+    "en": "Led astray by the mouth and judged by destiny.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0628"
+   },
+   {
+    "mg": "Tolo-kena maty giro, ka vintana no andrasana.",
+    "en": "A giving out of meat when the lamp has gone out: you wait for what falls to you (lit. your luck).",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0629"
+   },
+   {
+    "mg": "Fanafodin’ ny osa ny marina ataony.",
+    "en": "The medicine for the weak is his doing what is right.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0631"
+   },
+   {
+    "mg": "Ny hery tsy mahaleo ny fanahy.",
+    "en": "Strength does not equal goodness.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0635"
+   },
+   {
+    "mg": "Hianareo no natao valala fiandry fasana, vorompotsy tsy mandao omby.",
+    "en": "You were made a locust to watch the tomb, a white bird (little egret) not forsaking the oxen.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0638"
+   },
+   {
+    "mg": "Vy olona marina toy ny ombalahy ampandronjinana : tsy folaka ano, tsy maty mandrakizay.",
+    "en": "The upright are like contending bulls: neither conquered to-day, and never killed.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0641"
+   },
+   {
+    "mg": "Aza manao soa tapany.",
+    "en": "Don’t do good by halves.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0645"
+   },
+   {
+    "mg": "Manaova soa ampentany, fa misy hiankinana ; ary manaova soa vato, fa misy hipetrahana.",
+    "en": "Do good by means of a wall, for there is something to lean against ;",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0646"
+   },
+   {
+    "mg": "Tay ny fongo-bintsy an-ala, ka madio lavi-drano.",
+    "en": "Like the fect of the kingfisher in the forest, they are clean far from the water (when they may be expected to be dirty):",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0648"
+   },
+   {
+    "mg": "Ny ratsy fo tsy mba manan-kavana.",
+    "en": "The bad of heart have no friends.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0655"
+   },
+   {
+    "mg": "Aza ratsy alohan’ olona.",
+    "en": "Don't be the first to be bad.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0659"
+   },
+   {
+    "mg": "Aza mandthy am-piringa toa vorondolo.",
+    "en": "Don’t dance on a dunghill like an owl.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0666"
+   },
+   {
+    "mg": "Ny fandio tray siny tsy mahaleo ny fandoto tray tandroka.",
+    "en": "A pitcherful of clean water is not a match for a hornful of dirty water.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0670"
+   },
+   {
+    "mg": "Ny homana aza misy diso (na raraka) .",
+    "en": "There are faults even in eating.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0674"
+   },
+   {
+    "mg": "Maizina ny andro, azo tsilovina ; lalina ny rano, azo lakanina ; lalina ny hady, azo toharina ; fa ny ratsy atao tsy mba azon-kevitra.",
+    "en": "When the day is dark, it can be lighted up; when the water is deep, a canoe can be used ; when the fosse is deep, it can be reached by a ladder; but nothing can be done with an evil deed.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0675"
+   },
+   {
+    "mg": "Aza manafin-kilema momba tena.",
+    "en": "Don’t hide your own faults.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0678"
+   },
+   {
+    "mg": "Ny vilany nandrahoana no efa nipoaka.",
+    "en": "It’s the pot that boiled (the meat) that's burst.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0679"
+   },
+   {
+    "mg": "Raha monina anosy, lavitra olon-kiresahana.",
+    "en": "If you live on an island, you are far from people to talk with.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0682"
+   },
+   {
+    "mg": "Akondro noginjana hariva aho: ka raha tsy malazon' ny alina aza, mantsasaky ny alina.",
+    "en": "T’m a banana-tree cut down in the evening : if I’m not withered by night,",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0683"
+   },
+   {
+    "mg": "Lambo soso-nify ka nentim-paharazana.",
+    "en": "A hog with a double tooth : it came from his ancestors,",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0685"
+   },
+   {
+    "mg": "Manasa lamba be tseroka; na madio aza, mangarahara.",
+    "en": "Washing a very dirty dress; though it’s clean, it becomes full of holes.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0686"
+   },
+   {
+    "mg": "Ny akoho novonoina no mody latsa, ary ny atao no tonga adidy.",
+    "en": "The fowl killed becomes a reproach, and the thing done blameworthy.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0687"
+   },
+   {
+    "mg": "‘Veloma’ tsy mba adidy, sakafo lany tsy mba andraikitra.",
+    "en": "‘May you live’ isn’t blame, a meal eaten isn’t guilt.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0688"
+   },
+   {
+    "mg": "Tsorakazo noladinim-bitsika : lofidofiny foana, fa ny tenany be efa marazoka.",
+    "en": "A twig climbed upon by ants: they bend it little, but its stem is pretty.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0689"
+   },
+   {
+    "mg": "Raha tsy manao be fondro, manao be tsiny.",
+    "en": "Not much blame, yet many faults.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0694"
+   },
+   {
+    "mg": "Aza atao famaky manan-tsiny amin’ izay kiakiak’ akoho.",
+    "en": "Don’t blame the axe when the fowls cry out.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0697"
+   },
+   {
+    "mg": "Ny fihavanana tsy azo vidina.",
+    "en": "Friendship cannot be bought.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0701"
+   },
+   {
+    "mg": "My fihavanana hoatra ny siafotsy: raha vao, mikasaosaoka, raha tonta, misy romoromony.",
+    "en": "Friendship is like a stiff cloth : when new, it rustles (nicely), but when old,",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0706"
+   },
+   {
+    "mg": "Ny fikavanana toy ny raty: raha henjanina, tapaka; ary raha hetrahina, miboraka.",
+    "en": "Friendship is like a bad rope: if pulled tightly, it breaks; if pulled lightly,",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0707"
+   },
+   {
+    "mg": "My fikavanana aze ataonao toy ny siafotsy: intelo asampina, ka _mievotra hiany.",
+    "en": "Don’t let your friendship be like stiff cloth: though thrice thrown over the shoulder, it still slips off.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0709"
+   },
+   {
+    "mg": "Aleo very tsikalakalan-karena toy izay very tsikalakalam-pihavanana.",
+    "en": "Better lose a little money than a little friendship.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0712"
+   },
+   {
+    "mg": "Ny tstkalakalan-karena manam-pahalaniana, fa ny tsikalakalam-pihavanana tsy manam-pahalaniana.",
+    "en": "The little things and acts which preserve wealth fail, but those which preserve friendship fail not.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0713"
+   },
+   {
+    "mg": "Vy voky tsy mahaleo ny tsaroana.",
+    "en": "A good belly-full doesn’t equal a kind remembrance.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0715"
+   },
+   {
+    "mg": "Ny kary aza mitsoka amin' Andriampatsa mahazo, ka indrsndra fa ny havana. .",
+    "en": "Even the wild-cat that begs of Lord Shrimp gets (something), much more then the friend.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0720"
+   },
+   {
+    "mg": "A body tsy afindra reny ; ro tsy afindra vilany.",
+    "en": "An egg not removed to another mother ; broth not removed to another pot.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0722"
+   },
+   {
+    "mg": "Raha revom-potaka, rano no manala ; raha revon-teny, vava no manala; raha revon' alahelo, havana no itarainana.",
+    "en": "Get into the mud, water will remove it; get into a dispute, the mouth will get you out of it; be overtaken by sorrow, you can appeal to your friends.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0724"
+   },
+   {
+    "mg": "Ny fo tsy mandringa, ka raha mandalo aho mitsidika hiany.",
+    "en": "The heart isn’t lame, so when I pass, I give a look in.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0726"
+   },
+   {
+    "mg": "Zavarin’ ny fitia manan-tombo, ka intelo no miarahaba.",
+    "en": "To be too much in love and give a treble salutation,",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0728"
+   },
+   {
+    "mg": "Nahoana no ho tia vao ka manary kolokolo P",
+    "en": "Why do you say you love him, yet begin to desert him ?",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0729"
+   },
+   {
+    "mg": "Longo ratsy tsy menatra izay hitsoriaka.",
+    "en": "A bad friend is not ashamed of slipping away from his friendship.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0732"
+   },
+   {
+    "mg": "Mifankatia amin' amalona: ka nony sendra tia, nabolilany.",
+    "en": "An eel’s friendship : it slips away just when you begin to like it.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0733"
+   },
+   {
+    "mg": "Ziy ny varotra no taloha, fa ny fihavanana.",
+    "en": "It wasn’t business that was first, it was friendship.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0734"
+   },
+   {
+    "mg": "A taovy fitia landihazo : ha ny madilana tentenana, ary ny maito tohizana.",
+    "en": "Love me as you do cotton : add to the thin, and re-join the broken.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0736"
+   },
+   {
+    "mg": "Ataovy fihavanam-bava sy tanana: hoa raha marary ny fanana, dia mitsoka ny vava, ary raha marary ny vava, dia misafo ny tanana.",
+    "en": "Let your friendship be that of the mouth and the hand: if the hand is hurt, the mouth blows it, and if the mouth is hurt, the hand strokes it.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0737"
+   },
+   {
+    "mg": "A taovy fitia voampo: mbola lavitra hiany dia ampoizina.",
+    "en": "Love me as you love the véamfd :+ look out for me while yet far away.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0741"
+   },
+   {
+    "mg": "Aza mitaitay, toy ny fitia tsy ho ela.",
+    "en": "Don’t be in a hurry, like love that won’t last.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0742"
+   },
+   {
+    "mg": "Aza manao fitia rano trambo: be fihavy, ka mora lasa.",
+    "en": "Don’t let your love be like a summer torrent: much at first, but soon gone (or, soon coming and soon going).",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0743"
+   },
+   {
+    "mg": "Aza manao fihavana-molotra: tezitra vao mifanatona.",
+    "en": "Don’t show lip-love and be angry before you come together.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0744"
+   },
+   {
+    "mg": "Aza manasakaiza vahiny.",
+    "en": "Don't make friends of strangers.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0745"
+   },
+   {
+    "mg": "Aza manao fitia paraky, ka hatreo am-bava no ho miakatra hiany.",
+    "en": "Don’t love me as you do tobacco, from the mouth and upwards only.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0746"
+   },
+   {
+    "mg": "Aza manao fikavanan’ amboa, ka taolana iray no isarahana.",
+    "en": "Don't make it a dog’s friendship, to be broken over a bone.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0747"
+   },
+   {
+    "mg": "Aza mandalo tanéna misy havana.",
+    "en": "Don’t pass by a place where there's a friend.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0748"
+   },
+   {
+    "mg": "Aza manao fitia mifono avona.",
+    "en": "Don't let your love be wrapped up in pride.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0749"
+   },
+   {
+    "mg": "Aza asesiky ny fitia tanteraka, ka tsy mahalala ny ranonorana ho avy.",
+    "en": "Don't be so much in love that you can’t tell when the rain is coming.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0750"
+   },
+   {
+    "mg": "Aza ely fisian-kavana loatra.",
+    "en": "Don’t have too few friends.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0752"
+   },
+   {
+    "mg": "Aza manao fihavanan-kerana, ka tomany handratra ny sasany.",
+    "en": "Don’t have the friendship of rushes and try and injure others.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0755"
+   },
+   {
+    "mg": "Aza mila lolotr’ amalona aman-kavana.",
+    "en": "Don’t be on the look-out for a friend’s faults.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0756"
+   },
+   {
+    "mg": "Aza manao sakaiza_ manody.",
+    "en": "Don't prove a false friend.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0757"
+   },
+   {
+    "mg": "Aza ny havana no asian-dratsy, fa tsy ho tratran’ ny hafa tsy akory.",
+    "en": "Don’t do wrong to a friend or relative, for you won't get auother.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0759"
+   },
+   {
+    "mg": "Aza manao arahaba mamba : tsy fitia, fa tahotra.",
+    "en": "Don’t salute a crocodile : it isn’t love. but fear.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0760"
+   },
+   {
+    "mg": "Aza sarotra ihamboana toa havan-dratsy.",
+    "en": "Don’t make yourself difficult to boast of, like a good-for-nothing relative (or friend).",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0761"
+   },
+   {
+    "mg": "Havako raha misy patsa; fa raha lany ny patsa, havan-tetezina.",
+    "en": "He isa near relative while there are shrimps (to be had) ; but when they are done, he is only a distant relative.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0762"
+   },
+   {
+    "mg": "Raha voatohina ny aty, marary ny afero.",
+    "en": "If the liver is poked, the gall-bladder feels it.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0763"
+   },
+   {
+    "mg": "Aza manao tsinay homana aty.",
+    "en": "Don't let the entrails eat the liver.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0764"
+   },
+   {
+    "mg": "Aza atao fively amponga ny havana : ka ny tray anabaviny tambitambazana, ary ny tray hosa andahiny hodabodabohana.",
+    "en": "Don’t serve your friends as you do the ends of a drum: gentle to the one, and rough to the other.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0765"
+   },
+   {
+    "mg": "Raha mihavana aminay, aza milela-tanana.",
+    "en": "If you are friendly with us, don’t lick your hands.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0766"
+   },
+   {
+    "mg": "Lafim-bato, vato ; lafin-kazo, hazo ; lafin-kavana, havana.",
+    "en": "The side of a stone is a stone; the side of wood is wood; the side of a relative (i.e. a distant relative) is a relative.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0769"
+   },
+   {
+    "mg": "My maty aza te-ho maro.",
+    "en": "Even the dead wish to be many.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0774"
+   },
+   {
+    "mg": "Ny hazo tokana tsy mba ala.",
+    "en": "One tree doesn’t make a forest.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0776"
+   },
+   {
+    "mg": "Tondro tokana tsy mahazo hao.",
+    "en": "One finger won't catch a louse.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0777"
+   },
+   {
+    "mg": "Olon-drery tsy mba vahoaka.",
+    "en": "One person doesn’t make a multitude.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0779"
+   },
+   {
+    "mg": "Ny be no basy.",
+    "en": "The many are guns.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0780"
+   },
+   {
+    "mg": "Raha mandika ny soa nifanekena aho, tsy satry, fa avilindraha.",
+    "en": "If I break the good (covenant) agreed on, I do it unwillingly.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0792"
+   },
+   {
+    "mg": "Toy ny vatsin' Andrianalabe, ka tsinjarain-kiombonana hiany.",
+    "en": "Like the woodman's victuals: divided out to be shared in.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0795"
+   },
+   {
+    "mg": "Zoy ny famaky mijinja hazo: ka ny ahy momba ny azy.",
+    "en": "Like the axe Cutting down the tree: mine (i.e. the axe) goes with his (i.e.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0796"
+   },
+   {
+    "mg": "Aza manao ahy sy azy.",
+    "en": "Don’t say ‘mine’ and “his.’",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0798"
+   },
+   {
+    "mg": "Ny tray tsy tia mafana, ary ny tray tsy tia mangatsiaka; ka ataovy marimaritra hiraisana.",
+    "en": "One likes heat, and the other likes cold; pray agree on something and be friends.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0801"
+   },
+   {
+    "mg": "Ny feny ierana tsy mba loza.",
+    "en": "‘An agreement brings no harm.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0802"
+   },
+   {
+    "mg": "Imerina akanga tsy roa volo, fa tray hiany.",
+    "en": "Imérina is a guinea-fowl, not of two colours, but of one only.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0804"
+   },
+   {
+    "mg": "Aza mitangorona toy ny voangory ho ritra.",
+    "en": "Don't gather together like the edangery (beetle) about to die,",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0808"
+   },
+   {
+    "mg": "Aza atao mitsoaka an-tonony, hoatra ny tohi-rofian’ ankizy.",
+    "en": "Don't let it slip out at the joint, like the string tied by a child.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0810"
+   },
+   {
+    "mg": "Aza manao toy ny tandindona: miaraka hiany, fa tsy azo ho namana.",
+    "en": "Don't be like the shadow: a constant companion, but not a comrade (ie. a friend).",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0811"
+   },
+   {
+    "mg": "Lambarano voahosotra arina ; tafaray samy ngerona.",
+    "en": "Dark cloth smeared with soot ; two black things joined together.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0815"
+   },
+   {
+    "mg": "Miaraka amin’ ny ferena, ka ny tsara fanahy no maimbo.",
+    "en": "Being with the diseased, the good will be affected.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0816"
+   },
+   {
+    "mg": "Raha tsy marary, aza miray ondana amin’ ny marary.",
+    "en": "Unless you are sick yourself, don’t share the same pillow with a sick TsOn.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0817"
+   },
+   {
+    "mg": "Aza mifonoka ambanin’ ny maimbo.",
+    "en": "Don’t keep company with any one in bad odour.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0818"
+   },
+   {
+    "mg": "Aza manao foly mena tohizan-drofia.",
+    "en": "Don't join the bad to the good.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0820"
+   },
+   {
+    "mg": "Aza mandady miara-komana, hoatra ny mpiandry ratsy.",
+    "en": "Don't creep to eat together, like a company of bandits,",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0822"
+   },
+   {
+    "mg": "Aza manao volo-ngita mifandray tendro.",
+    "en": "Don't unite in wrong doing, like curly hairs on a woolly head.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0823"
+   },
+   {
+    "mg": "Aza mantsim-bao miray, hoatra ny rongony.",
+    "en": "Don’t get bad before you unite, like hemp.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0824"
+   },
+   {
+    "mg": "Nahoana no manao kitapo miara-peno.",
+    "en": "Why do you all fill one bag ?",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0825"
+   },
+   {
+    "mg": "Ny fahatelo be ho tsy mampanana.",
+    "en": "An enemy helps not to fortune.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0826"
+   },
+   {
+    "mg": "Mpandrava efa, toa voalavo.",
+    "en": "A destroyer of finished work, like a rat.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0827"
+   },
+   {
+    "mg": "Aza manetry montotra.",
+    "en": "Don’t cast down in ‘anger.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0828"
+   },
+   {
+    "mg": "Aza manao rano manindao namana.",
+    "en": "Don't be like a river and sweep your friends downwards.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0829"
+   },
+   {
+    "mg": "Lolompon-kovalahy, tsy miseho tsy ratsy tany.",
+    "en": "The malice of a Hova; it doesn’t show itself till troublous times,",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0830"
+   },
+   {
+    "mg": "Aza milavoa tst-ary: mangata-pary tray vany ka mitady izay ‘sy hiraisana.",
+    "en": "‘Don’t want what you can’t get: ask for a joint of sugar-cane to find a means of separation.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0834"
+   },
+   {
+    "mg": "Tstkovoka sy fandiorano: volo no ivatsana, fa ny fomba samy ‘manana ny azy.",
+    "en": "The water-beetle and the water-boatman : of one colour, but of diverse kinds.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0838"
+   },
+   {
+    "mg": "Tstboboka sy toho: rano no traisana, fa ny tarehy samy hafa.",
+    "en": "‘A tadpole and a fish: they live in the same water, but have a different appearance,",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0839"
+   },
+   {
+    "mg": "Zafondro natifi-baratra , ka tafahaona samy loza.",
+    "en": "A cannon that shot a thunderbolt, so one dreadful thing met another.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0841"
+   },
+   {
+    "mg": "Tsy miady, sahala ; ka hiady, hisy resy.",
+    "en": "Tf you don’t fight, you are my equal; if you do fight, one will be conquered.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0847"
+   },
+   {
+    "mg": "Ady tsy ahi-mahatratra.",
+    "en": "A dispute not guarded against reaches yourself.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0850"
+   },
+   {
+    "mg": "Raha tsy te-hiady aza hianao, tsy maintsy miady raha miaraka amin’ Imahaly.",
+    "en": "Though you don’t want to fight, you must fight if you go with Imahaly.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0852"
+   },
+   {
+    "mg": "Zoy ny aretin’ omby ny teny, ka izay mirehodrehoka no hifindrany.",
+    "en": "A quarrel is like a cattle disease, and it shifts to those who come into contact with it.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0853"
+   },
+   {
+    "mg": "A fody tsy miady amim-bato.",
+    "en": "An egg does'nt fight with a stone.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0857"
+   },
+   {
+    "mg": "Ady misy hena, ka ny mamoy no liana.",
+    "en": "A quarrel about meat, the one who gives it up is hungry.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0859"
+   },
+   {
+    "mg": "Borera sy voantay mitolona, loha no amantarana azy.",
+    "en": "‘A brown beetle and a scavenger beetle struggling, you can only tell them by their heads.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0860"
+   },
+   {
+    "mg": "My hofak’ ondry no soa misavily, fa ny teny tsy mba soa misavily.",
+    "en": "A sheep's tail is good to swing, but a dispute isn't good to swing.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0861"
+   },
+   {
+    "mg": "Adin’ akoholahy vorom-bato: ny mahery disadisaka, ary ny resy torotoro.",
+    "en": "A fight of game-cocks: the conqueror is bruised, and the conquered is torn to pieces.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0862"
+   },
+   {
+    "mg": "Aza mandeha singany toy ny Riraron’ Ibenahy.",
+    "en": "Don't go alone like Ibénahy’s shoe.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0865"
+   },
+   {
+    "mg": "Misalasala, hoatra ny adin-ondrilahy: akorain-tsy mifampianja ; avela hiany, mifamaky loha.",
+    "en": "Doubtful, like a ram-fight: urged on, they don't toss one another up;",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0867"
+   },
+   {
+    "mg": "Mitsana-menimenina, hoatra ny vary sosoa voatondraka, na ny voangory mipaika.",
+    "en": "To cease murmuring, like boiling rice that has run over, or a voangory (beetle) that has knocked itself.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0868"
+   },
+   {
+    "mg": "Tsy mba ny akanga hanidina aho, fa ny vorombazaha entina amin’ ny tendany.",
+    "en": "I am not a guinea-fowl to fly away, but a duck to be carried by the throat.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0869"
+   },
+   {
+    "mg": "Vy firaka no tsy mba vola ny lemim-panahiny.",
+    "en": "Lead is not silver because of its softness.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0872"
+   },
+   {
+    "mg": "Aza manositosika ny tsy manombika.",
+    "en": "Don’t push these who don't cut pieces off the mat.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0878"
+   },
+   {
+    "mg": "Fo tezitra tsy ananan-drariny.",
+    "en": "‘An angry heart is not possessed of right.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0879"
+   },
+   {
+    "mg": "Ny latsaka ao am-po tsy hamelona, ha ny an-tendro-molotra no lelajina.",
+    "en": "What you have eaten already is enough to kill you, yet you lick what comes to your lips again (ie. you are evidently wishing for more).",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0891"
+   },
+   {
+    "mg": "Varatra tsy indroa miriatra.",
+    "en": "A thunderbolt doesn’t strike twice,",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0894"
+   },
+   {
+    "mg": "Aza manao ady an-tsanga.",
+    "en": "‘Don't be a contentious wrangler.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0901"
+   },
+   {
+    "mg": "Tsy mety raha an-dafin-drano, ka tsy holakanina, na an-dafintsaha, ka tsy hotoharana.",
+    "en": "Don't refuse to canoe me over when on the other side of the water, or to meet me when on the other side of the field.",
+    "ref": "Houlder, « Ohabolana », The Antananarivo Annual — ohab_0903"
+   }
+  ]
+ }
 }
