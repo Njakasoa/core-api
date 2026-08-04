@@ -54,6 +54,15 @@ services:
       # for values the code reads raw — `env.ts` validates the rest, and an empty string
       # is not "unset" to zod: it fails, and the API refuses to boot.
       ANGANO_STORY_PRESET: ${ANGANO_STORY_PRESET:-}
+      # How many proxies append to x-forwarded-for in front of the container. The
+      # rate limiter reads that many hops from the RIGHT, because only the last
+      # entry is one the caller cannot forge. 1 = the Caddy in front, which is the
+      # case here: Cloudflare is DNS-only for api.njakasoa.xyz and never touches
+      # the request. Raise to 2 only if its proxy is switched on — it would then
+      # append to this same header. Defaulted to 1 and not to an empty string, per
+      # the note above: zod rejects "" for a positive integer, so the API would
+      # refuse to boot.
+      TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
     expose:
       - "3000"
     healthcheck:

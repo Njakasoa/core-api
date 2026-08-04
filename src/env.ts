@@ -22,6 +22,15 @@ const schema = z.object({
 
   RATE_LIMIT_WINDOW: z.coerce.number().int().positive().default(60),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(120),
+  /**
+   * How many proxies append to `x-forwarded-for` in front of this process.
+   * The rate limiter reads that many hops from the RIGHT, because each proxy
+   * appends the peer it saw and only the last entry is one the caller cannot
+   * forge — reading the first hop let anyone mint a fresh bucket per request.
+   * 1 for the Caddy in deploy/Caddyfile.example; 2 if Cloudflare fronts it too.
+   * Raising this beyond the real chain length trusts a hop the client controls.
+   */
+  TRUSTED_PROXY_HOPS: z.coerce.number().int().positive().default(1),
 
   WEBHOOK_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
 
