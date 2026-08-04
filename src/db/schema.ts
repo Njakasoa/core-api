@@ -307,6 +307,8 @@ export const tales = pgTable(
      *  contribution is not public domain. Export writes one file per regime,
      *  and merging them would subject everything to the strictest clause
      *  without it being visible anywhere. */
+    /** Ce que le contributeur DEMANDE. La porte d'entrée refuse la soumission
+     *  si un conteur a accordé moins — voir couvre() dans lib/collecte. */
     licence: text("licence").notNull().default("CC BY 4.0"),
     regime: text("regime").notNull().default("cc_by_4_communaute"),
     submittedAt: timestamp("submitted_at", { withTimezone: true }),
@@ -399,7 +401,14 @@ export const taleConsents = pgTable(
     /** Its own permission. "You may publish the recording" and "you may train a
      *  voice model on my grandmother's voice" are not the same sentence. */
     clonageVocal: boolean("clonage_vocal").notNull().default(false),
-    licenceAccordee: text("licence_accordee").notNull().default("CC BY 4.0"),
+    /** SANS valeur par défaut, et c'est le cœur du sujet. Une colonne de la
+     *  table de preuve qui se remplit toute seule affirme une chose que
+     *  personne n'a dite. Mesuré avant correction : un contributeur envoyant
+     *  « recherche non commerciale » recevait 201 et la ligne disait
+     *  « CC BY 4.0 » — le plus permissif des choix, attribué à quelqu'un à qui
+     *  on ne l'avait jamais soumis. Le dépôt de corpus pose la règle en toutes
+     *  lettres : « Une obligation juridique ne prend pas de valeur par défaut. » */
+    licenceAccordee: text("licence_accordee").notNull(),
     signedAt: timestamp("signed_at", { withTimezone: true }).notNull(),
     supersedesId: text("supersedes_id"),
     createdAt,

@@ -15,6 +15,13 @@
       "when": 1785853858433,
       "tag": "0001_thin_iron_patriot",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785859235844,
+      "tag": "0002_adorable_silk_fever",
+      "breakpoints": true
     }
   ]
 }
