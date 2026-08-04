@@ -13,6 +13,7 @@ import { pageQuery, paginate, decodeCursor } from "../lib/pagination.ts";
 import { requireAuth } from "../middleware/auth.ts";
 import { optionalAuth, requireRealUser } from "../middleware/corpus-role.ts";
 import { divergencePpm, DIVERGENCE_MAX_PPM } from "../lib/collecte/lettres.ts";
+import { LICENCES, couvre } from "../lib/collecte/licences.ts";
 
 /**
  * Collecte — the community platform for Malagasy folktales.
@@ -53,10 +54,13 @@ const nouveauTale = z.object({
   regionCollecte: z.string().max(120).optional(),
   lieuCollecte: z.string().max(120).optional(),
   genreSource: z.string().max(80).optional(),
+  /** Ce sous quoi le contributeur demande à publier. Déclaré, jamais hérité
+   *  d'un défaut : la porte d'entrée refusera si un conteur accorde moins. */
+  licence: z.enum(LICENCES).default("CC BY 4.0"),
   /** The raw text. Written once and never again — see the trigger in
    *  drizzle/0001. Corrections arrive as new `corrigee` versions. */
   texte: z.string().min(1).max(200_000),
-});
+}).strict();
 
 const nouveauConsentement = z.object({
   grantorRole: z.enum(["conteur", "transcripteur", "deposant", "ayant_droit"]),
@@ -74,13 +78,23 @@ const nouveauConsentement = z.object({
   /** Its own permission: publishing a recording and training a voice model on a
    *  grandmother's voice are not the same sentence. */
   clonageVocal: z.boolean().default(false),
+  /** OBLIGATOIRE, et sans valeur par défaut. Une colonne de cette table qui se
+   *  remplit toute seule affirme une chose que personne n'a dite — et le défaut
+   *  retiré ici était le plus permissif des choix. */
+  licenceAccordee: z.enum(LICENCES),
   signedAt: z.coerce.date(),
-});
+}).strict();
 
 const nouvelleCorrection = z.object({
   texte: z.string().min(1).max(200_000),
   origine: z.string().min(1).max(200),
-});
+}).strict();
+
+// `.strict()` sur les trois schémas, et c'est la moitié du correctif. Sans lui
+// Zod RETIRE EN SILENCE une clé qu'il ne connaît pas : un contributeur envoyant
+// « licenceAccordee: recherche non commerciale » recevait 201, et la ligne
+// affirmait « CC BY 4.0 ». Un champ qu'on refuse d'écouter est pire qu'un champ
+// absent — l'appelant croit avoir été entendu.
 
 /** The tale as the public sees it — never the submitter's identity. */
 function publique(t: typeof tales.$inferSelect) {
@@ -188,6 +202,7 @@ export function collecteRoute(): Hono<{ Variables: Variables }> {
           regionCollecte: b.regionCollecte ?? null,
           lieuCollecte: b.lieuCollecte ?? null,
           genreSource: b.genreSource ?? null,
+          licence: b.licence,
         });
         await tx.insert(taleVersions).values({
           id: id("tver"),
@@ -229,6 +244,7 @@ export function collecteRoute(): Hono<{ Variables: Variables }> {
         diffusionPubliqueTexte: b.diffusionPubliqueTexte,
         diffusionPubliqueAudio: b.diffusionPubliqueAudio,
         clonageVocal: b.clonageVocal,
+        licenceAccordee: b.licenceAccordee,
         signedAt: b.signedAt,
       });
       return c.json({ id: consentId }, 201);
@@ -311,19 +327,40 @@ export function collecteRoute(): Hono<{ Variables: Variables }> {
         .limit(1);
       if (!brute) manquant.push("texte");
       if (!t.dialecteSource) manquant.push("dialecteSource");
-      const [conteur] = await db
-        .select({ id: taleConsents.id })
+      const consentements = await db
+        .select({
+          id: taleConsents.id,
+          grantorRole: taleConsents.grantorRole,
+          grantorDisplay: taleConsents.grantorDisplay,
+          licenceAccordee: taleConsents.licenceAccordee,
+        })
         .from(taleConsents)
-        .where(
-          and(eq(taleConsents.taleId, t.id), eq(taleConsents.grantorRole, "conteur")),
-        )
-        .limit(1);
+        .where(eq(taleConsents.taleId, t.id));
+      const conteur = consentements.find((c) => c.grantorRole === "conteur");
       // The submitter licenses their transcription; the teller licenses the
       // telling. Two instruments, and only the second can be given by the
       // person the folklore regime exists to protect.
       if (!conteur) manquant.push("consentement du conteur");
       if (manquant.length > 0) {
         throw errors.unprocessable("Incomplete submission", { manquant });
+      }
+
+      // Un récit ne se publie pas plus largement que ce que son conteur a
+      // accordé. On REFUSE plutôt que de rétrograder la licence en silence :
+      // l'écart doit être vu et résolu par le contributeur, pas décidé par le
+      // serveur à la place d'une personne qui a signé autre chose.
+      const trop_etroits = consentements
+        .filter((c) => !couvre(c.licenceAccordee, t.licence))
+        .map((c) => ({
+          qui: c.grantorDisplay,
+          role: c.grantorRole,
+          a_accorde: c.licenceAccordee,
+        }));
+      if (trop_etroits.length > 0) {
+        throw errors.unprocessable(
+          "A tale cannot be published more widely than its teller allowed",
+          { licence_demandee: t.licence, consentements_plus_etroits: trop_etroits },
+        );
       }
 
       await db

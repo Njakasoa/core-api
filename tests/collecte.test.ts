@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createApp } from "../src/app.ts";
 import { db } from "../src/db/index.ts";
-import { taleVersions } from "../src/db/schema.ts";
+import { taleVersions, taleConsents } from "../src/db/schema.ts";
 import { eq, sql } from "drizzle-orm";
 
 /**
@@ -30,6 +30,7 @@ const UN_CONTE = {
   nouveaute: "INEDIT_ORAL" as const,
   dialecteSource: "betsimisaraka",
   regionCollecte: "Toamasina",
+  licence: "CC BY 4.0" as "CC BY 4.0" | "CC BY-NC 4.0" | "recherche non commerciale",
   texte: "Nisy indray mandeha, hono, lehilahy roa nifaninana tamin'ny hafetsena.",
 };
 
@@ -40,6 +41,7 @@ const UN_CONSENTEMENT = {
   capturedVia: "oral_enregistre" as const,
   langueDuFormulaire: "plt_Latn" as const,
   finalites: ["archivage", "rag"],
+  licenceAccordee: "CC BY 4.0" as const,
   signedAt: new Date().toISOString(),
 };
 
@@ -229,5 +231,87 @@ describe("the raw text is never rewritten", () => {
     expect(body.versions.some((v) => v.kind === "brute")).toBe(true);
     // Attested is not validated, and the field says so on every tale.
     expect(body.validationCommunautaire).toBeNull();
+  });
+});
+
+describe("a consent says what was granted, and nothing fills it in", () => {
+  test("a consent with no stated licence is refused", async () => {
+    // The defect this suite exists to prevent: the column had a DEFAULT of
+    // 'CC BY 4.0', so an unspoken licence became the most permissive one, in
+    // the very table whose only job is to attest what a person agreed to.
+    const moi = await compte();
+    const { id } = await creerConte(moi.headers);
+    const { licenceAccordee: _omis, ...sansLicence } = UN_CONSENTEMENT;
+    const res = await app.request(`/v1/collecte/tales/${id}/consents`, {
+      method: "POST", headers: moi.headers, body: JSON.stringify(sansLicence),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  test("what the teller wrote is what the record says", async () => {
+    // Zod strips unknown keys in silence. Before `.strict()`, a contributor
+    // sending "recherche non commerciale" got 201 and the row said CC BY 4.0 —
+    // a sentence the teller was never shown. A field we refuse to hear is worse
+    // than a field that does not exist: the caller believes they were heard.
+    const moi = await compte();
+    const { id } = await creerConte(moi.headers, { ...UN_CONTE, licence: "recherche non commerciale" });
+    const res = await app.request(`/v1/collecte/tales/${id}/consents`, {
+      method: "POST",
+      headers: moi.headers,
+      body: JSON.stringify({ ...UN_CONSENTEMENT, licenceAccordee: "recherche non commerciale" }),
+    });
+    expect(res.status).toBe(201);
+    const [row] = await db.select().from(taleConsents).where(eq(taleConsents.taleId, id));
+    expect(row?.licenceAccordee).toBe("recherche non commerciale");
+  });
+
+  test("an unknown field is refused, not quietly dropped", async () => {
+    const moi = await compte();
+    const { id } = await creerConte(moi.headers);
+    const res = await app.request(`/v1/collecte/tales/${id}/consents`, {
+      method: "POST",
+      headers: moi.headers,
+      body: JSON.stringify({ ...UN_CONSENTEMENT, licenceAcordee: "CC BY 4.0" }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  test("a tale is not published more widely than its teller allowed", async () => {
+    const moi = await compte();
+    // Le conte demande CC BY 4.0 ; la conteuse n'accorde que la recherche.
+    const { id } = await creerConte(moi.headers);
+    await app.request(`/v1/collecte/tales/${id}/consents`, {
+      method: "POST",
+      headers: moi.headers,
+      body: JSON.stringify({ ...UN_CONSENTEMENT, licenceAccordee: "recherche non commerciale" }),
+    });
+    const res = await app.request(`/v1/collecte/tales/${id}/submit`, {
+      method: "POST", headers: moi.headers,
+    });
+    expect(res.status).toBe(422);
+    const body = (await res.json()) as { error: { details: { consentements_plus_etroits: unknown[] } } };
+    expect(body.error.details.consentements_plus_etroits).toHaveLength(1);
+  });
+
+  test("the database refuses to edit a consent, but allows it to be withdrawn", async () => {
+    const moi = await compte();
+    const { id } = await creerConte(moi.headers);
+    await app.request(`/v1/collecte/tales/${id}/consents`, {
+      method: "POST", headers: moi.headers, body: JSON.stringify(UN_CONSENTEMENT),
+    });
+    const [c] = await db.select().from(taleConsents).where(eq(taleConsents.taleId, id));
+
+    let refus: unknown;
+    try {
+      await db.update(taleConsents).set({ clonageVocal: true })
+        .where(eq(taleConsents.id, c!.id));
+    } catch (e) { refus = e; }
+    expect(String(refus)).toContain("append-only");
+
+    // Withdrawal must stay possible: the project has committed in writing to
+    // deleting data on refusal. A trigger blocking DELETE would contradict it.
+    await db.delete(taleConsents).where(eq(taleConsents.id, c!.id));
+    const reste = await db.select().from(taleConsents).where(eq(taleConsents.id, c!.id));
+    expect(reste).toHaveLength(0);
   });
 });
