@@ -8,6 +8,13 @@
       "when": 1782335238637,
       "tag": "0000_parallel_selene",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785853858433,
+      "tag": "0001_thin_iron_patriot",
+      "breakpoints": true
     }
   ]
 }

@@ -17,6 +17,7 @@ import { authRoute } from "./routes/auth.ts";
 import { orgsRoute } from "./routes/orgs.ts";
 import { apiKeysRoute } from "./routes/api-keys.ts";
 import { itemsRoute } from "./routes/items.ts";
+import { collecteRoute } from "./routes/collecte.ts";
 import { webhooksRoute } from "./routes/webhooks.ts";
 import { assetsRoute } from "./routes/assets.ts";
 import { turnRoute } from "./routes/turn.ts";
@@ -60,6 +61,9 @@ export function createApp() {
   app.route("/v1/orgs", orgsRoute());
   app.route("/v1/keys", apiKeysRoute());
   app.route("/v1/items", itemsRoute());
+  // Collecte — community angano platform. Read-anonymous by design, so unlike
+  // every other /v1 resource it mounts no org scope; see routes/collecte.ts.
+  app.route("/v1/collecte", collecteRoute());
   app.route("/v1/webhooks", webhooksRoute());
   app.route("/v1/turn", turnRoute());
   app.route("/v1/tts", ttsRoute()); // GET /v1/tts/:hash — synthesized narration clips
