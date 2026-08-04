@@ -108,13 +108,21 @@ describe("principal", () => {
 describe("the window still closes", () => {
   test("the budget runs out and the request is refused", async () => {
     const ip = "198.51.100.200";
-    let res: Response | undefined;
-    // Spend the window. Bounded well above RATE_LIMIT_MAX so the loop cannot
-    // run away if the setting changes.
-    for (let i = 0; i < 100_000; i++) {
-      res = await app.request("/", { headers: { "x-forwarded-for": ip } });
-      if (res.status === 429) break;
+    const headers = { "x-forwarded-for": ip };
+
+    // Read the budget rather than guess it. A first version hard-coded a bound
+    // of 100_000 "well above RATE_LIMIT_MAX" — and CI sets RATE_LIMIT_MAX to
+    // exactly 100000 so the limiter never fires, which is not a bound above the
+    // limit but a bound equal to it. The server states its own limit in the
+    // response; taking it from there makes the test true under any setting.
+    const first = await app.request("/", { headers });
+    const limit = Number(first.headers.get("RateLimit-Limit"));
+    expect(limit).toBeGreaterThan(0);
+
+    let res = first;
+    for (let i = 0; i < limit && res.status !== 429; i++) {
+      res = await app.request("/", { headers });
     }
-    expect(res?.status).toBe(429);
-  }, 30_000);
+    expect(res.status).toBe(429);
+  }, 60_000);
 });
