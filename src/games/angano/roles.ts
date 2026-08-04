@@ -9,6 +9,10 @@
  * plus "neutre" for personal objectives. The pack is narrower than the team:
  * only actual Songomby see each other and take part in the night kill.
  */
+import { ATTESTATIONS, type Attestation } from "./attestation.generated.ts";
+
+export type { Attestation } from "./attestation.generated.ts";
+
 export type Team = "village" | "songomby" | "neutre";
 
 export interface RoleDef {
@@ -18,6 +22,13 @@ export interface RoleDef {
   team: Team;
   asset: string;     // placeholder image key (filename stem in public/assets/images)
   optional: boolean; // togglable in the lobby config
+  /**
+   * Ces neuf rôles étaient donnés comme du folklore malgache sans qu'aucun ne porte
+   * de source : rien, dans le code, ne permettait de distinguer un rôle attesté d'un
+   * rôle inventé. Ce champ rend la vérification possible. Absent = pas encore sourcé,
+   * jamais "réputé vrai". Données générées, voir ./attestation.generated.ts.
+   */
+  attestation?: Attestation;
 }
 
 export const ROLES: Record<string, RoleDef> = {
@@ -58,6 +69,13 @@ export const ROLES: Record<string, RoleDef> = {
     desc: "Humain à double vie et sorcier nocturne. Chaque nuit, maudis un joueur différent de la nuit précédente : son pouvoir échoue.",
   },
 };
+
+// Chaque rôle va chercher sa source dans le fichier généré — aucune donnée
+// d'attestation n'est recopiée ici. Un rôle sans entrée générée ressort donc
+// sans attestation, ce que roles.test.ts fait échouer.
+for (const role of Object.values(ROLES)) {
+  role.attestation = ATTESTATIONS[role.id];
+}
 
 /** Roles that take part in the nightly pack kill (and see/choose with the wolves). */
 export const PACK_KILLERS: ReadonlySet<string> = new Set(["songomby"]);
