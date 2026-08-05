@@ -129,9 +129,17 @@ export function objetsRoute(): Hono<{ Variables: Variables }> {
         );
       }
 
-      // `classe: original` — une photo déposée ne se régénère à partir de rien.
-      // Les vignettes en seront des dérivés, quand elles existeront.
-      const sha256 = await ecrireObjet(octets, mime, "original", { deposant: userId });
+      // LA CLASSE EST DÉCLARÉE PAR L'APPELANT, ET C'EST LE SEUL CHOIX QU'IL A
+      // sur le rangement. Elle dit ce qui se RÉGÉNÈRE : une vignette se
+      // refabrique depuis son original, un original ne se refabrique pas. Une
+      // règle de rétention R2 travaille par préfixe et pourra purger `derive/`
+      // sans jamais atteindre `original/` — mais seulement si les dérivés sont
+      // nommés comme tels au moment où on les verse.
+      //
+      // Par défaut `original` : c'est la valeur qui ne détruit rien si l'on se
+      // trompe. Un original rangé en dérivé serait purgé un jour, sans bruit.
+      const classe = c.req.query("classe") === "derive" ? "derive" : "original";
+      const sha256 = await ecrireObjet(octets, mime, classe, { deposant: userId });
 
       // L'adressage par contenu déduplique : redéposer le même fichier rend la
       // même empreinte sans rien réécrire. On le DIT, plutôt que de laisser
@@ -142,6 +150,7 @@ export function objetsRoute(): Hono<{ Variables: Variables }> {
           sha256,
           mime: fiche?.mime ?? mime,
           octets: octets.byteLength,
+          classe,
           url: urlObjet(sha256),
           quotaRestant: Math.max(0, QUOTA_QUOTIDIEN_OCTETS - deja - octets.byteLength),
         },

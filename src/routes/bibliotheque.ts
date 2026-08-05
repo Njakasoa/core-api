@@ -157,6 +157,11 @@ const nouvellePage = z
     imageSha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
     imageLargeur: z.number().int().positive().max(40_000).optional(),
     imageHauteur: z.number().int().positive().max(40_000).optional(),
+    /** La même page en petit. SON EMPREINTE N'EST JAMAIS CELLE DE L'IMAGE :
+     *  ce sont deux objets distincts, et la route qui les sert interroge les
+     *  deux colonnes. Sans vignette, la grille d'un livre charge les images
+     *  pleines — 60 photos de téléphone font 300 Mo à chaque ouverture. */
+    vignetteSha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
   })
   .strict();
 
@@ -658,11 +663,18 @@ export function bibliothequeRoute(): Hono<{ Variables: Variables }> {
         throw errors.forbidden("ce livre n'est pas le vôtre");
       }
       const b = c.req.valid("json");
-      if (b.imageSha256) {
-        const objet = await ficheObjet(b.imageSha256);
-        if (!objet) {
+      // Les DEUX empreintes sont vérifiées. Une page pointant vers une empreinte
+      // absente est une tuile blanche que rien ne signale — et l'oubli de la
+      // vignette serait le plus discret des deux, puisque la grille se rabat sur
+      // l'image pleine et paraît fonctionner.
+      for (const [champ, empreinte] of [
+        ["imageSha256", b.imageSha256],
+        ["vignetteSha256", b.vignetteSha256],
+      ] as const) {
+        if (!empreinte) continue;
+        if (!(await ficheObjet(empreinte))) {
           throw errors.unprocessable(
-            "aucun objet ne porte cette empreinte — versez l'image par POST /v1/objets avant de la rattacher",
+            `aucun objet ne porte l'empreinte de ${champ} — versez l'image par POST /v1/objets avant de la rattacher`,
           );
         }
       }
@@ -680,9 +692,15 @@ export function bibliothequeRoute(): Hono<{ Variables: Variables }> {
         imageSha256: b.imageSha256 ?? null,
         imageLargeur: b.imageLargeur ?? null,
         imageHauteur: b.imageHauteur ?? null,
+        vignetteSha256: b.vignetteSha256 ?? null,
       });
       return c.json(
-        { id: pageId, folio: b.folio, imageUrl: urlObjet(b.imageSha256 ?? null) },
+        {
+          id: pageId,
+          folio: b.folio,
+          imageUrl: urlObjet(b.imageSha256 ?? null),
+          vignetteUrl: urlObjet(b.vignetteSha256 ?? null),
+        },
         201,
       );
     },
