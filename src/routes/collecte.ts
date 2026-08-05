@@ -14,6 +14,7 @@ import { requireAuth } from "../middleware/auth.ts";
 import { optionalAuth, requireRealUser } from "../middleware/corpus-role.ts";
 import { divergencePpm, DIVERGENCE_MAX_PPM } from "../lib/collecte/lettres.ts";
 import { LICENCES, couvre } from "../lib/collecte/licences.ts";
+import { refusPhonotactique } from "../lib/collecte/phonotactique.ts";
 
 /**
  * Collecte — the community platform for Malagasy folktales.
@@ -48,11 +49,26 @@ const nouveauTale = z.object({
    *  published somewhere. Both are welcome; the corpus is filtered on this, so
    *  it is declared by the contributor and never guessed from the text. */
   nouveaute: z.enum(["INEDIT_ORAL", "DEJA_ATTESTE"]),
+  /** L'amorce dont ce récit est donné pour une version. Provenance déclarée par
+   *  le contributeur, jamais déduite d'un chemin d'interface. */
+  amorceId: z.string().max(60).optional(),
   /** The spelling the contributor uses for their own dialect, kept verbatim.
    *  A canonical form may be assigned later, in the column beside it. */
-  dialecteSource: z.string().max(80).optional(),
+  /** Vérifié sur la FORME, jamais contre une liste fermée : les neuf ethnies du
+   *  corpus viennent d'un collecteur français de 1910 et ne sont pas la carte de
+   *  Madagascar. Un dialecte que nous ne connaissons pas est une information. */
+  dialecteSource: z
+    .string()
+    .max(80)
+    .optional()
+    .refine((v) => !v || refusPhonotactique(v) === null, (v) => ({
+      message: refusPhonotactique(v ?? "") ?? "nom de dialecte invalide",
+    })),
   regionCollecte: z.string().max(120).optional(),
   lieuCollecte: z.string().max(120).optional(),
+  /** Quand le contributeur l'a entendu. Demandé AVANT le texte, et transmis —
+   *  une version de ce formulaire le demandait puis le jetait. */
+  quandEntendu: z.string().max(120).optional(),
   genreSource: z.string().max(80).optional(),
   /** Ce sous quoi le contributeur demande à publier. Déclaré, jamais hérité
    *  d'un défaut : la porte d'entrée refusera si un conteur accorde moins. */
@@ -66,7 +82,20 @@ const nouveauConsentement = z.object({
   grantorRole: z.enum(["conteur", "transcripteur", "deposant", "ayant_droit"]),
   grantorDisplay: z.string().min(1).max(200),
   attribution: z.enum(["nom_reel", "pseudonyme", "anonyme"]),
-  capturedVia: z.enum(["formulaire_web", "papier_scanne", "oral_enregistre"]),
+  /** Comment ce consentement a été recueilli.
+   *
+   *  `declare_par_le_transcripteur` existe parce que c'est le cas le plus
+   *  fréquent et qu'il était déclaré à tort comme `formulaire_web` : le conteur
+   *  n'est pas devant l'écran, c'est le contributeur qui rapporte son accord.
+   *  Le dire est moins flatteur et plus vrai — un consentement rapporté n'a pas
+   *  la même force qu'un consentement signé, et l'aval doit pouvoir en tenir
+   *  compte au lieu de l'ignorer. */
+  capturedVia: z.enum([
+    "formulaire_web",
+    "papier_scanne",
+    "oral_enregistre",
+    "declare_par_le_transcripteur",
+  ]),
   /** Consent obtained in French from a Malagasy-speaking teller is not informed
    *  consent. Which language was used is part of the evidence, not metadata. */
   langueDuFormulaire: z.enum(["plt_Latn", "fra_Latn"]),
@@ -82,6 +111,9 @@ const nouveauConsentement = z.object({
    *  remplit toute seule affirme une chose que personne n'a dite — et le défaut
    *  retiré ici était le plus permissif des choix. */
   licenceAccordee: z.enum(LICENCES),
+  /** QUAND le conteur a donné son accord — pas l'instant de la requête. Une
+   *  version de ce formulaire envoyait `new Date()`, ce qui datait la preuve du
+   *  moment où on la saisissait. */
   signedAt: z.coerce.date(),
 }).strict();
 
@@ -107,6 +139,13 @@ function publique(t: typeof tales.$inferSelect) {
     dialecteSource: t.dialecteSource,
     regionCollecte: t.regionCollecte,
     lieuCollecte: t.lieuCollecte,
+    quandEntendu: t.quandEntendu,
+    /** La provenance déclarée. Exposée parce qu'elle EST une donnée : savoir de
+     *  quelle amorce un contributeur dit que son récit est une version, c'est
+     *  ce qui permettra plus tard de regrouper les variantes — et de ne pas
+     *  mettre deux récitations du même angano de part et d'autre du partage
+     *  train/test, ce qu'aucune déduplication lexicale ne rattrape. */
+    amorceId: t.amorceId,
     genreSource: t.genreSource,
     nouveaute: t.nouveaute,
     statutRecit: t.statutRecit,
@@ -201,6 +240,8 @@ export function collecteRoute(): Hono<{ Variables: Variables }> {
           dialecteSource: b.dialecteSource ?? null,
           regionCollecte: b.regionCollecte ?? null,
           lieuCollecte: b.lieuCollecte ?? null,
+          quandEntendu: b.quandEntendu ?? null,
+          amorceId: b.amorceId ?? null,
           genreSource: b.genreSource ?? null,
           licence: b.licence,
         });
