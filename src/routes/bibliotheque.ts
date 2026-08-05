@@ -15,6 +15,8 @@ import {
 import type { Variables } from "../types.ts";
 import { id } from "../lib/ids.ts";
 import { sha256 } from "../lib/crypto.ts";
+import { enregistrerGardien } from "../lib/stockage/index.ts";
+import { urlObjet } from "./objets.ts";
 import { appliquer, contexte } from "../lib/bibliotheque/corrections.ts";
 import { errors } from "../lib/errors.ts";
 import { validate } from "../lib/validate.ts";
@@ -253,12 +255,12 @@ function pagePublique(p: typeof pages.$inferSelect, sourceRef: string, source: s
     ocrBitsParCaractere: p.ocrBitsParCaractere == null
       ? null
       : p.ocrBitsParCaractere / 1000,
-    imageUrl: p.imageSha256 ? `/v1/bibliotheque/images/${p.imageSha256}` : null,
+    imageUrl: urlObjet(p.imageSha256),
     imageLargeur: p.imageLargeur,
     imageHauteur: p.imageHauteur,
     /** La même page en 280 px. Sans elle, une grille de 166 folios réclame
      *  41 Mo et 166 bitmaps décodés — `loading="lazy"` diffère, ne réduit pas. */
-    vignetteUrl: p.vignetteSha256 ? `/v1/bibliotheque/images/${p.vignetteSha256}` : null,
+    vignetteUrl: urlObjet(p.vignetteSha256),
     /** L'image chez la source, quand elle existe et que nous ne l'avons pas.
      *  Dire où elle est vaut mieux que faire croire qu'elle n'existe pas. */
     urlSource:
@@ -478,53 +480,48 @@ export function bibliothequeRoute(): Hono<{ Variables: Variables }> {
     },
   );
 
-  app.get(
-    "/images/:sha256",
-    describeRoute({ description: "Les octets d'une image de page", tags: ["bibliotheque"] }),
-    async (c) => {
-      const h = c.req.param("sha256");
-      if (!/^[a-f0-9]{64}$/.test(h)) throw errors.badRequest("empreinte invalide");
-      // L'empreinte imprévisible EST l'autorisation, comme pour les clips de
-      // routes/tts.ts : une balise <img> ne porte pas de jeton. Mais elle ne
-      // suffit pas ici — une image de page sous droits ne doit pas être servie
-      // même à qui connaît son empreinte, donc on vérifie le livre.
-      //
-      // SERVIE SI TOUTES SES RÉFÉRENCES SONT SERVABLES, ET S'IL EN EXISTE UNE.
-      // Pas « s'il en existe une servable ». `publiable = false` est une
-      // affirmation sur LES OCTETS ; si les mêmes octets sont aussi référencés
-      // depuis un livre fermé, l'une des deux étiquettes est fausse et rien ne
-      // dit laquelle. Les coûts sont asymétriques : refuser une image libre
-      // coûte une tuile blanche, servir un scan sous droits coûte un retrait.
-      //
-      // Le second EXISTS est requis à part, parce que NOT EXISTS est vrai à vide :
-      // sans lui une image orpheline serait servie. L'ancienne jointure la
-      // refusait par accident ; celle-ci la refuse exprès.
-      //
-      // Les DEUX colonnes d'empreinte sont interrogées : l'empreinte d'une
-      // vignette n'apparaît jamais dans `image_sha256`, et l'oublier ferait
-      // répondre 404 à chaque tuile de la grille.
-      const lignes = await db.execute<{ mime: string; contenu: Uint8Array }>(sql`
-        select i.mime, i.contenu
-          from images i
-         where i.sha256 = ${h}
-           and exists (
-                 select 1 from pages p join livres l on l.id = p.livre_id
-                  where (p.image_sha256 = i.sha256 or p.vignette_sha256 = i.sha256)
-                    and l.publiable = true
-                    and p.publiable is distinct from false)
-           and not exists (
-                 select 1 from pages p join livres l on l.id = p.livre_id
-                  where (p.image_sha256 = i.sha256 or p.vignette_sha256 = i.sha256)
-                    and (l.publiable is distinct from true or p.publiable = false))
+  /**
+   * QUI PEUT VOIR UNE IMAGE DE PAGE — la part de la bibliothèque, et rien d'autre.
+   *
+   * La route qui sert les octets a quitté ce fichier : c'est `/v1/objets/:sha256`,
+   * commune à toutes les fonctionnalités. Ce qui reste ici est la seule chose
+   * qu'elle ne pouvait pas savoir — la règle de droits propre aux livres.
+   *
+   * SERVABLE SI TOUTES SES RÉFÉRENCES LE SONT, ET S'IL EN EXISTE UNE.
+   * Pas « s'il en existe une servable ». `publiable = false` est une affirmation
+   * sur LES OCTETS ; si les mêmes octets sont aussi référencés depuis un livre
+   * fermé, l'une des deux étiquettes est fausse et rien ne dit laquelle. Les
+   * coûts sont asymétriques : refuser une image libre coûte une tuile blanche,
+   * servir un scan sous droits coûte un retrait.
+   *
+   * Le second EXISTS est requis à part, parce que NOT EXISTS est vrai à vide :
+   * sans lui une image orpheline serait servie. L'ancienne jointure la refusait
+   * par accident ; celle-ci la refuse exprès. Ce raisonnement vaut désormais
+   * pour tout le dépôt : `objetServable()` le fait voter entre gardiens.
+   *
+   * Les DEUX colonnes d'empreinte sont interrogées : l'empreinte d'une vignette
+   * n'apparaît jamais dans `image_sha256`, et l'oublier ferait répondre 404 à
+   * chaque tuile de la grille.
+   */
+  enregistrerGardien({
+    nom: "bibliotheque",
+    async verdict(sha256) {
+      const [r] = await db.execute<{ servable: boolean; refusee: boolean }>(sql`
+        select
+          exists (
+            select 1 from pages p join livres l on l.id = p.livre_id
+             where (p.image_sha256 = ${sha256} or p.vignette_sha256 = ${sha256})
+               and l.publiable = true
+               and p.publiable is distinct from false) as servable,
+          exists (
+            select 1 from pages p join livres l on l.id = p.livre_id
+             where (p.image_sha256 = ${sha256} or p.vignette_sha256 = ${sha256})
+               and (l.publiable is distinct from true or p.publiable = false)) as refusee
       `);
-      const row = lignes[0];
-      if (!row) throw errors.notFound("image introuvable");
-      c.header("Content-Type", row.mime);
-      c.header("Cache-Control", "public, max-age=86400, immutable");
-      c.header("Access-Control-Allow-Origin", "*");
-      return c.body(row.contenu as unknown as ArrayBuffer);
+      if (r?.refusee) return "refusee";
+      return r?.servable ? "servable" : "inconnue";
     },
-  );
+  });
 
   // ── Écriture : curateur seulement ────────────────────────
   app.post(

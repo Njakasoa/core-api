@@ -31,6 +31,10 @@ import { db } from "../src/db/index.ts";
 import { livres, pages } from "../src/db/schema.ts";
 import { id } from "../src/lib/ids.ts";
 import { sha256Bytes } from "../src/lib/crypto.ts";
+import { depotParDefaut, ecrireObjet, lireObjet, supprimerObjet } from "../src/lib/stockage/index.ts";
+
+/** Où atterrissent les octets de ce versement — `OBJETS_STOCKAGE`. */
+const STOCKAGE = depotParDefaut();
 
 interface Rendu {
   sha256: string;
@@ -218,14 +222,23 @@ for (const l of lot.livres) {
               `fichier vaut ${vrai.slice(0, 12)}…`,
           );
         }
-        // `contenu` est un `bytea` déclaré `text` côté Drizzle : une chaîne JS
-        // s'y ferait appliquer la syntaxe d'entrée bytea et stockerait autre
-        // chose, sans erreur. Les octets passent par un fragment `sql`.
-        await tx.execute(sql`
-          insert into images (sha256, mime, octets, largeur, hauteur, contenu)
-          values (${vrai}, 'image/jpeg', ${r.octets}, ${r.largeur}, ${r.hauteur}, ${octets})
-          on conflict (sha256) do nothing
-        `);
+        // La classe dit ce qui se RÉGÉNÈRE : une vignette se refabrique depuis
+        // la page, un scan ne se refabrique pas. C'est ce qui permettra à une
+        // règle de rétention de purger les dérivés sans pouvoir toucher aux
+        // originaux. Voir lib/stockage/cles.ts.
+        //
+        // `ecrireObjet` recalcule l'empreinte, écrit l'objet AVANT la ligne, et
+        // range selon `OBJETS_STOCKAGE` : le versement n'a plus à savoir où.
+        const empreinte = await ecrireObjet(octets, "image/jpeg", r === p.vignette ? "derive" : "original", {
+          meta: { largeur: r.largeur, hauteur: r.hauteur, source: l.sourceRef, folio: p.folio },
+          tx: tx as unknown as typeof db,
+        });
+        if (empreinte !== r.sha256) {
+          throw new Error(
+            `${r.fichier} : le lot annonce ${r.sha256.slice(0, 12)}… et le ` +
+              `fichier vaut ${empreinte.slice(0, 12)}…`,
+          );
+        }
         imagesEcrites++;
         octetsEcrits += r.octets;
       }
@@ -260,16 +273,22 @@ for (const l of lot.livres) {
       pagesEcrites++;
     }
 
-    // Autocontrôle : relire les octets DEPUIS la base et les re-hacher. Le
-    // défaut qu'on cherche ici est muet — un `bytea` mal transmis s'insère sans
-    // erreur et ne se voit qu'à l'écran, une fois l'image servie et illisible.
-    const [temoin] = await tx.execute<{ sha256: string; contenu: Uint8Array }>(sql`
-      select sha256, contenu from images where sha256 = ${feuillets[0]!.image.sha256}
-    `);
-    if (!temoin || sha256Bytes(temoin.contenu) !== temoin.sha256) {
+    // Autocontrôle : relire les octets DEPUIS LEUR RANGEMENT et les re-hacher.
+    // Le défaut qu'on cherche ici est muet — un `bytea` mal transmis s'insère
+    // sans erreur et ne se voit qu'à l'écran, une fois l'image servie et
+    // illisible. Relire depuis la base alors qu'on vient d'écrire dans le seau
+    // ne vérifierait plus rien du tout : le témoin doit venir d'où viendra la
+    // tuile.
+    //
+    // La lecture passe par `lireObjet`, qui consulte la colonne `stockage` de la
+    // ligne : le témoin vient donc du dépôt réel, quel qu'il soit, sans que ce
+    // script ait à le savoir.
+    const attendue = feuillets[0]!.image.sha256;
+    const relus = (await lireObjet(attendue))?.octets ?? null;
+    if (!relus || sha256Bytes(relus) !== attendue) {
       throw new Error(
-        `${l.sourceRef} : les octets relus en base ne redonnent pas leur ` +
-          `empreinte — le bytea n'a pas été transmis tel quel`,
+        `${l.sourceRef} : les octets relus depuis ${STOCKAGE} ne redonnent pas ` +
+          `leur empreinte — ils n'ont pas été transmis tels quels`,
       );
     }
   });
@@ -296,14 +315,24 @@ for (const l of lot.livres) {
  * suppression.
  */
 if (process.argv.includes("--purger-orphelines")) {
-  const supprimees = await db.execute<{ sha256: string }>(sql`
-    delete from images i
-     where not exists (
+  // Les objets d'AUTRES fonctionnalités ne sont pas concernés : ce balayage ne
+  // retient que ceux qu'aucune page ne référence ET qu'aucun autre gardien ne
+  // réclamerait. Depuis que le dépôt est commun, « orphelin ici » n'est plus
+  // « orphelin partout » — d'où la restriction explicite aux objets versés par
+  // la bibliothèque, reconnaissables à leur `meta.source`.
+  const orphelines = await db.execute<{ sha256: string }>(sql`
+    select o.sha256 from objets o
+     where o.meta ? 'source'
+       and not exists (
              select 1 from pages p
-              where p.image_sha256 = i.sha256 or p.vignette_sha256 = i.sha256)
-    returning i.sha256
+              where p.image_sha256 = o.sha256 or p.vignette_sha256 = o.sha256)
   `);
-  console.log(`${supprimees.length} image(s) orpheline(s) supprimée(s)`);
+  // `supprimerObjet` efface les octets AVANT la ligne : supprimer la ligne
+  // d'abord réintroduirait le défaut que ce balayage corrige — « plus personne
+  // ne peut y accéder » au lieu de « nous ne l'avons plus » — et, la ligne
+  // partie, plus rien en base ne saurait que l'objet existe.
+  for (const o of orphelines) await supprimerObjet(o.sha256);
+  console.log(`${orphelines.length} image(s) orpheline(s) supprimée(s)`);
 }
 
 if (!ESSAI) {

@@ -63,13 +63,28 @@ services:
       # the note above: zod rejects "" for a positive integer, so the API would
       # refuse to boot.
       TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
-      # Page images get their own bucket: opening one book of the bibliothèque
+      # Stored objects get their own bucket: opening one book of the bibliothèque
       # asks for up to 166 thumbnails at once, and on the shared 120/min counter
       # that both cuts the grid off mid-load and locks the visitor out of every
-      # other endpoint until the window rolls. Still a limit and not an
-      # exemption — the route is unauthenticated and reads a whole bytea row per
-      # request, with no object store in front of it.
+      # other endpoint until the window rolls. Any future gallery has the same
+      # shape, which is why the bucket is on /v1/objets/ and not on one feature.
+      # Still a limit and not an exemption — the route is unauthenticated and
+      # reads a whole bytea row (or a round trip to R2) per request.
       RATE_LIMIT_IMAGES_MAX: ${RATE_LIMIT_IMAGES_MAX:-300}
+      # Objets stockés — toutes fonctionnalités : `db` (bytea) ou `r2`. Ne dit
+      # que la destination des NOUVEAUX octets ; chaque ligne d'`objets` porte le
+      # sien, et c'est lui que la lecture consulte, pour qu'une base à moitié
+      # migrée reste servable. Défaut explicite plutôt que chaîne vide : zod
+      # rejette "" pour une énumération, et l'API refuserait de démarrer.
+      OBJETS_STOCKAGE: ${OBJETS_STOCKAGE:-db}
+      # Requis dès que OBJETS_STOCKAGE=r2 ; l'API refuse alors de démarrer sans
+      # eux. Le seau n'est PAS public : le vote des gardiens que fait
+      # GET /v1/objets/:sha256 n'a pas d'équivalent côté Cloudflare.
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
+      R2_BUCKET: ${R2_BUCKET:-}
+      R2_ENDPOINT: ${R2_ENDPOINT:-}
     expose:
       - "3000"
     healthcheck:

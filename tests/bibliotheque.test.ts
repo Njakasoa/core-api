@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createApp } from "../src/app.ts";
 import { db } from "../src/db/index.ts";
-import { corpusRoles, images, livres, pageOcr, pages } from "../src/db/schema.ts";
+import { corpusRoles, objets, livres, pageOcr, pages } from "../src/db/schema.ts";
 import { eq, sql } from "drizzle-orm";
 import { id } from "../src/lib/ids.ts";
 import { sha256Bytes } from "../src/lib/crypto.ts";
@@ -73,7 +73,7 @@ let graine = 0;
  * Des octets d'image différents à chaque exécution.
  *
  * La base n'est jamais nettoyée entre deux `bun test`, et une image est adressée
- * PAR SON CONTENU : des octets figés donneraient la même ligne `images` à toutes
+ * PAR SON CONTENU : des octets figés donneraient la même ligne `objets` à toutes
  * les exécutions, et les pages laissées par la précédente — dont celle d'un
  * livre volontairement fermé — décideraient de la publication à la place du cas
  * en cours. Le premier passage était vert, le second rouge, et l'échec
@@ -97,8 +97,8 @@ function octetsUniques(): Uint8Array {
 async function verserImage(octets: Uint8Array): Promise<string> {
   const h = sha256Bytes(octets);
   await db.execute(sql`
-    insert into images (sha256, mime, octets, contenu)
-    values (${h}, 'image/jpeg', ${octets.length}, ${Buffer.from(octets)})
+    insert into objets (sha256, mime, octets, classe, contenu)
+    values (${h}, 'image/jpeg', ${octets.length}, 'original', ${Buffer.from(octets)})
     on conflict (sha256) do nothing
   `);
   return h;
@@ -193,12 +193,12 @@ describe("ce qui ne sort pas", () => {
     const { id: pageId } = (await page.json()) as { id: string };
 
     const empreinte = "a".repeat(64);
-    await db.insert(images).values({
+    await db.insert(objets).values({
       sha256: empreinte, mime: "image/png", octets: 3, contenu: sql`'\\x001122'::bytea` as never,
     }).onConflictDoNothing();
     await db.update(pages).set({ imageSha256: empreinte }).where(eq(pages.id, pageId));
 
-    const r = await app.request(`/v1/bibliotheque/images/${empreinte}`);
+    const r = await app.request(`/v1/objets/${empreinte}`);
     expect(r.status).toBe(404);
   });
 });
@@ -332,7 +332,7 @@ describe("les octets d'image", () => {
     const octets = octetsUniques();
     const { h } = await livreAvecImage(octets, "octets");
 
-    const r = await app.request(`/v1/bibliotheque/images/${h}`);
+    const r = await app.request(`/v1/objets/${h}`);
     expect(r.status).toBe(200);
     const rendus = new Uint8Array(await r.arrayBuffer());
     expect(Array.from(rendus)).toEqual(Array.from(octets));
@@ -343,7 +343,7 @@ describe("les octets d'image", () => {
     // `NOT EXISTS` est vrai à vide : sans la clause `EXISTS` séparée, une image
     // que plus aucune page ne référence sortirait.
     const h = await verserImage(octetsUniques());
-    const r = await app.request(`/v1/bibliotheque/images/${h}`);
+    const r = await app.request(`/v1/objets/${h}`);
     expect(r.status).toBe(404);
   });
 
@@ -353,7 +353,7 @@ describe("les octets d'image", () => {
     // coûte une tuile blanche, servir coûte un retrait.
     const octets = octetsUniques();
     const { cur, h } = await livreAvecImage(octets, "partage");
-    expect((await app.request(`/v1/bibliotheque/images/${h}`)).status).toBe(200);
+    expect((await app.request(`/v1/objets/${h}`)).status).toBe(200);
 
     const { corps: ferme } = await creerLivre(cur.headers, {
       ...LIVRE_SOUS_DROITS, sourceRef: `ferme${Date.now()}`,
@@ -364,7 +364,7 @@ describe("les octets d'image", () => {
     const { id: page2 } = (await p2.json()) as { id: string };
     await db.update(pages).set({ imageSha256: h }).where(eq(pages.id, page2));
 
-    expect((await app.request(`/v1/bibliotheque/images/${h}`)).status).toBe(404);
+    expect((await app.request(`/v1/objets/${h}`)).status).toBe(404);
   });
 
   test("une vignette est servie, alors qu'aucune page ne la porte en image_sha256", async () => {
@@ -376,12 +376,12 @@ describe("les octets d'image", () => {
     const h = await verserImage(octets);
     await db.update(pages).set({ vignetteSha256: h }).where(eq(pages.id, pageId));
 
-    const r = await app.request(`/v1/bibliotheque/images/${h}`);
+    const r = await app.request(`/v1/objets/${h}`);
     expect(r.status).toBe(200);
 
     const page = await app.request(`/v1/bibliotheque/pages/${pageId}`);
     const b = (await page.json()) as { vignetteUrl: string | null };
-    expect(b.vignetteUrl).toBe(`/v1/bibliotheque/images/${h}`);
+    expect(b.vignetteUrl).toBe(`/v1/objets/${h}`);
   });
 
   test("une image est rendable depuis une autre origine", async () => {
@@ -392,7 +392,7 @@ describe("les octets d'image", () => {
     // serveur. `Access-Control-Allow-Origin: *` n'y change rien, CORP est une
     // porte distincte.
     const { h } = await livreAvecImage(octetsUniques(), "corp");
-    const r = await app.request(`/v1/bibliotheque/images/${h}`);
+    const r = await app.request(`/v1/objets/${h}`);
     expect(r.headers.get("Cross-Origin-Resource-Policy")).toBe("cross-origin");
 
     // Et la relaxation reste étroite : le reste de l'API garde le défaut.
@@ -405,7 +405,7 @@ describe("les octets d'image", () => {
     // fermerait du même coup tout le reste de l'API au visiteur, puisque c'est
     // un seul compteur.
     const { h } = await livreAvecImage(octetsUniques(), "seau");
-    const img = await app.request(`/v1/bibliotheque/images/${h}`);
+    const img = await app.request(`/v1/objets/${h}`);
     expect(img.headers.get("RateLimit-Limit")).toBe(String(env.RATE_LIMIT_IMAGES_MAX));
 
     const autre = await app.request("/v1/bibliotheque/livres?limit=1");

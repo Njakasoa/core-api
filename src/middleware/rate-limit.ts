@@ -80,22 +80,25 @@ function trustedIp(c: Parameters<MiddlewareHandler>[0]): string {
  * bucket per request, which is the very hole being closed here.
  */
 /**
- * Page images get their own bucket, and it is not an exemption.
+ * Stored objects get their own bucket, and it is not an exemption.
  *
  * A viewer opening one book asks for up to 166 thumbnails in a burst, which the
  * shared 120/min bucket would cut off mid-grid — and would then also lock the
  * visitor out of every other endpoint for the rest of the window, because it is
- * one counter. So the images move to a bucket of their own.
+ * one counter. So bytes move to a bucket of their own. The same holds for any
+ * future feature that renders a gallery: this is a property of serving files,
+ * not of the bibliothèque, which is why the path is `/v1/objets/` and not one
+ * feature's sub-route.
  *
- * Not exempted, though: `GET /v1/bibliotheque/images/:sha256` is unauthenticated
- * and reads a whole `bytea` row per request, with no object store in front of
- * it. An exemption there is an unmetered egress tap. Keyed by IP alone, since
- * an <img> tag carries no token and every reader looks anonymous here.
+ * Not exempted, though: `GET /v1/objets/:sha256` is unauthenticated and reads a
+ * whole `bytea` row (or does a round trip to R2) per request. An exemption there
+ * is an unmetered egress tap. Keyed by IP alone, since an <img> tag carries no
+ * token and every reader looks anonymous here.
  */
-const CHEMIN_IMAGES = "/v1/bibliotheque/images/";
+const CHEMIN_OBJETS = "/v1/objets/";
 
 async function clientKey(c: Parameters<MiddlewareHandler>[0]): Promise<string> {
-  if (c.req.path.startsWith(CHEMIN_IMAGES)) return `img:${trustedIp(c)}`;
+  if (c.req.path.startsWith(CHEMIN_OBJETS)) return `img:${trustedIp(c)}`;
 
   // Honoured if the limiter is ever mounted after requireAuth on some route.
   const auth = c.get("auth");

@@ -20,6 +20,7 @@ import { apiKeysRoute } from "./routes/api-keys.ts";
 import { itemsRoute } from "./routes/items.ts";
 import { collecteRoute } from "./routes/collecte.ts";
 import { bibliothequeRoute } from "./routes/bibliotheque.ts";
+import { objetsRoute } from "./routes/objets.ts";
 import { corpusRolesRoute } from "./routes/corpus-roles.ts";
 import { webhooksRoute } from "./routes/webhooks.ts";
 import { assetsRoute } from "./routes/assets.ts";
@@ -74,6 +75,11 @@ export function createApp() {
   // Bibliothèque — livres numérisés, pages, images. Lecture publique filtrée sur
   // `publiable`, écriture réservée au curateur ; voir routes/bibliotheque.ts.
   app.route("/v1/bibliotheque", bibliothequeRoute());
+  // Objets — les octets de tout fichier stocké, adressés par leur empreinte, pour
+  // toutes les fonctionnalités. Monté APRÈS ses clients : chacun enregistre son
+  // gardien de droits au montage, et la route les fait voter. Voir
+  // lib/stockage/ pour la règle de nommage et routes/objets.ts pour l'accès.
+  app.route("/v1/objets", objetsRoute());
   // Corpus — accorder et révoquer les rôles de corpus (modérateur seulement).
   // Jusqu'ici tout rôle était posé par un INSERT à la main ; voir
   // routes/corpus-roles.ts.

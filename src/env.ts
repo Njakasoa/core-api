@@ -23,12 +23,13 @@ const schema = z.object({
   RATE_LIMIT_WINDOW: z.coerce.number().int().positive().default(60),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(120),
   /**
-   * A separate bucket for `GET /v1/bibliotheque/images/:sha256`.
-   * Opening one book asks for up to 166 thumbnails at once; on the shared
-   * bucket that both cuts the grid off mid-load and locks the visitor out of
-   * every other endpoint until the window rolls, since it is one counter.
+   * A separate bucket for `GET /v1/objets/:sha256` — every stored file, all
+   * features. Opening one book asks for up to 166 thumbnails at once; on the
+   * shared bucket that both cuts the grid off mid-load and locks the visitor out
+   * of every other endpoint until the window rolls, since it is one counter. Any
+   * future gallery has the same shape, which is why this is not per-feature.
    * Higher, but still a limit: the route is unauthenticated and reads a whole
-   * `bytea` row per request, with no object store in front of it.
+   * `bytea` row — or does a round trip to R2 — per request.
    */
   RATE_LIMIT_IMAGES_MAX: z.coerce.number().int().positive().default(300),
   /**
@@ -42,6 +43,35 @@ const schema = z.object({
   TRUSTED_PROXY_HOPS: z.coerce.number().int().positive().default(1),
 
   WEBHOOK_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
+
+  /**
+   * Où vont les octets versés — `db` (bytea) ou `r2`.
+   *
+   * S'applique à TOUT objet stocké, quelle que soit la fonctionnalité : scans de
+   * pages, photos de cahiers, pièces jointes, clips. Le dépôt ne connaît pas ses
+   * clients (voir lib/stockage/).
+   *
+   * CE RÉGLAGE NE DIT QUE LA DESTINATION DES NOUVEAUX OCTETS.
+   * La lecture ne le consulte jamais : chaque ligne d'`objets` porte sa propre
+   * colonne `stockage`, et c'est elle que la route lit. Un basculement global
+   * qui ferait mentir les lignes déjà écrites rendrait 404 tout ce qui a été
+   * versé avant, sans qu'aucun test ne s'en aperçoive — la migration se fait
+   * ligne par ligne, en vérifiant, et le drapeau ne fait que dire où atterrira
+   * la suivante.
+   */
+  OBJETS_STOCKAGE: z.enum(["db", "r2"]).default("db"),
+
+  // ── Cloudflare R2 (stockage d'objet, optionnel) ────────
+  // Compatible S3 : `Bun.S3Client` parle le protocole nativement, donc aucune
+  // dépendance n'est ajoutée. Le seau n'est PAS public — voir lib/stockage/depots.ts.
+  R2_ACCOUNT_ID: z.string().optional(),
+  R2_ACCESS_KEY_ID: z.string().optional(),
+  R2_SECRET_ACCESS_KEY: z.string().optional(),
+  R2_BUCKET: z.string().optional(),
+  /** Point d'entrée S3. Déduit du compte quand il est tu ; se déclare pour un
+   *  seau à domaine géré (`https://<seau>.<compte>.r2.cloudflarestorage.com`)
+   *  ou pour un bac à sable local (MinIO). */
+  R2_ENDPOINT: z.string().optional(),
 
   // Cloudflare Realtime TURN — optional. When both are set, /v1/turn/credentials
   // mints short-lived ICE servers from Cloudflare's global TURN network; when
@@ -101,7 +131,36 @@ const schema = z.object({
   ANGANO_TTS_CHAR_BUDGET: z.coerce.number().int().positive().default(8_000),
 });
 
-const parsed = schema.safeParse(process.env);
+/**
+ * `OBJETS_STOCKAGE=r2` sans identifiants est refusé au démarrage.
+ *
+ * Le reste de ce fichier laisse les intégrations optionnelles se dégrader en
+ * silence — pas de clé ElevenLabs, pas de narration — parce que le jeu continue
+ * sans. Ici la dégradation serait un versement qui écrit dans le vide et
+ * référence des empreintes que personne ne peut lire : des tuiles blanches,
+ * découvertes à l'écran plutôt qu'au démarrage.
+ */
+const schemaVerifie = schema.superRefine((v, ctx) => {
+  if (v.OBJETS_STOCKAGE !== "r2") return;
+  for (const champ of ["R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET"] as const) {
+    if (!v[champ]) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [champ],
+        message: `requis quand OBJETS_STOCKAGE=r2`,
+      });
+    }
+  }
+  if (!v.R2_ACCOUNT_ID && !v.R2_ENDPOINT) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["R2_ACCOUNT_ID"],
+      message: "requis quand OBJETS_STOCKAGE=r2, sauf si R2_ENDPOINT est donné",
+    });
+  }
+});
+
+const parsed = schemaVerifie.safeParse(process.env);
 
 if (!parsed.success) {
   console.error("❌ Invalid environment variables:");

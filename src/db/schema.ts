@@ -571,35 +571,76 @@ export const pages = pgTable(
 );
 
 /**
- * Les octets d'une image, adressés par leur empreinte.
+ * Les octets d'un objet stocké, adressés par leur empreinte. TOUTES FONCTIONNALITÉS.
  *
- * POURQUOI EN BASE ET POURQUOI PAR EMPREINTE
- * Aucun stockage d'objet n'existe dans ce dépôt — ni S3, ni R2, ni volume, ni
- * chemin d'écriture sur disque. `bytea` est le seul endroit qui survive à un
- * redémarrage sans ajouter une préoccupation de déploiement à un service qui
- * n'en a aucune.
+ * ELLE S'APPELAIT `images` ET N'A JAMAIS RANGÉ QUE DES OCTETS
+ * Le nom la donnait à la bibliothèque ; l'adressage par contenu, lui, ne connaît
+ * pas de propriétaire. La suite du projet stockera des photos de cahiers
+ * envoyées par les contributeurs, des pièces jointes, des clips — et chacune
+ * aurait redemandé sa table, sa route et son cache, avec l'occasion de se
+ * tromper à chaque fois. Les droits restent chez le propriétaire : c'est le
+ * registre de gardiens de lib/stockage/objets.ts, pas une colonne d'ici.
  *
  * L'adressage par sha256 reprend l'argument déjà écrit et justifié dans
  * routes/tts.ts : une empreinte imprévisible EST l'autorisation, parce qu'une
- * balise <img> ne porte pas de jeton. Il donne en prime la déduplication.
+ * balise <img> ne porte pas de jeton. Il donne en prime la déduplication — deux
+ * fonctionnalités qui manipulent les mêmes octets partagent l'objet.
  *
- * LE COÛT, DIT PLUTÔT QUE TU : `bytea` gonfle les WAL, les sauvegardes et la
- * réplication du volume des images, et chaque lecture est une ligne entière
- * sans requête par intervalle. Pour quelques milliers de pages c'est le bon
- * compromis ; si un jour chaque contributeur photographie un cahier, ce ne l'est
- * plus. La forme d'URL est choisie pour que le passage à un stockage d'objet
- * soit un changement dans UN gestionnaire — pas dans le contrat d'URL, pas dans
- * les lignes, pas chez les clients.
+ * LE COÛT DU `bytea`, DIT PLUTÔT QUE TU : il gonfle les WAL, les sauvegardes et
+ * la réplication du volume stocké, et chaque lecture est une ligne entière sans
+ * requête par intervalle. Pour quelques milliers de pages c'est le bon
+ * compromis ; le jour où chaque contributeur photographie un cahier, ce ne l'est
+ * plus. D'où `stockage`, et d'où le fait que le passage à R2 n'ait touché ni le
+ * contrat d'URL, ni les lignes, ni les clients.
  */
-export const images = pgTable("images", {
-  sha256: text("sha256").primaryKey(),
-  mime: text("mime").notNull(),
-  octets: integer("octets").notNull(),
-  largeur: integer("largeur"),
-  hauteur: integer("hauteur"),
-  contenu: text("contenu").notNull(), // bytea, déclaré text côté Drizzle
-  createdAt,
-});
+export const objets = pgTable(
+  "objets",
+  {
+    sha256: text("sha256").primaryKey(),
+    mime: text("mime").notNull(),
+    octets: integer("octets").notNull(),
+    /**
+     * `original` ou `derive` — ce qui se régénère et ce qui ne se régénère pas.
+     *
+     * Une vignette, un transcodage, une synthèse vocale se refabriquent depuis
+     * leur source ; un scan, une photo de cahier, non. C'est la seule
+     * distinction dont l'infrastructure ait besoin : les règles de cycle de vie
+     * travaillent par préfixe, donc `derive/` peut être purgé sans qu'aucune
+     * règle ne puisse atteindre `original/` par accident. La classe entre dans
+     * le nom de l'objet — voir lib/stockage/cles.ts.
+     */
+    classe: text("classe").notNull().default("original"),
+    /**
+     * Les octets eux-mêmes, quand ils sont ici. `bytea`, déclaré `text` côté
+     * Drizzle. NUL quand `stockage = 'r2'` : c'est le déménagement, pas une
+     * perte, et `objets_stockage_ck` interdit les deux états incohérents.
+     */
+    contenu: text("contenu"),
+    /**
+     * Où sont les octets de CETTE ligne — `db` ou `r2`.
+     *
+     * PAR LIGNE, ET SURTOUT PAS PAR VARIABLE D'ENVIRONNEMENT
+     * Un drapeau global bascule d'un coup une base à moitié migrée : les lignes
+     * encore en `bytea` deviennent illisibles à l'instant où on le tourne, et
+     * rien ne le signale — la route rend 404, le navigateur affiche du blanc,
+     * aucun journal ne dit pourquoi. En le portant sur la ligne, une base
+     * mi-chemin est un état SERVABLE : chaque objet se lit là où il est
+     * réellement, et `OBJETS_STOCKAGE` ne décide que de la destination des
+     * prochains. C'est aussi ce qui rend le retour en arrière possible sans
+     * rien réécrire.
+     */
+    stockage: text("stockage").notNull().default("db"),
+    /**
+     * Ce que le propriétaire sait de l'objet et que le dépôt n'a pas à
+     * connaître : dimensions d'une image, durée d'un clip, provenance. Des
+     * colonnes `largeur`/`hauteur` dans une table qui ne range plus seulement
+     * des images obligeraient chaque nouveau type de fichier à en ajouter.
+     */
+    meta: jsonb("meta").$type<Record<string, unknown>>().notNull().default({}),
+    createdAt,
+  },
+  (t) => [index("objets_stockage_idx").on(t.stockage, t.classe)],
+);
 
 /**
  * Une océrisation d'une page. APPEND-ONLY, et jamais une vérité.
