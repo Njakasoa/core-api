@@ -171,7 +171,13 @@ const nouvellePage = z
  */
 const nouvelleCorrection = z
   .object({
-    baseOcrId: z.string().min(1).max(60),
+    /** 80 et non 60 comme les autres identifiants du dépôt : les lectures
+     *  reprises par la migration 0007 portent un identifiant DÉRIVÉ de leur page
+     *  (`ocr_` + un sha256 hexadécimal), ce qui fait 68 caractères. C'était le
+     *  prix d'une reprise rejouable sans doublon — et `page_ocr` interdisant
+     *  l'UPDATE comme le DELETE direct, ces identifiants ne se renomment pas.
+     *  Le plafond dit donc la vérité de la table plutôt que celle de `ids.ts`. */
+    baseOcrId: z.string().min(1).max(80),
     debut: z.number().int().min(0),
     fin: z.number().int().min(1),
     lu: z.string().min(1).max(400),
@@ -842,7 +848,7 @@ export function bibliothequeRoute(): Hono<{ Variables: Variables }> {
     describeRoute({ description: "Sceller la lecture corrigée", tags: ["bibliotheque"] }),
     requireAuth,
     requireCorpusRole("relecteur"),
-    validate("json", z.object({ baseOcrId: z.string().min(1).max(60) }).strict()),
+    validate("json", z.object({ baseOcrId: z.string().min(1).max(80) }).strict()),
     async (c) => {
       // LE SCELLEMENT donne au texte corrigé ce que la vue dérivée n'a pas : un
       // identifiant et une empreinte. C'est ce qui le rend citable, exportable,
