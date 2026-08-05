@@ -63,6 +63,13 @@ services:
       # the note above: zod rejects "" for a positive integer, so the API would
       # refuse to boot.
       TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
+      # Page images get their own bucket: opening one book of the bibliothèque
+      # asks for up to 166 thumbnails at once, and on the shared 120/min counter
+      # that both cuts the grid off mid-load and locks the visitor out of every
+      # other endpoint until the window rolls. Still a limit and not an
+      # exemption — the route is unauthenticated and reads a whole bytea row per
+      # request, with no object store in front of it.
+      RATE_LIMIT_IMAGES_MAX: ${RATE_LIMIT_IMAGES_MAX:-300}
     expose:
       - "3000"
     healthcheck:

@@ -10,6 +10,7 @@ import type { Variables } from "./types.ts";
 import { corsOrigins } from "./env.ts";
 import { logger } from "./middleware/logger.ts";
 import { rateLimit } from "./middleware/rate-limit.ts";
+import { mediaCorp } from "./middleware/media-corp.ts";
 import { onError, notFound } from "./middleware/error-handler.ts";
 
 import { healthRoute } from "./routes/health.ts";
@@ -18,6 +19,7 @@ import { orgsRoute } from "./routes/orgs.ts";
 import { apiKeysRoute } from "./routes/api-keys.ts";
 import { itemsRoute } from "./routes/items.ts";
 import { collecteRoute } from "./routes/collecte.ts";
+import { bibliothequeRoute } from "./routes/bibliotheque.ts";
 import { webhooksRoute } from "./routes/webhooks.ts";
 import { assetsRoute } from "./routes/assets.ts";
 import { turnRoute } from "./routes/turn.ts";
@@ -32,6 +34,10 @@ export function createApp() {
   // ── Global middleware ──────────────────────────────────
   app.use("*", requestId());
   app.use("*", logger);
+  // Registered BEFORE secureHeaders so it unwinds AFTER it: secureHeaders sets
+  // Cross-Origin-Resource-Policy: same-origin post-next, which silently blanks
+  // every <img> served to another origin. See middleware/media-corp.ts.
+  app.use("*", mediaCorp);
   app.use("*", secureHeaders());
   app.use("*", cors({ origin: corsOrigins, maxAge: 86400 }));
   app.use("*", bodyLimit({ maxSize: 1024 * 1024 }));
@@ -64,6 +70,9 @@ export function createApp() {
   // Collecte — community angano platform. Read-anonymous by design, so unlike
   // every other /v1 resource it mounts no org scope; see routes/collecte.ts.
   app.route("/v1/collecte", collecteRoute());
+  // Bibliothèque — livres numérisés, pages, images. Lecture publique filtrée sur
+  // `publiable`, écriture réservée au curateur ; voir routes/bibliotheque.ts.
+  app.route("/v1/bibliotheque", bibliothequeRoute());
   app.route("/v1/webhooks", webhooksRoute());
   app.route("/v1/turn", turnRoute());
   app.route("/v1/tts", ttsRoute()); // GET /v1/tts/:hash — synthesized narration clips

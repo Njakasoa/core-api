@@ -1,0 +1,303 @@
+/**
+ * Verse la bibliothèque de contes : livres, pages, octets d'images.
+ *
+ * ÉCRIT DIRECTEMENT EN BASE, ET PAS PAR HTTP — CE N'EST PAS UNE COMMODITÉ
+ * Quatre choses l'interdisent. `app.use("*", bodyLimit(1 MiB))` est monté avant
+ * toute route : un scan de page en dépasse le plafond, et un `bodyLimit` posé
+ * par route ne verrait jamais le corps. Aucune route d'écriture d'octets
+ * n'existe, et `routes/bibliotheque.ts` explique pourquoi elle n'existera pas :
+ * « une plateforme où n'importe qui téléverse une page de livre est une
+ * plateforme qui republie du contenu sous droits sans le savoir ». Le limiteur
+ * s'applique à `/v1/*`, donc 748 POST recevraient un 429 au 120ᵉ. Et surtout,
+ * chaque POST serait sa transaction : un échec à mi-course laisserait une
+ * bibliothèque dont les pages pointent vers des empreintes absentes.
+ *
+ * OÙ IL TOURNE
+ * Là où est la base. En production, `deploy/docker-compose.prod.yml` ne publie
+ * aucun port pour `db` : le `DATABASE_URL` de prod est injoignable depuis
+ * l'extérieur du réseau Docker. Le lot voyage donc par `docker compose cp`, pas
+ * par git — les images ne doivent jamais entrer dans le dépôt ni dans le
+ * contexte de construction (`.dockerignore` n'exclut pas `src/data`, et
+ * `deploy/update-core-api.sh` rebâtit à chaque changement de `origin/main`).
+ *
+ *     bun scripts/seed-bibliotheque.ts --pages <bibliotheque_pages.json> \
+ *                                      --racine <repparcs/data>
+ *     bun scripts/seed-bibliotheque.ts … --essai   # n'écrit rien
+ */
+import { readFile } from "node:fs/promises";
+import { join, resolve } from "node:path";
+import { and, eq, inArray, ne, or, sql } from "drizzle-orm";
+import { db } from "../src/db/index.ts";
+import { livres, pages } from "../src/db/schema.ts";
+import { id } from "../src/lib/ids.ts";
+import { sha256Bytes } from "../src/lib/crypto.ts";
+
+interface Rendu {
+  sha256: string;
+  octets: number;
+  largeur: number | null;
+  hauteur: number | null;
+  fichier: string;
+}
+interface PageLot {
+  folio: number;
+  texteOcr: string | null;
+  ocrMoteur: string;
+  pageImprimee: string | null;
+  publiable: boolean | null;
+  image: Rendu;
+  vignette: Rendu;
+}
+interface LivreLot {
+  sourceRef: string;
+  source: string;
+  titre: string;
+  auteur: string | null;
+  annee: number | null;
+  anneeFin: number | null;
+  langue: string;
+  pagesTotal: number;
+  statutFixation: string;
+  licence: string;
+  licenceConstatee: string;
+  publiable: boolean;
+  urlNotice: string;
+}
+
+function argument(nom: string): string | undefined {
+  const i = process.argv.indexOf(`--${nom}`);
+  return i >= 0 ? process.argv[i + 1] : undefined;
+}
+
+const ESSAI = process.argv.includes("--essai");
+const CHEMIN_LIVRES = argument("livres") ?? "src/data/bibliotheque.generated.json";
+const CHEMIN_PAGES = argument("pages");
+const RACINE = argument("racine");
+
+if (!CHEMIN_PAGES || !RACINE) {
+  console.error(
+    "usage : bun scripts/seed-bibliotheque.ts --pages <bibliotheque_pages.json> " +
+      "--racine <repparcs/data> [--livres <fichier>] [--essai]",
+  );
+  process.exit(2);
+}
+
+const lot = JSON.parse(await readFile(resolve(CHEMIN_LIVRES), "utf-8")) as {
+  pages_manifeste_sha256: string;
+  livres: LivreLot[];
+};
+const lotPages = JSON.parse(await readFile(resolve(CHEMIN_PAGES), "utf-8")) as {
+  manifeste_sha256: string;
+  par_ark: Record<string, PageLot[]>;
+};
+
+// Le lot de pages et la liste des livres doivent venir de la MÊME génération.
+// L'empreinte est calculée une seule fois, du côté Python, et recopiée dans les
+// deux fichiers : la recalculer ici ne détecterait rien, puisque Python et
+// JavaScript ne sérialisent pas le JSON de la même façon.
+if (lot.pages_manifeste_sha256 !== lotPages.manifeste_sha256) {
+  console.error(
+    `Lot périmé : la liste des livres attend le manifeste ` +
+      `${lot.pages_manifeste_sha256.slice(0, 12)}… et le fichier de pages porte ` +
+      `${lotPages.manifeste_sha256.slice(0, 12)}…. Relancez ` +
+      `build_bibliotheque.py, ou copiez le bon lot.`,
+  );
+  process.exit(1);
+}
+
+/**
+ * Une image ne doit pas changer de camp en cours de route.
+ *
+ * L'adressage par contenu déduplique : deux livres peuvent partager des octets.
+ * Or la route qui les sert refuse une image dès qu'UNE de ses références n'est
+ * pas publiable — refuser une image libre coûte une tuile blanche, servir un
+ * scan sous droits coûte un retrait. Verser sans regarder rendrait donc muettes
+ * des images déjà en ligne, et l'API n'aurait aucun moyen de dire pourquoi.
+ * Mieux vaut refuser ici, où l'on peut encore nommer le livre en cause.
+ */
+async function conflitDeDroits(empreintes: string[], publiable: boolean) {
+  if (empreintes.length === 0) return [];
+  // Écrit avec le constructeur de requêtes plutôt qu'en SQL brut : `= any($1)`
+  // reçoit le tableau comme un paramètre scalaire et Postgres répond
+  // « op ANY/ALL (array) requires array on right side ». `inArray` déplie la
+  // liste en autant de paramètres, ce que le pilote sait faire.
+  return db
+    .select({ titre: livres.titre, publiable: livres.publiable })
+    .from(pages)
+    .innerJoin(livres, eq(livres.id, pages.livreId))
+    .where(
+      and(
+        or(
+          inArray(pages.imageSha256, empreintes),
+          inArray(pages.vignetteSha256, empreintes),
+        ),
+        ne(livres.publiable, publiable),
+      ),
+    )
+    .limit(5);
+}
+
+let livresEcrits = 0;
+let pagesEcrites = 0;
+let imagesEcrites = 0;
+let octetsEcrits = 0;
+
+for (const l of lot.livres) {
+  const feuillets = lotPages.par_ark[l.sourceRef];
+  if (!feuillets) {
+    console.error(`${l.sourceRef} : aucune page dans le lot — versement interrompu`);
+    process.exit(1);
+  }
+
+  const empreintes = feuillets.flatMap((p) => [p.image.sha256, p.vignette.sha256]);
+  const conflits = await conflitDeDroits(empreintes, l.publiable);
+  if (conflits.length > 0) {
+    console.error(
+      `${l.sourceRef} : ${conflits.length} image(s) déjà référencée(s) par un ` +
+        `livre au régime opposé (« ${conflits[0]!.titre} »). Versement refusé.`,
+    );
+    process.exit(1);
+  }
+
+  if (ESSAI) {
+    console.log(`  [essai] ${l.sourceRef} — ${feuillets.length} pages`);
+    continue;
+  }
+
+  // Une transaction par livre. L'ordre compte : le livre d'abord parce que le
+  // déclencheur `pages_pas_plus_permissive` lit son `publiable`, les images
+  // avant les pages parce qu'une page pointant une empreinte absente est une
+  // tuile 404 que rien ne signale.
+  await db.transaction(async (tx) => {
+    const [livre] = await tx
+      .insert(livres)
+      .values({
+        id: id("livre"),
+        sourceRef: l.sourceRef,
+        source: l.source,
+        titre: l.titre,
+        auteur: l.auteur,
+        annee: l.annee,
+        anneeFin: l.anneeFin,
+        langue: l.langue,
+        pagesTotal: l.pagesTotal,
+        statutFixation: l.statutFixation,
+        licence: l.licence,
+        licenceConstatee: l.licenceConstatee,
+        publiable: l.publiable,
+        urlNotice: l.urlNotice,
+      })
+      .onConflictDoUpdate({
+        target: [livres.source, livres.sourceRef],
+        set: {
+          titre: l.titre,
+          auteur: l.auteur,
+          annee: l.annee,
+          anneeFin: l.anneeFin,
+          pagesTotal: l.pagesTotal,
+          statutFixation: l.statutFixation,
+          licence: l.licence,
+          licenceConstatee: l.licenceConstatee,
+          publiable: l.publiable,
+          urlNotice: l.urlNotice,
+          updatedAt: new Date(),
+        },
+      })
+      .returning({ id: livres.id });
+
+    for (const p of feuillets) {
+      for (const r of [p.image, p.vignette]) {
+        const octets = await readFile(join(resolve(RACINE), r.fichier));
+        // L'empreinte est RECALCULÉE sur les octets lus, jamais crue sur
+        // parole : c'est elle qui sert d'URL, donc une empreinte fausse
+        // adresse un fichier que personne ne peut produire.
+        const vrai = sha256Bytes(octets);
+        if (vrai !== r.sha256) {
+          throw new Error(
+            `${r.fichier} : le lot annonce ${r.sha256.slice(0, 12)}… et le ` +
+              `fichier vaut ${vrai.slice(0, 12)}…`,
+          );
+        }
+        // `contenu` est un `bytea` déclaré `text` côté Drizzle : une chaîne JS
+        // s'y ferait appliquer la syntaxe d'entrée bytea et stockerait autre
+        // chose, sans erreur. Les octets passent par un fragment `sql`.
+        await tx.execute(sql`
+          insert into images (sha256, mime, octets, largeur, hauteur, contenu)
+          values (${vrai}, 'image/jpeg', ${r.octets}, ${r.largeur}, ${r.hauteur}, ${octets})
+          on conflict (sha256) do nothing
+        `);
+        imagesEcrites++;
+        octetsEcrits += r.octets;
+      }
+
+      await tx
+        .insert(pages)
+        .values({
+          id: id("page"),
+          livreId: livre!.id,
+          folio: p.folio,
+          pageImprimee: p.pageImprimee,
+          texteOcr: p.texteOcr,
+          ocrMoteur: p.texteOcr ? p.ocrMoteur : null,
+          imageSha256: p.image.sha256,
+          imageLargeur: p.image.largeur,
+          imageHauteur: p.image.hauteur,
+          vignetteSha256: p.vignette.sha256,
+          publiable: p.publiable,
+        })
+        .onConflictDoUpdate({
+          target: [pages.livreId, pages.folio],
+          set: {
+            texteOcr: p.texteOcr,
+            ocrMoteur: p.texteOcr ? p.ocrMoteur : null,
+            imageSha256: p.image.sha256,
+            imageLargeur: p.image.largeur,
+            imageHauteur: p.image.hauteur,
+            vignetteSha256: p.vignette.sha256,
+            updatedAt: new Date(),
+          },
+        });
+      pagesEcrites++;
+    }
+
+    // Autocontrôle : relire les octets DEPUIS la base et les re-hacher. Le
+    // défaut qu'on cherche ici est muet — un `bytea` mal transmis s'insère sans
+    // erreur et ne se voit qu'à l'écran, une fois l'image servie et illisible.
+    const [temoin] = await tx.execute<{ sha256: string; contenu: Uint8Array }>(sql`
+      select sha256, contenu from images where sha256 = ${feuillets[0]!.image.sha256}
+    `);
+    if (!temoin || sha256Bytes(temoin.contenu) !== temoin.sha256) {
+      throw new Error(
+        `${l.sourceRef} : les octets relus en base ne redonnent pas leur ` +
+          `empreinte — le bytea n'a pas été transmis tel quel`,
+      );
+    }
+  });
+
+  livresEcrits++;
+  console.log(
+    `  ✓ ${l.sourceRef.padEnd(16)} ${feuillets.length.toString().padStart(3)} pages   ` +
+      `${l.titre.slice(0, 44)}`,
+  );
+}
+
+if (!ESSAI) {
+  const [compte] = await db
+    .select({
+      livres: sql<number>`count(distinct ${livres.id})::int`,
+      pages: sql<number>`count(${pages.id})::int`,
+    })
+    .from(livres)
+    .leftJoin(pages, eq(pages.livreId, livres.id))
+    .where(and(eq(livres.source, "gallica"), eq(livres.publiable, true)));
+  console.log(
+    `\n${livresEcrits} livres versés · ${pagesEcrites} pages · ` +
+      `${imagesEcrites} images (${(octetsEcrits / 1e6).toFixed(0)} Mo)`,
+  );
+  console.log(
+    `en base : ${compte?.livres ?? 0} livres Gallica publiables, ` +
+      `${compte?.pages ?? 0} pages`,
+  );
+}
+
+process.exit(0);

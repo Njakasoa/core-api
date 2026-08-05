@@ -22,6 +22,34 @@
       "when": 1785859235844,
       "tag": "0002_adorable_silk_fever",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785866298869,
+      "tag": "0003_colorful_champions",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1785866947006,
+      "tag": "0004_classy_harrier",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1785870695798,
+      "tag": "0005_careful_mercury",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1785886676430,
+      "tag": "0006_fixed_paladin",
+      "breakpoints": true
     }
   ]
 }

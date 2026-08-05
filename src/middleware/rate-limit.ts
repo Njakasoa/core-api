@@ -79,7 +79,24 @@ function trustedIp(c: Parameters<MiddlewareHandler>[0]): string {
  * Otherwise sending garbage in the Authorization header would mint a fresh
  * bucket per request, which is the very hole being closed here.
  */
+/**
+ * Page images get their own bucket, and it is not an exemption.
+ *
+ * A viewer opening one book asks for up to 166 thumbnails in a burst, which the
+ * shared 120/min bucket would cut off mid-grid — and would then also lock the
+ * visitor out of every other endpoint for the rest of the window, because it is
+ * one counter. So the images move to a bucket of their own.
+ *
+ * Not exempted, though: `GET /v1/bibliotheque/images/:sha256` is unauthenticated
+ * and reads a whole `bytea` row per request, with no object store in front of
+ * it. An exemption there is an unmetered egress tap. Keyed by IP alone, since
+ * an <img> tag carries no token and every reader looks anonymous here.
+ */
+const CHEMIN_IMAGES = "/v1/bibliotheque/images/";
+
 async function clientKey(c: Parameters<MiddlewareHandler>[0]): Promise<string> {
+  if (c.req.path.startsWith(CHEMIN_IMAGES)) return `img:${trustedIp(c)}`;
+
   // Honoured if the limiter is ever mounted after requireAuth on some route.
   const auth = c.get("auth");
   if (auth?.kind === "apiKey") return `key:${auth.apiKeyId}`;
@@ -99,6 +116,7 @@ export const rateLimit: MiddlewareHandler = async (c, next) => {
   const now = Date.now();
   const windowMs = env.RATE_LIMIT_WINDOW * 1000;
   const key = await clientKey(c);
+  const max = key.startsWith("img:") ? env.RATE_LIMIT_IMAGES_MAX : env.RATE_LIMIT_MAX;
 
   let bucket = store.get(key);
   if (!bucket || bucket.resetAt <= now) {
@@ -107,12 +125,12 @@ export const rateLimit: MiddlewareHandler = async (c, next) => {
   }
   bucket.count++;
 
-  const remaining = Math.max(0, env.RATE_LIMIT_MAX - bucket.count);
-  c.header("RateLimit-Limit", String(env.RATE_LIMIT_MAX));
+  const remaining = Math.max(0, max - bucket.count);
+  c.header("RateLimit-Limit", String(max));
   c.header("RateLimit-Remaining", String(remaining));
   c.header("RateLimit-Reset", String(Math.ceil((bucket.resetAt - now) / 1000)));
 
-  if (bucket.count > env.RATE_LIMIT_MAX) {
+  if (bucket.count > max) {
     throw errors.tooManyRequests();
   }
   await next();

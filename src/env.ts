@@ -23,6 +23,15 @@ const schema = z.object({
   RATE_LIMIT_WINDOW: z.coerce.number().int().positive().default(60),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(120),
   /**
+   * A separate bucket for `GET /v1/bibliotheque/images/:sha256`.
+   * Opening one book asks for up to 166 thumbnails at once; on the shared
+   * bucket that both cuts the grid off mid-load and locks the visitor out of
+   * every other endpoint until the window rolls, since it is one counter.
+   * Higher, but still a limit: the route is unauthenticated and reads a whole
+   * `bytea` row per request, with no object store in front of it.
+   */
+  RATE_LIMIT_IMAGES_MAX: z.coerce.number().int().positive().default(300),
+  /**
    * How many proxies append to `x-forwarded-for` in front of this process.
    * The rate limiter reads that many hops from the RIGHT, because each proxy
    * appends the peer it saw and only the last entry is one the caller cannot
