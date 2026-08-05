@@ -64,6 +64,13 @@
       "when": 1785926301628,
       "tag": "0008_lazy_wild_pack",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1785926361628,
+      "tag": "0009_open_deposit",
+      "breakpoints": true
     }
   ]
 }

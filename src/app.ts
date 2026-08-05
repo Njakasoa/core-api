@@ -21,6 +21,7 @@ import { itemsRoute } from "./routes/items.ts";
 import { collecteRoute } from "./routes/collecte.ts";
 import { bibliothequeRoute } from "./routes/bibliotheque.ts";
 import { objetsRoute } from "./routes/objets.ts";
+import { TAILLE_MAX_OCTETS } from "./lib/stockage/images-entrantes.ts";
 import { corpusRolesRoute } from "./routes/corpus-roles.ts";
 import { webhooksRoute } from "./routes/webhooks.ts";
 import { assetsRoute } from "./routes/assets.ts";
@@ -42,7 +43,22 @@ export function createApp() {
   app.use("*", mediaCorp);
   app.use("*", secureHeaders());
   app.use("*", cors({ origin: corsOrigins, maxAge: 86400 }));
-  app.use("*", bodyLimit({ maxSize: 1024 * 1024 }));
+  // Le plafond de corps est PLUS HAUT sur la seule route qui verse des octets.
+  //
+  // 1 Mio partout ailleurs : aucune route JSON n'a de raison d'en demander plus,
+  // et le plafond protège la mémoire du processus. Mais `POST /v1/objets` reçoit
+  // la photo d'un cahier — 3 à 6 Mo depuis un téléphone — et un `bodyLimit` monté
+  // dans la route ne verrait jamais le corps, celui-ci étant déjà tranché ici.
+  //
+  // Ce n'est pas une exemption : le dépôt garde son propre plafond (20 Mio), son
+  // reniflage de type et son quota par compte. Voir lib/stockage/images-entrantes.ts.
+  const corpsOrdinaire = bodyLimit({ maxSize: 1024 * 1024 });
+  const corpsDepot = bodyLimit({ maxSize: TAILLE_MAX_OCTETS });
+  app.use("*", (c, next) =>
+    c.req.method === "POST" && c.req.path === "/v1/objets"
+      ? corpsDepot(c, next)
+      : corpsOrdinaire(c, next),
+  );
   app.use("/v1/*", rateLimit);
 
   app.onError(onError);

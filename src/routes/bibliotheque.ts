@@ -15,7 +15,7 @@ import {
 import type { Variables } from "../types.ts";
 import { id } from "../lib/ids.ts";
 import { sha256 } from "../lib/crypto.ts";
-import { enregistrerGardien } from "../lib/stockage/index.ts";
+import { enregistrerGardien, ficheObjet } from "../lib/stockage/index.ts";
 import { urlObjet } from "./objets.ts";
 import { appliquer, contexte } from "../lib/bibliotheque/corrections.ts";
 import { errors } from "../lib/errors.ts";
@@ -23,6 +23,7 @@ import { validate } from "../lib/validate.ts";
 import { pageQuery, paginate, decodeCursor } from "../lib/pagination.ts";
 import { requireAuth } from "../middleware/auth.ts";
 import {
+  detientRole,
   optionalAuth,
   requireCorpusRole,
   requireRealUser,
@@ -148,6 +149,14 @@ const nouvellePage = z
     texteOcr: z.string().max(200_000).optional(),
     ocrMoteur: z.string().max(60).optional(),
     publiable: z.boolean().optional(),
+    /** L'empreinte d'une image DÉJÀ versée par `POST /v1/objets`.
+     *
+     *  Deux étapes plutôt qu'une : les octets voyagent seuls, sans le JSON qui
+     *  les décrit, ce qui laisse le plafond de corps ordinaire à 1 Mio partout
+     *  ailleurs et permet de redéposer un folio sans renvoyer sa photo. */
+    imageSha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+    imageLargeur: z.number().int().positive().max(40_000).optional(),
+    imageHauteur: z.number().int().positive().max(40_000).optional(),
   })
   .strict();
 
@@ -277,10 +286,10 @@ function pagePublique(p: typeof pages.$inferSelect, sourceRef: string, source: s
  * doivent poser exactement la même question, et une frontière recopiée est une
  * frontière qu'on finit par recopier de travers.
  */
-async function pagePubliable(pageId: string) {
+async function pagePubliable(pageId: string, vu?: string | null) {
   const [p] = await db.select().from(pages).where(eq(pages.id, pageId)).limit(1);
   if (!p || p.publiable === false) throw errors.notFound("Page introuvable");
-  return { page: p, livre: await livrePubliable(p.livreId) };
+  return { page: p, livre: await livrePubliable(p.livreId, vu) };
 }
 
 /**
@@ -344,15 +353,35 @@ async function etatCorrection(
 }
 
 /** Le livre demandé, et seulement s'il est publiable — ou 404. */
-async function livrePubliable(livreId: string) {
-  const [l] = await db
-    .select()
-    .from(livres)
-    .where(and(eq(livres.id, livreId), eq(livres.publiable, true)))
-    .limit(1);
-  // 404 et non 403 : un livre sous droits ne doit pas révéler qu'il existe ici.
+/**
+ * Le livre demandé — ou 404, y compris quand il existe.
+ *
+ * TROIS PERSONNES PEUVENT LE VOIR, ET POUR TROIS RAISONS DIFFÉRENTES
+ *   le public       s'il est publiable ET accepté par la modération
+ *   son déposant    toujours, sinon il ne peut pas relire ce qu'il vient d'envoyer
+ *   un modérateur   toujours, sinon il ne peut pas juger
+ *
+ * `publiable` et `statut_moderation` sont deux questions distinctes et le
+ * restent : « avons-nous le droit » n'est pas « quelqu'un a-t-il vérifié ». Les
+ * réunir ferait disparaître la seconde, qui est précisément celle que le dépôt
+ * ouvert rend obligatoire.
+ *
+ * 404 et non 403 : un livre sous droits, ou refusé, ne doit pas révéler qu'il
+ * existe ici. Un 403 confirmerait l'identifiant à qui le devine.
+ */
+async function livrePubliable(livreId: string, demandeur?: string | null) {
+  const [l] = await db.select().from(livres).where(eq(livres.id, livreId)).limit(1);
   if (!l) throw errors.notFound("Livre introuvable");
-  return l;
+  if (l.publiable && l.statutModeration === "accepte") return l;
+  if (demandeur && l.deposeParUserId === demandeur) return l;
+  if (demandeur && (await detientRole(demandeur, "moderateur", "curateur"))) return l;
+  throw errors.notFound("Livre introuvable");
+}
+
+/** L'identifiant du demandeur, quand il y en a un. */
+function demandeur(c: { get: (k: "auth") => unknown }): string | null {
+  const a = c.get("auth") as { kind?: string; userId?: string } | undefined;
+  return a?.kind === "user" ? (a.userId ?? null) : null;
 }
 
 export function bibliothequeRoute(): Hono<{ Variables: Variables }> {
@@ -370,7 +399,15 @@ export function bibliothequeRoute(): Hono<{ Variables: Variables }> {
       const rows = await db
         .select()
         .from(livres)
-        .where(and(eq(livres.publiable, true), after ? gt(livres.id, after) : undefined))
+        // La modération conditionne la MISE EN AVANT. Un livre déposé et non
+        // encore jugé n'apparaît dans aucune liste — ses images restent
+        // joignables par leur empreinte, ce qui permet au déposant de se relire
+        // sans que personne d'autre ne tombe dessus.
+        .where(and(
+          eq(livres.publiable, true),
+          eq(livres.statutModeration, "accepte"),
+          after ? gt(livres.id, after) : undefined,
+        ))
         .orderBy(asc(livres.id))
         .limit(limit + 1);
       const page = paginate(rows, limit);
@@ -383,7 +420,7 @@ export function bibliothequeRoute(): Hono<{ Variables: Variables }> {
     describeRoute({ description: "Un livre et l'état de ses pages", tags: ["bibliotheque"] }),
     optionalAuth,
     async (c) => {
-      const l = await livrePubliable(c.req.param("id"));
+      const l = await livrePubliable(c.req.param("id"), demandeur(c));
       const [compte] = await db
         .select({
           pages: sql<number>`count(*)::int`,
@@ -400,6 +437,12 @@ export function bibliothequeRoute(): Hono<{ Variables: Variables }> {
         pagesConnues: compte?.pages ?? 0,
         pagesAvecImage: compte?.avecImage ?? 0,
         pagesAvecTexte: compte?.avecTexte ?? 0,
+        // L'état de modération n'est rendu QUE là où le livre est visible, et
+        // `livrePubliable` a déjà tranché qui le voit. Le taire au déposant
+        // reviendrait à lui cacher pourquoi son dépôt n'apparaît nulle part.
+        statutModeration: l.statutModeration,
+        motifModeration: l.motifModeration,
+        deposeParMoi: l.deposeParUserId != null && l.deposeParUserId === demandeur(c),
       });
     },
   );
@@ -410,7 +453,7 @@ export function bibliothequeRoute(): Hono<{ Variables: Variables }> {
     optionalAuth,
     validate("query", pageQuery),
     async (c) => {
-      const l = await livrePubliable(c.req.param("id"));
+      const l = await livrePubliable(c.req.param("id"), demandeur(c));
       const { limit, cursor } = c.req.valid("query");
       const apres = cursor ? Number(decodeCursor(cursor) ?? 0) : 0;
       // Le filtre de publication est posé EN SQL, pas après la découpe. Appliqué
@@ -442,7 +485,7 @@ export function bibliothequeRoute(): Hono<{ Variables: Variables }> {
     describeRoute({ description: "Une page, avec toutes ses océrisations", tags: ["bibliotheque"] }),
     optionalAuth,
     async (c) => {
-      const { page: p, livre: l } = await pagePubliable(c.req.param("id"));
+      const { page: p, livre: l } = await pagePubliable(c.req.param("id"), demandeur(c));
       const passes = await db
         .select({
           id: pageOcr.id,
@@ -516,7 +559,13 @@ export function bibliothequeRoute(): Hono<{ Variables: Variables }> {
           exists (
             select 1 from pages p join livres l on l.id = p.livre_id
              where (p.image_sha256 = ${sha256} or p.vignette_sha256 = ${sha256})
-               and (l.publiable is distinct from true or p.publiable = false)) as refusee
+               and (l.publiable is distinct from true
+                    or p.publiable = false
+                    -- Un livre REFUSÉ par la modération vaut refus des octets.
+                    -- « en attente » n'en est pas un : le déposant doit pouvoir
+                    -- se relire, et le modérateur doit pouvoir regarder ce qu'il
+                    -- juge. Ce que la modération ferme, c'est la mise en avant.
+                    or l.statut_moderation = 'refuse')) as refusee
       `);
       if (r?.refusee) return "refusee";
       return r?.servable ? "servable" : "inconnue";
@@ -524,17 +573,38 @@ export function bibliothequeRoute(): Hono<{ Variables: Variables }> {
   });
 
   // ── Écriture : curateur seulement ────────────────────────
+  /**
+   * Déposer un livre. OUVERT À TOUT COMPTE RÉEL depuis que le téléversement l'est.
+   *
+   * CE QUI CHANGE SELON QUI DÉPOSE, ET CE QUI NE CHANGE PAS
+   * Un curateur dépose un ouvrage déjà accepté : son travail EST la vérification,
+   * et lui demander de se modérer lui-même n'ajouterait rien qu'une file qu'il
+   * viderait seul. Tout autre compte dépose en attente — le livre existe, son
+   * déposant le voit, et personne d'autre ne le trouve avant qu'un modérateur
+   * n'ait tranché.
+   *
+   * Ce qui ne change pas : la déclaration de droits est obligatoire pour tout le
+   * monde, `nouveauLivre` refuse déjà un livre non publiable qui ne dit pas
+   * pourquoi, et le déposant est nommé dans la ligne — sans quoi un retrait à sa
+   * demande serait impossible.
+   */
   app.post(
     "/livres",
-    describeRoute({ description: "Verser un livre", tags: ["bibliotheque"] }),
+    describeRoute({ description: "Déposer un livre", tags: ["bibliotheque"] }),
     requireAuth,
-    requireCorpusRole("curateur"),
+    requireRealUser,
     validate("json", nouveauLivre),
     async (c) => {
       const b = c.req.valid("json");
+      const moi = demandeur(c)!;
+      const curateur = await detientRole(moi, "curateur");
       const livreId = id("livre");
       await db.insert(livres).values({
         id: livreId,
+        deposeParUserId: moi,
+        statutModeration: curateur ? "accepte" : "en_attente",
+        modereParUserId: curateur ? moi : null,
+        modereLe: curateur ? new Date() : null,
         sourceRef: b.sourceRef,
         source: b.source,
         titre: b.titre,
@@ -551,20 +621,51 @@ export function bibliothequeRoute(): Hono<{ Variables: Variables }> {
         urlNotice: b.urlNotice ?? null,
       });
       const [l] = await db.select().from(livres).where(eq(livres.id, livreId)).limit(1);
-      return c.json({ ...livrePublic(l!), publiable: l!.publiable }, 201);
+      return c.json(
+        {
+          ...livrePublic(l!),
+          publiable: l!.publiable,
+          statutModeration: l!.statutModeration,
+        },
+        201,
+      );
     },
   );
 
+  /**
+   * Ajouter un folio — au déposant du livre, ou à un curateur.
+   *
+   * Pas `requireCorpusRole("curateur")` : le contributeur qui vient de déposer
+   * son livre doit pouvoir y mettre ses pages, sinon le dépôt ouvert s'arrête au
+   * titre. Mais pas ouvert à tous non plus — ajouter une page au livre d'autrui
+   * serait s'inviter dans son ouvrage, et le déposant en répond.
+   *
+   * `imageSha256` rattache une image DÉJÀ VERSÉE par `POST /v1/objets`. Le
+   * rattachement est refusé si l'objet n'existe pas : une page pointant une
+   * empreinte absente est une tuile blanche que rien ne signale.
+   */
   app.post(
     "/livres/:id/pages",
-    describeRoute({ description: "Verser une page", tags: ["bibliotheque"] }),
+    describeRoute({ description: "Ajouter un folio", tags: ["bibliotheque"] }),
     requireAuth,
-    requireCorpusRole("curateur"),
+    requireRealUser,
     validate("json", nouvellePage),
     async (c) => {
       const [l] = await db.select().from(livres).where(eq(livres.id, c.req.param("id"))).limit(1);
       if (!l) throw errors.notFound("Livre introuvable");
+      const moi = demandeur(c)!;
+      if (l.deposeParUserId !== moi && !(await detientRole(moi, "curateur"))) {
+        throw errors.forbidden("ce livre n'est pas le vôtre");
+      }
       const b = c.req.valid("json");
+      if (b.imageSha256) {
+        const objet = await ficheObjet(b.imageSha256);
+        if (!objet) {
+          throw errors.unprocessable(
+            "aucun objet ne porte cette empreinte — versez l'image par POST /v1/objets avant de la rattacher",
+          );
+        }
+      }
       const pageId = id("page");
       // Le déclencheur de la base refusera une page publiable dans un livre qui
       // ne l'est pas ; on ne le rattrape pas ici, on le laisse parler.
@@ -576,8 +677,99 @@ export function bibliothequeRoute(): Hono<{ Variables: Variables }> {
         texteOcr: b.texteOcr ?? null,
         ocrMoteur: b.ocrMoteur ?? null,
         publiable: b.publiable ?? null,
+        imageSha256: b.imageSha256 ?? null,
+        imageLargeur: b.imageLargeur ?? null,
+        imageHauteur: b.imageHauteur ?? null,
       });
-      return c.json({ id: pageId, folio: b.folio }, 201);
+      return c.json(
+        { id: pageId, folio: b.folio, imageUrl: urlObjet(b.imageSha256 ?? null) },
+        201,
+      );
+    },
+  );
+
+  /**
+   * La file de modération — modérateur ou curateur.
+   *
+   * Elle rend ce que la liste publique cache, et rien d'autre : les livres
+   * déposés qu'aucune décision n'a encore atteints. Le compte de pages et
+   * d'images accompagne chaque entrée, parce qu'un livre sans page est un dépôt
+   * abandonné en cours de route et qu'il ne se juge pas comme un ouvrage complet.
+   */
+  app.get(
+    "/moderation",
+    describeRoute({ description: "Les livres en attente de décision", tags: ["bibliotheque"] }),
+    requireAuth,
+    requireCorpusRole("moderateur", "curateur"),
+    validate("query", z.object({
+      statut: z.enum(["en_attente", "accepte", "refuse"]).default("en_attente"),
+      limit: z.coerce.number().int().min(1).max(100).default(30),
+    })),
+    async (c) => {
+      const { statut, limit } = c.req.valid("query");
+      const lignes = await db.execute<Record<string, unknown>>(sql`
+        select l.id, l.titre, l.auteur, l.annee, l.source, l.source_ref as "sourceRef",
+               l.statut_fixation as "statutFixation", l.licence,
+               l.licence_constatee as "licenceConstatee", l.publiable,
+               l.motif_non_publiable as "motifNonPubliable", l.url_notice as "urlNotice",
+               l.statut_moderation as "statutModeration", l.motif_moderation as "motifModeration",
+               l.created_at as "createdAt",
+               u.email as "deposantEmail", u.name as "deposantNom",
+               count(p.id)::int as "pagesConnues",
+               count(p.image_sha256)::int as "pagesAvecImage"
+          from livres l
+          left join users u on u.id = l.depose_par_user_id
+          left join pages p on p.livre_id = l.id
+         where l.statut_moderation = ${statut}
+      group by l.id, u.email, u.name
+      order by l.created_at asc
+         limit ${limit}
+      `);
+      return c.json({ data: lignes });
+    },
+  );
+
+  /**
+   * Trancher. UN REFUS DOIT DIRE POURQUOI.
+   *
+   * La contrainte `livres_refus_motive_ck` l'impose déjà en base ; elle est
+   * revérifiée ici pour que le déposant reçoive une phrase plutôt qu'une erreur
+   * Postgres. Sans motif, il ne peut que redéposer à l'identique.
+   *
+   * La décision est TRAÇABLE — qui, quand, pourquoi — sur le patron des rôles de
+   * corpus : le jour où un refus est contesté, « qui a décidé et sur quel motif »
+   * est la seule question qui compte.
+   */
+  app.post(
+    "/livres/:id/moderation",
+    describeRoute({ description: "Accepter ou refuser un livre déposé", tags: ["bibliotheque"] }),
+    requireAuth,
+    requireRealUser,
+    requireCorpusRole("moderateur", "curateur"),
+    validate("json", z.object({
+      decision: z.enum(["accepte", "refuse"]),
+      motif: z.string().max(1000).optional(),
+    }).strict()),
+    async (c) => {
+      const { decision, motif } = c.req.valid("json");
+      const [l] = await db.select().from(livres).where(eq(livres.id, c.req.param("id"))).limit(1);
+      if (!l) throw errors.notFound("Livre introuvable");
+      if (decision === "refuse" && !motif?.trim()) {
+        throw errors.unprocessable(
+          "un refus doit dire pourquoi — sans motif, le déposant ne peut que redéposer à l'identique",
+        );
+      }
+      await db
+        .update(livres)
+        .set({
+          statutModeration: decision,
+          motifModeration: motif?.trim() || null,
+          modereParUserId: demandeur(c),
+          modereLe: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(livres.id, l.id));
+      return c.json({ id: l.id, statutModeration: decision, motif: motif?.trim() || null });
     },
   );
 
@@ -634,7 +826,7 @@ export function bibliothequeRoute(): Hono<{ Variables: Variables }> {
     requireRealUser,
     validate("json", nouvelleCorrection),
     async (c) => {
-      const { page: p } = await pagePubliable(c.req.param("id"));
+      const { page: p } = await pagePubliable(c.req.param("id"), demandeur(c));
       const auth = c.get("auth");
       const userId = auth.kind === "user" ? auth.userId : "";
       const b = c.req.valid("json");
@@ -851,7 +1043,7 @@ export function bibliothequeRoute(): Hono<{ Variables: Variables }> {
       // identifiant et une empreinte. C'est ce qui le rend citable, exportable,
       // et c'est ce qui donnera enfin un sens à `accord_document_millimes`, nul
       // partout depuis le début faute de transcription humaine.
-      const { page: p } = await pagePubliable(c.req.param("id"));
+      const { page: p } = await pagePubliable(c.req.param("id"), demandeur(c));
       const auth = c.get("auth");
       const baseOcrId = c.req.valid("json").baseOcrId;
 
