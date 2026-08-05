@@ -533,8 +533,15 @@ export const pages = pgTable(
     /** Numéro IMPRIMÉ sur la page, quand il existe. Texte et non entier :
      *  « xii », « 12bis » et « — » sont des numéros de page réels. */
     pageImprimee: text("page_imprimee"),
-    /** L'OCR tel qu'il a été produit. Jamais réécrit : une correction est une
-     *  ligne de `page_ocr`, jamais une modification de celle-ci. */
+    /** La PREMIÈRE lecture, gardée pour l'affichage de liste et le compte
+     *  `pagesAvecTexte`. Ce n'est plus la lecture citable : celle-là est une
+     *  ligne de `page_ocr`, immuable par déclencheur, et c'est la seule qu'une
+     *  correction peut viser.
+     *
+     *  La distinction n'est pas théorique. `scripts/seed-bibliotheque.ts` fait
+     *  `onConflictDoUpdate({ set: { texteOcr … } })` : rejouer le versement
+     *  après une nouvelle océrisation réécrit cette colonne SUR PLACE. Des
+     *  offsets enregistrés dedans deviendraient faux en silence. */
     texteOcr: text("texte_ocr"),
     ocrMoteur: text("ocr_moteur"), // tesseract-fra | vision | humain
     /** Score de detecter_ocr.py — bits par caractère, mesuré SANS lexique.
@@ -646,6 +653,128 @@ export const pageOcr = pgTable(
   },
   (t) => [index("page_ocr_page_idx").on(t.pageId, t.createdAt)],
 );
+
+/**
+ * Une correction proposée sur un passage précis d'une lecture précise.
+ *
+ * CE QU'ELLE CORRIGE N'EST PAS « LA PAGE », C'EST UNE PASSE
+ * `baseOcrId` désigne la ligne de `page_ocr` dans laquelle `debut` et `fin`
+ * découpent. Sans elle, une correction acceptée sur la lecture `tesseract-fra`
+ * s'appliquerait à des offsets qui, dans la lecture `tesseract-eng`, tombent au
+ * milieu d'un autre mot. Il y a donc une version corrigée PAR LECTURE, jamais
+ * une par page : en fusionner deux reviendrait à désigner une gagnante, ce que
+ * ce module refuse partout ailleurs.
+ *
+ * `lu` recopie la sous-chaîne d'origine, et la base VÉRIFIE qu'elle correspond
+ * (déclencheur `page_corrections_ancree`). L'écart n'est donc pas « détectable »,
+ * il est inécrivable. C'est aussi le seul endroit où se fait la conversion entre
+ * les offsets 0-indexés demi-ouverts de l'API et le `substr` 1-indexé de
+ * Postgres — l'erreur de un que toute implémentation commet, écrite une fois.
+ *
+ * UN INTERVALLE VIDE EST REFUSÉ. Un `int4range` vide ne chevauche rien, donc
+ * deux insertions acceptées au même point passeraient la contrainte d'exclusion
+ * et s'appliqueraient dans un ordre indéterminé. Pour insérer un mot manquant,
+ * on étend l'intervalle sur un mot voisin.
+ *
+ * `propose = ''` est LÉGITIME : c'est une suppression, et supprimer du bruit
+ * inséré est la correction la plus fréquente sur ces pages.
+ *
+ * `propose` n'est JAMAIS normalisé ni rogné. Normaliser vers une forme canonique
+ * est, en miniature, la faute qui a fait rejeter deux correcteurs d'OCR sur ce
+ * corpus : ils gagnaient 16,6 points de reconnaissance lexicale en perdant 4,8
+ * points de fidélité au document.
+ *
+ * LA CASCADE EST UN CHOIX DE DROITS. `lu` et `propose` sont des copies du texte
+ * de la page. Un retrait exigé par un ayant droit qui laisserait ces lignes
+ * debout garderait la page retirée en base sous un autre nom de table.
+ */
+export const pageCorrections = pgTable(
+  "page_corrections",
+  {
+    id: text("id").primaryKey(),
+    pageId: text("page_id")
+      .notNull()
+      .references(() => pages.id, { onDelete: "cascade" }),
+    baseOcrId: text("base_ocr_id")
+      .notNull()
+      .references(() => pageOcr.id, { onDelete: "cascade" }),
+    /** Offsets en points de code, 0-indexés, demi-ouverts [debut, fin). */
+    debut: integer("debut").notNull(),
+    fin: integer("fin").notNull(),
+    lu: text("lu").notNull(),
+    propose: text("propose").notNull(),
+    motif: text("motif"),
+    /** [x, y, largeur, hauteur] dans l'image lue, quand le client la connaît.
+     *  Même rôle que dans `DesaccordOcr` : de quoi en appeler au papier. */
+    bbox: jsonb("bbox").$type<[number, number, number, number]>(),
+    proposeParUserId: text("propose_par_user_id")
+      .notNull()
+      .references(() => users.id),
+    // proposee | acceptee | refusee | retiree | obsolete | revoquee
+    statut: text("statut").notNull().default("proposee"),
+    /** { par, le, motif } — la seule sortie d'une acceptation erronée. Sans
+     *  elle, un intervalle accepté à tort est verrouillé à vie : la ligne est
+     *  immuable et la contrainte d'exclusion interdit toute rivale. Or l'erreur
+     *  qu'on redoute — accepter une modernisation de l'orthographe — est
+     *  exactement celle que ce corpus a déjà subie. */
+    revocation: jsonb("revocation").$type<{
+      par: string;
+      le: string;
+      motif: string;
+    }>(),
+    createdAt,
+  },
+  (t) => [
+    /** La file du relecteur : par page puis par position, JAMAIS par date. Un
+     *  ordre chronologique donne une file entièrement possédée par le dernier
+     *  arrivé. */
+    index("page_corrections_file_idx").on(t.statut, t.pageId, t.debut),
+    index("page_corrections_base_idx").on(t.baseOcrId, t.debut),
+    index("page_corrections_auteur_idx").on(t.proposeParUserId, t.createdAt),
+    /** Un double-clic n'est pas un second avis. */
+    uniqueIndex("page_corrections_doublon_uq")
+      .on(t.baseOcrId, t.debut, t.fin, t.proposeParUserId)
+      .where(sql`statut = 'proposee'`),
+  ],
+);
+
+/**
+ * L'avis d'UN relecteur sur UNE proposition. Append-only.
+ *
+ * POURQUOI UNE TABLE ET NON DEUX COLONNES SUR LA CORRECTION
+ * Le protocole de relecture de ce projet (repparcs/scripts/kit_relecture.py)
+ * pose depuis toujours que « vos jugements sont conservés individuellement…
+ * ils ne sont jamais fondus dans une moyenne », et qu'un désaccord est un
+ * résultat qu'on publie plutôt qu'un problème qu'on arbitre. Deux colonnes
+ * `decide_par` / `decide_le` rendraient le second avis impossible à écrire.
+ *
+ * Le seuil vit dans `page_correction_statut()` : `accords_requis = 1`
+ * aujourd'hui. Le porter à deux relecteurs de régions différentes — ce que le
+ * kit exige déjà hors ligne — sera une ligne de migration, pas un changement de
+ * schéma.
+ */
+export const pageCorrectionAvis = pgTable(
+  "page_correction_avis",
+  {
+    id: text("id").primaryKey(),
+    correctionId: text("correction_id")
+      .notNull()
+      .references(() => pageCorrections.id, { onDelete: "cascade" }),
+    relecteurUserId: text("relecteur_user_id")
+      .notNull()
+      .references(() => users.id),
+    avis: text("avis").notNull(), // accord | desaccord
+    motif: text("motif"),
+    createdAt,
+  },
+  (t) => [
+    uniqueIndex("page_correction_avis_uq").on(t.correctionId, t.relecteurUserId),
+    index("page_correction_avis_relecteur_idx").on(t.relecteurUserId, t.createdAt),
+  ],
+);
+
+export type PageCorrection = typeof pageCorrections.$inferSelect;
+export type PageCorrectionAvis = typeof pageCorrectionAvis.$inferSelect;
 
 /** Un endroit précis où deux passes ne lisent pas la même chose. */
 export interface DesaccordOcr {

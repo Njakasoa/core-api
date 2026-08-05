@@ -29,6 +29,10 @@ async function compte(role?: string) {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ email, password: "correct-horse-battery" }),
   });
+  // Un `register` qui échoue rendait `b.user.id` indéfini, et l'erreur
+  // ressemblait alors à un défaut de l'API — alors que c'était le limiteur qui
+  // avait épuisé son seau en fin de suite. On le dit ici, au bon endroit.
+  if (!r.ok) throw new Error(`inscription impossible : HTTP ${r.status}`);
   const b = (await r.json()) as { accessToken: string; user: { id: string } };
   if (role) {
     await db.insert(corpusRoles).values({
@@ -166,7 +170,14 @@ describe("ce qui ne sort pas", () => {
       method: "POST", headers: cur.headers,
       body: JSON.stringify({ folio: 3, publiable: true }),
     });
-    expect(r.status).toBeGreaterThanOrEqual(400);
+    // `>= 400` passait sur un 500, ce qui était exactement le cas : la règle
+    // venait d'un déclencheur, et rien ne traduisait une erreur Postgres. Le
+    // message du déclencheur est écrit en français pour être lu ; il doit
+    // arriver au client.
+    expect(r.status).toBe(422);
+    const b = (await r.json()) as { error: { code: string; message: string } };
+    expect(b.error.code).toBe("regle_du_corpus");
+    expect(b.error.message).toMatch(/livre non publiable/);
   });
 
   test("l'image d'un livre sous droits n'est pas servie, même avec son empreinte", async () => {

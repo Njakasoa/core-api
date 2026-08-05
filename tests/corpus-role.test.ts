@@ -163,3 +163,32 @@ describe("requireRealUser refuses a machine", () => {
     expect(res.status).toBe(200);
   });
 });
+
+describe("une portée qu'on ne sait pas appliquer", () => {
+  test("un rôle porteur d'un scope est refusé, pas honoré à moitié", async () => {
+    // `corpus_roles.scope` existe depuis le premier jour — « relecteur pour un
+    // dialecte » — et n'était JAMAIS lu. Un rôle accordé avec une portée
+    // donnait donc le pouvoir sur tout le site, à quelqu'un qui croyait l'avoir
+    // restreint. Le défaut ne mordait pas tant qu'aucune route ne montait ce
+    // contrôle ; il devient exploitable le jour où `relecteur` est monté.
+    const u = await compte();
+    await db.insert(corpusRoles).values({
+      id: id("crole"), userId: u.userId, role: "relecteur",
+      scope: { dialectes: ["sakalava"] }, grantedByUserId: u.userId,
+    });
+    expect(await frappe(garde(requireCorpusRole("relecteur")), u.token)).toBe(403);
+  });
+
+  test("mais un rôle sans portée à côté d'un rôle porté suffit", async () => {
+    // On échoue fermé sur une portée qu'on ignore, pas sur la personne : un
+    // rôle accordé sans restriction reste un rôle accordé.
+    const u = await compte();
+    await db.insert(corpusRoles).values([
+      { id: id("crole"), userId: u.userId, role: "relecteur",
+        scope: { dialectes: ["sakalava"] }, grantedByUserId: u.userId },
+      { id: id("crole"), userId: u.userId, role: "relecteur",
+        grantedByUserId: u.userId },
+    ]);
+    expect(await frappe(garde(requireCorpusRole("relecteur")), u.token)).toBe(200);
+  });
+});

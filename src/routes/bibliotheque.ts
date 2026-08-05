@@ -3,14 +3,28 @@ import { describeRoute } from "hono-openapi";
 import { z } from "zod";
 import { and, asc, desc, eq, gt, sql } from "drizzle-orm";
 import { db } from "../db/index.ts";
-import { livres, pages, pageOcr, ocrJobs } from "../db/schema.ts";
+import {
+  livres,
+  pages,
+  pageOcr,
+  ocrJobs,
+  pageCorrections,
+  pageCorrectionAvis,
+  contributorProfiles,
+} from "../db/schema.ts";
 import type { Variables } from "../types.ts";
 import { id } from "../lib/ids.ts";
+import { sha256 } from "../lib/crypto.ts";
+import { appliquer, contexte } from "../lib/bibliotheque/corrections.ts";
 import { errors } from "../lib/errors.ts";
 import { validate } from "../lib/validate.ts";
 import { pageQuery, paginate, decodeCursor } from "../lib/pagination.ts";
 import { requireAuth } from "../middleware/auth.ts";
-import { optionalAuth, requireCorpusRole } from "../middleware/corpus-role.ts";
+import {
+  optionalAuth,
+  requireCorpusRole,
+  requireRealUser,
+} from "../middleware/corpus-role.ts";
 
 /**
  * Bibliothèque — les livres numérisés, leurs pages, leurs images.
@@ -106,6 +120,16 @@ const nouveauLivre = z
  */
 export const MOTEURS_CONNUS = ["tesseract-fra", "tesseract-eng"] as const;
 
+/**
+ * Le moteur d'une lecture SCELLÉE par un relecteur.
+ *
+ * Il ne rejoint pas `MOTEURS_CONNUS`, et ce n'est pas un oubli : cette liste est
+ * celle de la file de travaux. Une transcription humaine n'est pas un travail
+ * qu'on met en file, c'est une ligne qu'on verse — et le mettre là ferait
+ * réclamer par un exécutant un travail que personne ne peut faire à sa place.
+ */
+export const MOTEUR_RELECTURE = "humain:relecture";
+
 const nouvellePage = z
   .object({
     /** Numéro de VUE dans la source — celui qui construit l'URL IIIF. */
@@ -124,6 +148,57 @@ const nouvellePage = z
     publiable: z.boolean().optional(),
   })
   .strict();
+
+/**
+ * Une correction proposée sur un passage.
+ *
+ * `baseOcrId` est OBLIGATOIRE, et ce n'est pas de la cérémonie : `page_ocr` n'a
+ * volontairement pas d'unicité (page, moteur), donc deux passes du même moteur
+ * peuvent coexister. Laisser le serveur choisir la base ferait enregistrer une
+ * correction dont le `lu` correspond par hasard aux mêmes offsets dans une autre
+ * lecture, et dont le sens est faux.
+ *
+ * `propose` peut être VIDE : c'est une suppression, et retirer du bruit inséré
+ * par l'OCR est la correction la plus fréquente sur ces pages. Il n'est ni rogné
+ * ni normalisé — normaliser vers une forme canonique est, en miniature, la faute
+ * qui a fait rejeter deux correcteurs sur ce corpus.
+ *
+ * AUCUN CONTRÔLE PHONOTACTIQUE ICI, et c'est délibéré. `refusPhonotactique`
+ * exige une finale vocalique ; or `tamin'`, `amin'`, `n'` — les élisions d'avant
+ * 1908 dont ces livres sont pleins — finissent par une consonne. Le contrôle
+ * rejetterait les graphies anciennes qu'on veut préserver et accepterait leurs
+ * remplacements modernisés. Et le corpus est bilingue par construction.
+ */
+const nouvelleCorrection = z
+  .object({
+    baseOcrId: z.string().min(1).max(60),
+    debut: z.number().int().min(0),
+    fin: z.number().int().min(1),
+    lu: z.string().min(1).max(400),
+    propose: z.string().max(1000),
+    motif: z.string().max(500).optional(),
+    bbox: z.tuple([z.number(), z.number(), z.number(), z.number()]).optional(),
+  })
+  .strict();
+
+const nouvelAvis = z
+  .object({
+    avis: z.enum(["accord", "desaccord"]),
+    /** Un avis sans motif est un avis qu'on ne peut ni discuter ni rejouer.
+     *  Le protocole hors ligne de ce projet demande la raison, pas la note. */
+    motif: z.string().max(500).optional(),
+  })
+  .strict();
+
+const filtreCorrections = z.object({
+  statut: z
+    .enum(["proposee", "acceptee", "refusee", "retiree", "obsolete", "revoquee"])
+    .default("proposee"),
+  livre: z.string().max(60).optional(),
+  page: z.string().max(60).optional(),
+  proposeur: z.string().max(60).optional(),
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+});
 
 /** Le livre tel que le public le voit. */
 function livrePublic(l: typeof livres.$inferSelect) {
@@ -184,6 +259,79 @@ function pagePublique(p: typeof pages.$inferSelect, sourceRef: string, source: s
       source === "gallica"
         ? `https://gallica.bnf.fr/ark:/12148/${sourceRef}/f${p.folio}.item`
         : null,
+  };
+}
+
+/**
+ * La page demandée, et seulement si elle ET son livre sont publiables — ou 404.
+ *
+ * Extrait de `GET /pages/:id`, où il était en ligne : les routes de correction
+ * doivent poser exactement la même question, et une frontière recopiée est une
+ * frontière qu'on finit par recopier de travers.
+ */
+async function pagePubliable(pageId: string) {
+  const [p] = await db.select().from(pages).where(eq(pages.id, pageId)).limit(1);
+  if (!p || p.publiable === false) throw errors.notFound("Page introuvable");
+  return { page: p, livre: await livrePubliable(p.livreId) };
+}
+
+/**
+ * L'état de correction d'une page : le texte corrigé, ses éditions, et ce qui
+ * attend encore un relecteur.
+ *
+ * LE TEXTE CORRIGÉ EST DÉRIVÉ, base + corrections acceptées, à cet instant. Il
+ * n'a donc ni identifiant ni empreinte, et n'est pas citable : c'est le rôle du
+ * SCELLEMENT, qui en fait une ligne de `page_ocr`.
+ *
+ * Le public voit les corrections acceptées et un COMPTE de celles en attente,
+ * jamais leur contenu. Sans cela, « n'importe qui peut proposer » plus « tout le
+ * monde voit les propositions » ferait d'une page publique un canal de
+ * dégradation.
+ */
+async function etatCorrection(
+  pageId: string,
+  passes: { id: string; moteur: string; texte: string; createdAt: Date }[],
+) {
+  const lignes = await db
+    .select()
+    .from(pageCorrections)
+    .where(eq(pageCorrections.pageId, pageId));
+  if (lignes.length === 0) return null;
+
+  // Une base par lecture : les offsets d'une correction ne valent que dans la
+  // passe où ils ont été posés.
+  const acceptees = lignes.filter((x) => x.statut === "acceptee");
+  const enAttente = lignes.filter((x) => x.statut === "proposee").length;
+  const base = passes.find((p) => p.id === acceptees[0]?.baseOcrId);
+  const scelle = [...passes]
+    .reverse()
+    .find((p) => p.moteur === MOTEUR_RELECTURE);
+
+  return {
+    base: base?.id ?? null,
+    texte: base
+      ? appliquer(base.texte, acceptees.map((e) => ({
+          debut: e.debut, fin: e.fin, propose: e.propose,
+        })))
+      : null,
+    editions: acceptees
+      .sort((a, b) => a.debut - b.debut)
+      .map((e) => ({
+        id: e.id, debut: e.debut, fin: e.fin, lu: e.lu, propose: e.propose,
+        motif: e.motif,
+      })),
+    propositionsEnAttente: enAttente,
+    relectureScellee: scelle
+      ? {
+          ocrId: scelle.id,
+          le: scelle.createdAt,
+          // La dérive après scellement est AFFICHÉE, pas cachée : une dérive
+          // qu'on ne montre pas est celle qui mord.
+          correctionsDepuis: acceptees.filter(
+            (e) => e.createdAt > scelle.createdAt,
+          ).length,
+        }
+      : null,
   };
 }
 
@@ -286,9 +434,7 @@ export function bibliothequeRoute(): Hono<{ Variables: Variables }> {
     describeRoute({ description: "Une page, avec toutes ses océrisations", tags: ["bibliotheque"] }),
     optionalAuth,
     async (c) => {
-      const [p] = await db.select().from(pages).where(eq(pages.id, c.req.param("id"))).limit(1);
-      if (!p || p.publiable === false) throw errors.notFound("Page introuvable");
-      const l = await livrePubliable(p.livreId);
+      const { page: p, livre: l } = await pagePubliable(c.req.param("id"));
       const passes = await db
         .select({
           id: pageOcr.id,
@@ -316,6 +462,12 @@ export function bibliothequeRoute(): Hono<{ Variables: Variables }> {
           accordDocument: o.accordDocument == null ? null : o.accordDocument / 1000,
           reconnuLexique: o.reconnuLexique == null ? null : o.reconnuLexique / 1000,
         })),
+        /** Le texte corrigé vit SOUS SA PROPRE CLÉ, et surtout pas dans `ocr[]`.
+         *  Ce tableau porte l'affirmation « aucune n'est désignée juste », que la
+         *  visionneuse imprime dès qu'il en contient plus d'une. Une lecture
+         *  validée par un humain EST désignée meilleure — c'est légitime, et
+         *  c'est précisément pour ça qu'elle ne peut pas voyager là-dedans. */
+        correction: await etatCorrection(p.id, passes),
       });
     },
   );
@@ -468,6 +620,295 @@ export function bibliothequeRoute(): Hono<{ Variables: Variables }> {
         .orderBy(desc(ocrJobs.createdAt))
         .limit(1);
       return c.json({ id: deja!.id, status: deja!.status, deja: true }, 200);
+    },
+  );
+
+  // ── Corrections : proposer est ouvert, décider ne l'est pas ──────────────
+  app.post(
+    "/pages/:id/corrections",
+    describeRoute({ description: "Proposer une correction", tags: ["bibliotheque"] }),
+    requireAuth,
+    requireRealUser,
+    validate("json", nouvelleCorrection),
+    async (c) => {
+      const { page: p } = await pagePubliable(c.req.param("id"));
+      const auth = c.get("auth");
+      const userId = auth.kind === "user" ? auth.userId : "";
+      const b = c.req.valid("json");
+
+      // Le levier de modération existe déjà et n'était utilisé nulle part.
+      const [profil] = await db
+        .select({ jusqu: contributorProfiles.restrictedUntil })
+        .from(contributorProfiles)
+        .where(eq(contributorProfiles.userId, userId))
+        .limit(1);
+      if (profil?.jusqu && profil.jusqu > new Date()) {
+        throw errors.forbidden("votre compte est temporairement restreint");
+      }
+
+      const correctionId = id("corr");
+      // Rien n'est vérifié ici : les bornes, l'ancrage du `lu` dans la lecture,
+      // les plafonds et le chevauchement sont des règles de la BASE. Les
+      // reproduire ici donnerait deux vérités à tenir d'accord, et c'est
+      // toujours la copie applicative qui dérive.
+      await db.insert(pageCorrections).values({
+        id: correctionId,
+        pageId: p.id,
+        baseOcrId: b.baseOcrId,
+        debut: b.debut,
+        fin: b.fin,
+        lu: b.lu,
+        propose: b.propose,
+        motif: b.motif ?? null,
+        bbox: b.bbox ?? null,
+        proposeParUserId: userId,
+      });
+      return c.json({ id: correctionId, statut: "proposee" }, 201);
+    },
+  );
+
+  app.post(
+    "/corrections/:id/retrait",
+    describeRoute({ description: "Retirer sa propre proposition", tags: ["bibliotheque"] }),
+    requireAuth,
+    requireRealUser,
+    async (c) => {
+      // Sans retrait, une faute de frappe ne peut être réparée que par
+      // l'attention d'un relecteur — on dépenserait la ressource la plus rare
+      // du projet pour corriger un doigt qui a glissé.
+      const auth = c.get("auth");
+      const userId = auth.kind === "user" ? auth.userId : "";
+      const modifiees = await db
+        .update(pageCorrections)
+        .set({ statut: "retiree" })
+        .where(
+          and(
+            eq(pageCorrections.id, c.req.param("id")),
+            eq(pageCorrections.proposeParUserId, userId),
+            eq(pageCorrections.statut, "proposee"),
+          ),
+        )
+        .returning({ id: pageCorrections.id });
+      if (modifiees.length === 0) {
+        throw errors.notFound("Proposition introuvable, ou déjà décidée");
+      }
+      return c.json({ id: modifiees[0]!.id, statut: "retiree" });
+    },
+  );
+
+  app.get(
+    "/corrections",
+    describeRoute({ description: "La file de relecture", tags: ["bibliotheque"] }),
+    requireAuth,
+    requireCorpusRole("relecteur", "moderateur"),
+    validate("query", filtreCorrections),
+    async (c) => {
+      const q = c.req.valid("query");
+      const lignes = await db
+        .select({
+          correction: pageCorrections,
+          folio: pages.folio,
+          livreId: pages.livreId,
+          titre: livres.titre,
+          sourceRef: livres.sourceRef,
+          baseTexte: pageOcr.texte,
+          baseMoteur: pageOcr.moteur,
+        })
+        .from(pageCorrections)
+        .innerJoin(pages, eq(pages.id, pageCorrections.pageId))
+        .innerJoin(livres, eq(livres.id, pages.livreId))
+        .innerJoin(pageOcr, eq(pageOcr.id, pageCorrections.baseOcrId))
+        .where(
+          and(
+            eq(pageCorrections.statut, q.statut),
+            q.livre ? eq(pages.livreId, q.livre) : undefined,
+            q.page ? eq(pageCorrections.pageId, q.page) : undefined,
+            q.proposeur
+              ? eq(pageCorrections.proposeParUserId, q.proposeur)
+              : undefined,
+          ),
+        )
+        // Par page puis par position, JAMAIS par date : un ordre chronologique
+        // donne une file entièrement possédée par le dernier arrivé.
+        .orderBy(asc(pageCorrections.pageId), asc(pageCorrections.debut))
+        .limit(q.limit);
+
+      // Un histogramme par proposeur, pour qu'un flot se voie d'un coup d'œil
+      // plutôt qu'en faisant défiler. C'est un signal AFFICHÉ, jamais une porte.
+      const parProposeur = await db
+        .select({
+          proposeur: pageCorrections.proposeParUserId,
+          enAttente: sql<number>`count(*)::int`,
+        })
+        .from(pageCorrections)
+        .where(eq(pageCorrections.statut, "proposee"))
+        .groupBy(pageCorrections.proposeParUserId)
+        .orderBy(sql`count(*) desc`)
+        .limit(20);
+
+      return c.json({
+        data: lignes.map((l) => ({
+          id: l.correction.id,
+          pageId: l.correction.pageId,
+          folio: l.folio,
+          livre: { id: l.livreId, titre: l.titre, sourceRef: l.sourceRef },
+          baseOcrId: l.correction.baseOcrId,
+          baseMoteur: l.baseMoteur,
+          debut: l.correction.debut,
+          fin: l.correction.fin,
+          lu: l.correction.lu,
+          propose: l.correction.propose,
+          motif: l.correction.motif,
+          bbox: l.correction.bbox,
+          proposeParUserId: l.correction.proposeParUserId,
+          createdAt: l.correction.createdAt,
+          // Un relecteur qui lit « hontra → hoatra » sans sa phrase juge une
+          // chaîne, pas une page.
+          contexte: contexte(l.baseTexte, l.correction.debut, l.correction.fin),
+        })),
+        parProposeur,
+      });
+    },
+  );
+
+  app.post(
+    "/corrections/:id/avis",
+    describeRoute({ description: "Donner son avis de relecteur", tags: ["bibliotheque"] }),
+    requireAuth,
+    requireCorpusRole("relecteur"),
+    validate("json", nouvelAvis),
+    async (c) => {
+      const auth = c.get("auth");
+      const b = c.req.valid("json");
+      // « On ne relit pas sa propre proposition » et « cette proposition est
+      // déjà décidée » sont refusés par la base. Le seuil qui transforme des
+      // avis en décision y vit aussi : le porter à deux relecteurs de régions
+      // différentes sera une ligne de migration, pas un changement d'API.
+      await db.insert(pageCorrectionAvis).values({
+        id: id("avis"),
+        correctionId: c.req.param("id"),
+        relecteurUserId: auth.kind === "user" ? auth.userId : "",
+        avis: b.avis,
+        motif: b.motif ?? null,
+      });
+      const [apres] = await db
+        .select({ statut: pageCorrections.statut })
+        .from(pageCorrections)
+        .where(eq(pageCorrections.id, c.req.param("id")))
+        .limit(1);
+      return c.json({ id: c.req.param("id"), statut: apres?.statut }, 201);
+    },
+  );
+
+  app.post(
+    "/corrections/:id/revocation",
+    describeRoute({ description: "Révoquer une correction acceptée", tags: ["bibliotheque"] }),
+    requireAuth,
+    requireCorpusRole("relecteur"),
+    validate("json", z.object({ motif: z.string().min(3).max(500) }).strict()),
+    async (c) => {
+      // La SEULE sortie d'une acceptation erronée. Sans elle, un intervalle
+      // accepté à tort est verrouillé à vie : la ligne est immuable et la
+      // contrainte d'exclusion interdit toute rivale. Or l'erreur qu'on
+      // redoute — accepter une modernisation de l'orthographe — est exactement
+      // celle que ce corpus a déjà subie.
+      const auth = c.get("auth");
+      const modifiees = await db
+        .update(pageCorrections)
+        .set({
+          statut: "revoquee",
+          revocation: {
+            par: auth.kind === "user" ? auth.userId : "",
+            le: new Date().toISOString(),
+            motif: c.req.valid("json").motif,
+          },
+        })
+        .where(
+          and(
+            eq(pageCorrections.id, c.req.param("id")),
+            eq(pageCorrections.statut, "acceptee"),
+          ),
+        )
+        .returning({ id: pageCorrections.id });
+      if (modifiees.length === 0) {
+        throw errors.notFound("Correction introuvable, ou pas acceptée");
+      }
+      return c.json({ id: modifiees[0]!.id, statut: "revoquee" });
+    },
+  );
+
+  app.post(
+    "/pages/:id/relecture",
+    describeRoute({ description: "Sceller la lecture corrigée", tags: ["bibliotheque"] }),
+    requireAuth,
+    requireCorpusRole("relecteur"),
+    validate("json", z.object({ baseOcrId: z.string().min(1).max(60) }).strict()),
+    async (c) => {
+      // LE SCELLEMENT donne au texte corrigé ce que la vue dérivée n'a pas : un
+      // identifiant et une empreinte. C'est ce qui le rend citable, exportable,
+      // et c'est ce qui donnera enfin un sens à `accord_document_millimes`, nul
+      // partout depuis le début faute de transcription humaine.
+      const { page: p } = await pagePubliable(c.req.param("id"));
+      const auth = c.get("auth");
+      const baseOcrId = c.req.valid("json").baseOcrId;
+
+      const [base] = await db
+        .select()
+        .from(pageOcr)
+        .where(and(eq(pageOcr.id, baseOcrId), eq(pageOcr.pageId, p.id)))
+        .limit(1);
+      if (!base) throw errors.notFound("Lecture de base introuvable sur cette page");
+
+      const acceptees = await db
+        .select()
+        .from(pageCorrections)
+        .where(
+          and(
+            eq(pageCorrections.baseOcrId, baseOcrId),
+            eq(pageCorrections.statut, "acceptee"),
+          ),
+        )
+        .orderBy(asc(pageCorrections.debut));
+      if (acceptees.length === 0) {
+        throw errors.unprocessable(
+          "aucune correction acceptée sur cette lecture — il n'y a rien à sceller",
+        );
+      }
+
+      const texte = appliquer(
+        base.texte,
+        acceptees.map((e) => ({ debut: e.debut, fin: e.fin, propose: e.propose })),
+      );
+      const empreinte = sha256(texte);
+
+      // Idempotent sur l'empreinte : sceller une page inchangée rend le scellé
+      // existant plutôt qu'un doublon. `page_ocr` n'a pas d'unicité par
+      // conception — les passes multiples sont le principe — donc c'est ici
+      // qu'on distingue « sceller à nouveau » de « sceller deux fois ».
+      const [deja] = await db
+        .select({ id: pageOcr.id })
+        .from(pageOcr)
+        .where(and(eq(pageOcr.pageId, p.id), eq(pageOcr.texteSha256, empreinte)))
+        .limit(1);
+      if (deja) return c.json({ id: deja.id, deja: true }, 200);
+
+      const ocrId = id("ocr");
+      await db.insert(pageOcr).values({
+        id: ocrId,
+        pageId: p.id,
+        moteur: MOTEUR_RELECTURE,
+        texte,
+        texteSha256: empreinte,
+        produitParUserId: auth.kind === "user" ? auth.userId : null,
+        meta: {
+          base_ocr_id: baseOcrId,
+          base_moteur: base.moteur,
+          corrections: acceptees.map((e) => e.id),
+          corrections_sha256: sha256(acceptees.map((e) => e.id).join(",")),
+          scelle_le: new Date().toISOString(),
+        },
+      });
+      return c.json({ id: ocrId, corrections: acceptees.length }, 201);
     },
   );
 

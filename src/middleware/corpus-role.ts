@@ -75,7 +75,7 @@ export function requireCorpusRole(...roles: string[]): MiddlewareHandler {
       throw errors.unauthorized("This endpoint requires a signed-in person");
     }
     const held = await db
-      .select({ role: corpusRoles.role })
+      .select({ role: corpusRoles.role, scope: corpusRoles.scope })
       .from(corpusRoles)
       .leftJoin(orgMembers, eq(orgMembers.orgId, corpusRoles.orgId))
       .where(
@@ -87,10 +87,20 @@ export function requireCorpusRole(...roles: string[]): MiddlewareHandler {
             eq(orgMembers.userId, auth.userId),
           ),
         ),
-      )
-      .limit(1);
+      );
     if (held.length === 0) {
       throw errors.forbidden(`Requires corpus role: ${roles.join(" or ")}`);
+    }
+    // `scope` existe depuis le premier jour — « relecteur pour un dialecte » —
+    // et n'a JAMAIS été lu ici. Un rôle accordé avec une portée donnait donc
+    // silencieusement le pouvoir sur tout le site, à quelqu'un qui croyait
+    // l'avoir restreint. On échoue fermé plutôt que d'honorer à moitié : le jour
+    // où la portée sera appliquée, elle le sera à cet endroit précis, et pas
+    // dans chaque route qui aurait oublié de la regarder.
+    if (held.every((h) => h.scope != null)) {
+      throw errors.forbidden(
+        "ce rôle porte une portée que ce contrôle ne sait pas encore appliquer",
+      );
     }
     return next();
   };
