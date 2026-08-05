@@ -281,6 +281,31 @@ for (const l of lot.livres) {
   );
 }
 
+/**
+ * Les octets qu'aucune page ne référence plus.
+ *
+ * `images` n'a volontairement pas de clé étrangère — l'adressage par contenu
+ * veut qu'une même image serve plusieurs pages, et une FK vers l'une d'elles
+ * serait fausse. Mais rien ne ramasse ce que la cascade laisse : supprimer un
+ * livre efface ses pages et laisse ses octets en base, indéfiniment.
+ *
+ * La route ne les sert plus (elle exige une référence servable), donc ce n'est
+ * pas une fuite. C'est en revanche un RETRAIT INCOMPLET : quand un ayant droit
+ * exige la suppression d'un ouvrage, « plus personne ne peut y accéder » n'est
+ * pas « nous ne l'avons plus ». D'où ce balayage, à lancer après une
+ * suppression.
+ */
+if (process.argv.includes("--purger-orphelines")) {
+  const supprimees = await db.execute<{ sha256: string }>(sql`
+    delete from images i
+     where not exists (
+             select 1 from pages p
+              where p.image_sha256 = i.sha256 or p.vignette_sha256 = i.sha256)
+    returning i.sha256
+  `);
+  console.log(`${supprimees.length} image(s) orpheline(s) supprimée(s)`);
+}
+
 if (!ESSAI) {
   const [compte] = await db
     .select({
