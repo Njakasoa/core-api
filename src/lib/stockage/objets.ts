@@ -148,18 +148,28 @@ export async function ecrireObjet(
   octets: Uint8Array,
   mime: string,
   classe: Classe,
-  options: { meta?: Record<string, unknown>; tx?: typeof db } = {},
+  options: {
+    meta?: Record<string, unknown>;
+    tx?: typeof db;
+    /** Le compte qui verse. Nul pour un script. Voir `objets.depose_par_user_id`. */
+    deposant?: string | null;
+  } = {},
 ): Promise<string> {
   const sha256 = sha256Bytes(octets);
   const depot = depotParDefaut();
   const ex = options.tx ?? db;
-  const meta = options.meta ?? {};
+  // SÉRIALISÉ ICI, ET PAS LAISSÉ AU PILOTE. `postgres` ne sait pas transmettre
+  // un objet JavaScript comme paramètre : il appelle `Buffer.byteLength` dessus
+  // et lève « The "string" argument must be of type string ». Le défaut dormait
+  // — aucun chemin de code n'avait encore versé d'objet AVEC des métadonnées.
+  const meta = JSON.stringify(options.meta ?? {});
+  const deposant = options.deposant ?? null;
 
   if (depot === "r2") {
     await depotR2.ecrire(classe, sha256, octets, mime);
     await ex.execute(sql`
-      insert into objets (sha256, mime, octets, classe, contenu, stockage, meta)
-      values (${sha256}, ${mime}, ${octets.byteLength}, ${classe}, null, 'r2', ${meta})
+      insert into objets (sha256, mime, octets, classe, contenu, stockage, meta, depose_par_user_id)
+      values (${sha256}, ${mime}, ${octets.byteLength}, ${classe}, null, 'r2', ${meta}::jsonb, ${deposant})
       on conflict (sha256) do nothing
     `);
   } else {
@@ -167,12 +177,32 @@ export async function ecrireObjet(
     // lui ferait appliquer la syntaxe d'entrée bytea et stockerait silencieusement
     // autre chose. Les octets passent par un fragment `sql`.
     await ex.execute(sql`
-      insert into objets (sha256, mime, octets, classe, contenu, stockage, meta)
-      values (${sha256}, ${mime}, ${octets.byteLength}, ${classe}, ${octets}, 'db', ${meta})
+      insert into objets (sha256, mime, octets, classe, contenu, stockage, meta, depose_par_user_id)
+      values (${sha256}, ${mime}, ${octets.byteLength}, ${classe}, ${octets}, 'db', ${meta}::jsonb, ${deposant})
       on conflict (sha256) do nothing
     `);
   }
   return sha256;
+}
+
+/**
+ * Ce qu'un compte a versé sur la fenêtre glissante, en octets.
+ *
+ * GLISSANTE, ET PAS CALENDAIRE : un plafond qui se réinitialise à minuit se
+ * contourne en attendant le changement de jour, et double le débit à cheval sur
+ * deux dates.
+ */
+export async function octetsVersesRecemment(
+  userId: string,
+  fenetreHeures: number,
+): Promise<number> {
+  const [r] = await db.execute<{ total: string }>(sql`
+    select coalesce(sum(octets), 0)::bigint as total
+      from objets
+     where depose_par_user_id = ${userId}
+       and created_at > now() - (${fenetreHeures} || ' hours')::interval
+  `);
+  return Number(r?.total ?? 0);
 }
 
 /**

@@ -31,6 +31,7 @@ export {
   ficheObjet,
   lireObjet,
   objetServable,
+  octetsVersesRecemment,
   oublierGardiens,
   supprimerObjet,
   type Gardien,

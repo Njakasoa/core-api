@@ -500,12 +500,51 @@ export const livres = pgTable(
     publiable: boolean("publiable").notNull().default(false),
     motifNonPubliable: text("motif_non_publiable"),
     urlNotice: text("url_notice"),
+
+    /**
+     * Qui a déposé ce livre. NUL pour les six volumes Gallica, versés par script
+     * avant que quiconque puisse en déposer.
+     *
+     * Depuis que le téléversement est ouvert aux contributeurs, savoir de qui
+     * vient un ouvrage n'est pas une commodité d'affichage : c'est ce qui permet
+     * de le retirer entièrement quand son déposant le demande, et de savoir à
+     * qui parler quand une revendication de droits arrive.
+     */
+    deposeParUserId: text("depose_par_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+
+    /**
+     * L'état de la MODÉRATION — et surtout pas celui des droits.
+     *
+     * `publiable` dit « avons-nous le droit », `statut_moderation` dit
+     * « quelqu'un a-t-il vérifié ». Les confondre en une seule colonne ferait
+     * disparaître la question qu'on ne pose pas : un ouvrage peut être
+     * parfaitement libre de droits et n'avoir été relu par personne, et c'est
+     * exactement l'état dans lequel arrive tout dépôt de contributeur.
+     *
+     * Un livre n'est LISTÉ publiquement qu'une fois accepté. Ses images, elles,
+     * restent joignables par leur empreinte avant cela — c'est ce qui permet au
+     * déposant de se relire et au modérateur de juger. L'empreinte imprévisible
+     * est la capacité, comme partout ailleurs dans ce dépôt ; ce que la
+     * modération protège, c'est la mise en avant, pas le secret.
+     */
+    statutModeration: text("statut_moderation").notNull().default("en_attente"),
+    /** Pourquoi refusé. Un refus sans motif est un refus qu'on ne peut pas corriger. */
+    motifModeration: text("motif_moderation"),
+    modereParUserId: text("modere_par_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    modereLe: timestamp("modere_le", { withTimezone: true }),
     createdAt,
     updatedAt,
   },
   (t) => [
     uniqueIndex("livres_source_uq").on(t.source, t.sourceRef),
     index("livres_publiable_idx").on(t.publiable, t.id),
+    /** La file de modération, et la liste publique, se lisent par cet index. */
+    index("livres_moderation_idx").on(t.statutModeration, t.createdAt),
+    index("livres_depose_par_idx").on(t.deposeParUserId),
   ],
 );
 
@@ -637,9 +676,28 @@ export const objets = pgTable(
      * des images obligeraient chaque nouveau type de fichier à en ajouter.
      */
     meta: jsonb("meta").$type<Record<string, unknown>>().notNull().default({}),
+    /**
+     * Qui a déposé ces octets. NUL pour tout ce qui vient d'un script.
+     *
+     * LE DÉPÔT NE CONNAÎT PAS SES CLIENTS, MAIS IL CONNAÎT SES DÉPOSANTS.
+     * Ce n'est pas la même chose : la fonctionnalité qui se sert de l'objet
+     * reste hors de cette table, mais le stockage lui-même a deux besoins que
+     * personne d'autre ne peut couvrir — plafonner ce qu'un compte peut verser,
+     * et rendre les octets d'une personne quand elle demande leur retrait.
+     * Sans cette colonne, une route de téléversement ouverte est un robinet
+     * qu'on ne peut ni mesurer ni fermer.
+     */
+    deposeParUserId: text("depose_par_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
     createdAt,
   },
-  (t) => [index("objets_stockage_idx").on(t.stockage, t.classe)],
+  (t) => [
+    index("objets_stockage_idx").on(t.stockage, t.classe),
+    /** Le quota se calcule par cet index : somme des octets d'un compte sur une
+     *  fenêtre glissante. Sans lui, chaque téléversement balaierait la table. */
+    index("objets_deposant_idx").on(t.deposeParUserId, t.createdAt),
+  ],
 );
 
 /**

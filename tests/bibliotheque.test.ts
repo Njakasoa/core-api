@@ -112,10 +112,26 @@ async function creerLivre(h: Record<string, string>, corps: object) {
 }
 
 describe("qui peut verser un livre", () => {
-  test("un compte ordinaire ne le peut pas", async () => {
+  /**
+   * LA RÈGLE A CHANGÉ, ET CE TEST DIT LAQUELLE.
+   *
+   * Il exigeait un 403 : seul un curateur pouvait verser. Le dépôt est
+   * désormais ouvert à tout compte réel, parce que sans lui les ~400 angano
+   * manquants restent inatteignables — aucun corpus libre de droits ne les
+   * contient. Ce qui a remplacé le refus n'est pas rien : le livre existe mais
+   * n'est LISTÉ nulle part avant d'avoir été jugé, et c'est cela qu'on vérifie
+   * ici plutôt qu'un code d'état.
+   */
+  test("un compte ordinaire dépose — mais rien n'est publié pour autant", async () => {
     const moi = await compte();
-    const { statut } = await creerLivre(moi.headers, LIVRE_LIBRE);
-    expect(statut).toBe(403);
+    const { statut, corps } = await creerLivre(moi.headers, {
+      ...LIVRE_LIBRE,
+      sourceRef: `ordinaire-${Date.now()}`,
+    });
+    expect(statut).toBe(201);
+    expect((corps as { statutModeration?: string }).statutModeration).toBe("en_attente");
+    // Le public ne le voit pas — c'est la moitié qui compte.
+    expect((await app.request(`/v1/bibliotheque/livres/${corps.id}`)).status).toBe(404);
   });
 
   test("un anonyme non plus, et il reçoit 401 et non 403", async () => {
@@ -127,10 +143,17 @@ describe("qui peut verser un livre", () => {
     expect(r.status).toBe(401);
   });
 
-  test("un curateur le peut", async () => {
+  test("un curateur verse, et son livre est public d'emblée", async () => {
+    // Son travail EST la vérification : le faire passer par une file qu'il
+    // viderait seul n'ajouterait rien.
     const cur = await compte("curateur");
-    const { statut } = await creerLivre(cur.headers, LIVRE_LIBRE);
+    const { statut, corps } = await creerLivre(cur.headers, {
+      ...LIVRE_LIBRE,
+      sourceRef: `curateur-${Date.now()}`,
+    });
     expect(statut).toBe(201);
+    expect((corps as { statutModeration?: string }).statutModeration).toBe("accepte");
+    expect((await app.request(`/v1/bibliotheque/livres/${corps.id}`)).status).toBe(200);
   });
 
   test("un livre non publiable doit dire pourquoi", async () => {

@@ -68,26 +68,57 @@ export const requireRealUser: MiddlewareHandler = async (c, next) => {
  * is an institution, and its members act for it. Both are resolved here so a
  * caller never has to say which hat they are wearing.
  */
+/**
+ * Les rôles qu'une personne détient réellement, portées comprises.
+ *
+ * Extrait de `requireCorpusRole` parce que deux appelants en ont besoin sans
+ * pouvoir se placer en intergiciel : l'interface, qui doit savoir quoi afficher
+ * AVANT d'essuyer un 403, et les routes dont la visibilité dépend du rôle plutôt
+ * que d'en dépendre entièrement — un déposant voit son livre en attente, un
+ * modérateur voit ceux de tout le monde, le public n'en voit aucun.
+ *
+ * Une seule requête pour les deux voies d'accès : le rôle tenu par la personne,
+ * et celui tenu par une organisation dont elle est membre.
+ */
+export async function rolesDetenus(
+  userId: string,
+): Promise<{ role: string; scope: unknown }[]> {
+  return db
+    .select({ role: corpusRoles.role, scope: corpusRoles.scope })
+    .from(corpusRoles)
+    .leftJoin(orgMembers, eq(orgMembers.orgId, corpusRoles.orgId))
+    .where(
+      and(
+        isNull(corpusRoles.revokedAt),
+        or(eq(corpusRoles.userId, userId), eq(orgMembers.userId, userId)),
+      ),
+    );
+}
+
+/**
+ * Vrai si la personne détient l'un de ces rôles, SANS portée.
+ *
+ * La portée fait échouer fermé ici comme dans l'intergiciel : un rôle accordé
+ * « pour un dialecte » ne doit pas donner le pouvoir sur tout le site parce que
+ * l'appelant a oublié de la regarder.
+ */
+export async function detientRole(
+  userId: string,
+  ...roles: string[]
+): Promise<boolean> {
+  const tenus = (await rolesDetenus(userId)).filter((r) => roles.includes(r.role));
+  return tenus.length > 0 && tenus.some((r) => r.scope == null);
+}
+
 export function requireCorpusRole(...roles: string[]): MiddlewareHandler {
   return async (c, next) => {
     const auth = c.get("auth");
     if (!auth || auth.kind !== "user") {
       throw errors.unauthorized("This endpoint requires a signed-in person");
     }
-    const held = await db
-      .select({ role: corpusRoles.role, scope: corpusRoles.scope })
-      .from(corpusRoles)
-      .leftJoin(orgMembers, eq(orgMembers.orgId, corpusRoles.orgId))
-      .where(
-        and(
-          isNull(corpusRoles.revokedAt),
-          inArray(corpusRoles.role, roles),
-          or(
-            eq(corpusRoles.userId, auth.userId),
-            eq(orgMembers.userId, auth.userId),
-          ),
-        ),
-      );
+    const held = (await rolesDetenus(auth.userId)).filter((h) =>
+      roles.includes(h.role),
+    );
     if (held.length === 0) {
       throw errors.forbidden(`Requires corpus role: ${roles.join(" or ")}`);
     }
