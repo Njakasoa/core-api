@@ -290,10 +290,28 @@ export const tales = pgTable(
     dialecte: text("dialecte"),
     regionCollecte: text("region_collecte"),
     lieuCollecte: text("lieu_collecte"),
+    /** Quand le contributeur a entendu ce conte — « dans mon enfance »,
+     *  « vers 1988 ». Champ libre : une date exacte serait inventée, et une
+     *  approximation vraie vaut mieux qu'une précision fausse.
+     *  Son propre champ, et non un ajout à `lieuCollecte` : un lieu n'est pas
+     *  une date, et le corpus lit ce champ-là. */
+    quandEntendu: text("quand_entendu"),
     titreSource: text("titre_source").notNull(),
     titre: text("titre"),
     genreSource: text("genre_source"),
     familleRecitId: text("famille_recit_id").references(() => taleFamilies.id),
+    /** L'amorce dont le contributeur dit que ce récit est une version —
+     *  « renel_001 ». C'est une PROVENANCE DÉCLARÉE, pas le regroupement lui-même :
+     *  `familleRecitId` reste dérivé, arbitré par un curateur.
+     *
+     *  Sans cette colonne, l'information était perdue à la saisie : l'écran sait
+     *  que le conte est une variante de renel_001, l'affiche, et le POST ne le
+     *  transmettait pas. Mesuré : 622 contes en base, 0 avec une famille. Deux
+     *  récitations d'un même angano ne partagent presque aucun 5-gramme, donc
+     *  aucune déduplication ne rattrape l'omission — et une variante qui tombe
+     *  en test pendant que son jumeau est en train donne une évaluation fausse
+     *  que rien ne révèle. */
+    amorceId: text("amorce_id"),
     /** Single value by law, kept as a column so the export cannot forget it. */
     statutRecit: text("statut_recit").notNull().default("EXPRESSION_DU_FOLKLORE"),
     statutFixation: text("statut_fixation").notNull().default("LICENCE_CC"),
@@ -416,6 +434,447 @@ export const taleConsents = pgTable(
   (t) => [index("tale_consent_tale_idx").on(t.taleId, t.id)],
 );
 
+// ═══════════════════════════════════════════════════════════════════════════
+// Bibliothèque — les livres numérisés, leurs pages, leurs images
+//
+// POURQUOI ELLE EXISTE
+// Le dépôt de corpus porte 44 volumes en texte, dont Callet 1908 (724 439 mots
+// du bon registre). Ils sont inutilisables tels quels : le locuteur du projet a
+// jugé illisibles les 40 phrases qu'on lui a soumises, y compris celles notées
+// 82 %. Le texte seul ne permet ni de vérifier, ni de corriger, ni même de
+// savoir ce que la page disait. La bibliothèque remet la page sous les yeux.
+//
+// LE FAIT QUI CONDITIONNE TOUT LE RESTE
+// Un seul livre a ses images sur disque, et il n'est pas publiable. Les 1 782
+// pages Gallica ont été téléchargées puis JETÉES — fetch_gallica.py écrivait un
+// JPEG temporaire, appelait tesseract, puis faisait tmp.unlink(). Elles sont
+// reconstructibles par une URL IIIF déterministe, au prix d'un anti-robot.
+// Ces tables ne supposent donc AUCUNE image : un livre existe, ses pages
+// existent, et l'image arrive plus tard ou jamais.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Un ouvrage numérisé.
+ *
+ * LES DROITS SONT PORTÉS PAR LE LIVRE **ET** PAR LA PAGE
+ * `ny_voary_1980` déclare `publiable: false` sur 39 de ses 41 fiches et
+ * `publiable: true` sur 2. Poser le régime au seul niveau du livre reproduirait
+ * exactement l'erreur déjà commise dans build_dataset_deux_etapes.py, où 33
+ * documents non publiables sont sortis étiquetés « domaine public ». Le livre
+ * porte donc un défaut, et la page peut le restreindre — jamais l'élargir.
+ *
+ * `statutRecit` et `statutFixation` restent deux colonnes distinctes, comme
+ * dans `tales` : le récit est une expression du folklore (loi 94-036 art. 5,
+ * 15°), seule la fixation porte un droit d'auteur. Un livre de 1908 peut être
+ * dans le domaine public sans que les récits qu'il contient cessent d'appartenir
+ * à ceux qui les racontent.
+ */
+export const livres = pgTable(
+  "livres",
+  {
+    id: text("id").primaryKey(),
+    /** L'identifiant de la source : « bpt6k1502294r » chez Gallica,
+     *  « tantaramyandria00antagoog » chez archive.org. C'est lui qui permet de
+     *  reconstruire l'URL IIIF d'une page sans rien stocker de plus. */
+    sourceRef: text("source_ref").notNull(),
+    source: text("source").notNull(), // gallica | archive_org | scan_local | autre
+    titre: text("titre").notNull(),
+    auteur: text("auteur"),
+    annee: integer("annee"),
+    /** L'année de FIN, pour les ouvrages parus sur plusieurs millésimes.
+     *  `bpt6k327620j` porte « 1930-1932 » dans le corpus, et une colonne entière
+     *  ne peut pas le dire. Écraser la fourchette en `1930` serait une coercition
+     *  muette ; la colonne existe pour que la seconde borne survive. */
+    anneeFin: integer("annee_fin"),
+    langue: text("langue").notNull().default("plt_Latn"),
+    /** Le nombre de pages du livre. Peut être connu sans qu'aucune image le soit. */
+    pagesTotal: integer("pages_total"),
+    statutRecit: text("statut_recit").notNull().default("EXPRESSION_DU_FOLKLORE"),
+    statutFixation: text("statut_fixation").notNull(), // DOMAINE_PUBLIC | SOUS_DROITS | LICENCE_CC | SOUS_DROITS_A_ETABLIR
+    licence: text("licence").notNull(),
+    /** Ce que la source a réellement affiché, recopié tel quel — jamais résumé.
+     *  « domaine public (notice Gallica, lue le 2026-08-02) » n'est pas la même
+     *  affirmation que « domaine public », et la seconde perd qui l'a dit. */
+    licenceConstatee: text("licence_constatee"),
+    /** Le défaut, restreignable page par page, jamais élargissable. */
+    publiable: boolean("publiable").notNull().default(false),
+    motifNonPubliable: text("motif_non_publiable"),
+    urlNotice: text("url_notice"),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    uniqueIndex("livres_source_uq").on(t.source, t.sourceRef),
+    index("livres_publiable_idx").on(t.publiable, t.id),
+  ],
+);
+
+/**
+ * Une page d'un livre.
+ *
+ * `folio` est le numéro de vue de la source — le « f0012 » de Gallica — et non
+ * le numéro imprimé sur le papier, qui peut manquer, se répéter ou repartir à
+ * zéro. Les deux sont gardés quand on les connaît : confondre la vue et la page
+ * imprimée rend une citation invérifiable.
+ *
+ * `imageSha256` est nul tant que l'image n'a pas été récupérée, ce qui est
+ * l'état de 1 782 pages sur 1 783 aujourd'hui. Une page sans image reste une
+ * page : elle porte son texte océrisé et sa qualité mesurée.
+ */
+export const pages = pgTable(
+  "pages",
+  {
+    id: text("id").primaryKey(),
+    livreId: text("livre_id")
+      .notNull()
+      .references(() => livres.id, { onDelete: "cascade" }),
+    /** Numéro de VUE dans la source, celui qui construit l'URL IIIF. */
+    folio: integer("folio").notNull(),
+    /** Numéro IMPRIMÉ sur la page, quand il existe. Texte et non entier :
+     *  « xii », « 12bis » et « — » sont des numéros de page réels. */
+    pageImprimee: text("page_imprimee"),
+    /** La PREMIÈRE lecture, gardée pour l'affichage de liste et le compte
+     *  `pagesAvecTexte`. Ce n'est plus la lecture citable : celle-là est une
+     *  ligne de `page_ocr`, immuable par déclencheur, et c'est la seule qu'une
+     *  correction peut viser.
+     *
+     *  La distinction n'est pas théorique. `scripts/seed-bibliotheque.ts` fait
+     *  `onConflictDoUpdate({ set: { texteOcr … } })` : rejouer le versement
+     *  après une nouvelle océrisation réécrit cette colonne SUR PLACE. Des
+     *  offsets enregistrés dedans deviendraient faux en silence. */
+    texteOcr: text("texte_ocr"),
+    ocrMoteur: text("ocr_moteur"), // tesseract-fra | vision | humain
+    /** Score de detecter_ocr.py — bits par caractère, mesuré SANS lexique.
+     *  Repères mesurés : Global Voices propre 1,84 · mg.wikipedia 2,36 ·
+     *  Gallica folklore 2,54 · Callet 1908 4,15. */
+    ocrBitsParCaractere: integer("ocr_bits_par_caractere_millimes"),
+    imageSha256: text("image_sha256"),
+    imageLargeur: integer("image_largeur"),
+    imageHauteur: integer("image_hauteur"),
+    /** La même page en 280 px, pour la grille.
+     *  Une grille de 166 folios en images pleines fait 41 Mo et 166 bitmaps
+     *  décodés ; `loading="lazy"` diffère le chargement, il ne le réduit pas.
+     *  Son empreinte n'est jamais celle de `imageSha256` : la route qui sert les
+     *  octets doit donc regarder LES DEUX colonnes, faute de quoi chaque
+     *  vignette répond 404. */
+    vignetteSha256: text("vignette_sha256"),
+    /** Une page peut être moins publiable que son livre, jamais davantage. */
+    publiable: boolean("publiable"),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    uniqueIndex("pages_livre_folio_uq").on(t.livreId, t.folio),
+    index("pages_image_idx").on(t.imageSha256),
+    index("pages_vignette_idx").on(t.vignetteSha256),
+  ],
+);
+
+/**
+ * Les octets d'un objet stocké, adressés par leur empreinte. TOUTES FONCTIONNALITÉS.
+ *
+ * ELLE S'APPELAIT `images` ET N'A JAMAIS RANGÉ QUE DES OCTETS
+ * Le nom la donnait à la bibliothèque ; l'adressage par contenu, lui, ne connaît
+ * pas de propriétaire. La suite du projet stockera des photos de cahiers
+ * envoyées par les contributeurs, des pièces jointes, des clips — et chacune
+ * aurait redemandé sa table, sa route et son cache, avec l'occasion de se
+ * tromper à chaque fois. Les droits restent chez le propriétaire : c'est le
+ * registre de gardiens de lib/stockage/objets.ts, pas une colonne d'ici.
+ *
+ * L'adressage par sha256 reprend l'argument déjà écrit et justifié dans
+ * routes/tts.ts : une empreinte imprévisible EST l'autorisation, parce qu'une
+ * balise <img> ne porte pas de jeton. Il donne en prime la déduplication — deux
+ * fonctionnalités qui manipulent les mêmes octets partagent l'objet.
+ *
+ * LE COÛT DU `bytea`, DIT PLUTÔT QUE TU : il gonfle les WAL, les sauvegardes et
+ * la réplication du volume stocké, et chaque lecture est une ligne entière sans
+ * requête par intervalle. Pour quelques milliers de pages c'est le bon
+ * compromis ; le jour où chaque contributeur photographie un cahier, ce ne l'est
+ * plus. D'où `stockage`, et d'où le fait que le passage à R2 n'ait touché ni le
+ * contrat d'URL, ni les lignes, ni les clients.
+ */
+export const objets = pgTable(
+  "objets",
+  {
+    sha256: text("sha256").primaryKey(),
+    mime: text("mime").notNull(),
+    octets: integer("octets").notNull(),
+    /**
+     * `original` ou `derive` — ce qui se régénère et ce qui ne se régénère pas.
+     *
+     * Une vignette, un transcodage, une synthèse vocale se refabriquent depuis
+     * leur source ; un scan, une photo de cahier, non. C'est la seule
+     * distinction dont l'infrastructure ait besoin : les règles de cycle de vie
+     * travaillent par préfixe, donc `derive/` peut être purgé sans qu'aucune
+     * règle ne puisse atteindre `original/` par accident. La classe entre dans
+     * le nom de l'objet — voir lib/stockage/cles.ts.
+     */
+    classe: text("classe").notNull().default("original"),
+    /**
+     * Les octets eux-mêmes, quand ils sont ici. `bytea`, déclaré `text` côté
+     * Drizzle. NUL quand `stockage = 'r2'` : c'est le déménagement, pas une
+     * perte, et `objets_stockage_ck` interdit les deux états incohérents.
+     */
+    contenu: text("contenu"),
+    /**
+     * Où sont les octets de CETTE ligne — `db` ou `r2`.
+     *
+     * PAR LIGNE, ET SURTOUT PAS PAR VARIABLE D'ENVIRONNEMENT
+     * Un drapeau global bascule d'un coup une base à moitié migrée : les lignes
+     * encore en `bytea` deviennent illisibles à l'instant où on le tourne, et
+     * rien ne le signale — la route rend 404, le navigateur affiche du blanc,
+     * aucun journal ne dit pourquoi. En le portant sur la ligne, une base
+     * mi-chemin est un état SERVABLE : chaque objet se lit là où il est
+     * réellement, et `OBJETS_STOCKAGE` ne décide que de la destination des
+     * prochains. C'est aussi ce qui rend le retour en arrière possible sans
+     * rien réécrire.
+     */
+    stockage: text("stockage").notNull().default("db"),
+    /**
+     * Ce que le propriétaire sait de l'objet et que le dépôt n'a pas à
+     * connaître : dimensions d'une image, durée d'un clip, provenance. Des
+     * colonnes `largeur`/`hauteur` dans une table qui ne range plus seulement
+     * des images obligeraient chaque nouveau type de fichier à en ajouter.
+     */
+    meta: jsonb("meta").$type<Record<string, unknown>>().notNull().default({}),
+    createdAt,
+  },
+  (t) => [index("objets_stockage_idx").on(t.stockage, t.classe)],
+);
+
+/**
+ * Une océrisation d'une page. APPEND-ONLY, et jamais une vérité.
+ *
+ * Chaque passe — tesseract, modèle de vision, transcription humaine — écrit une
+ * ligne. Aucune n'écrase la précédente, parce qu'on ne sait pas laquelle a
+ * raison : deux correcteurs d'OCR entraînés sur ce corpus ont déjà été REJETÉS
+ * après avoir rendu le texte moins fidèle au document (74,96 % → 70,18 %) tout
+ * en le rendant plus reconnaissable par le lexique (59,82 % → 76,46 %).
+ *
+ * `accordDocument` est la seule mesure qui décide, et elle n'existe que pour les
+ * pages dont on possède une transcription humaine. Là où elle manque, la colonne
+ * reste nulle — et une colonne nulle est une réponse : on ne sait pas.
+ */
+export const pageOcr = pgTable(
+  "page_ocr",
+  {
+    id: text("id").primaryKey(),
+    pageId: text("page_id")
+      .notNull()
+      .references(() => pages.id, { onDelete: "cascade" }),
+    moteur: text("moteur").notNull(), // tesseract-fra | vision:<modele> | humain
+    texte: text("texte").notNull(),
+    texteSha256: text("texte_sha256").notNull(),
+    /** Millièmes, pour comparer exactement sans flottant. */
+    accordDocumentMillimes: integer("accord_document_millimes"),
+    reconnuLexiqueMillimes: integer("reconnu_lexique_millimes"),
+    /** Ce que le moteur a dit de sa propre incertitude, quand il en dit quelque
+     *  chose. Un modèle de vision qui signale ses doutes vaut mieux qu'un score
+     *  global, et se garde tel quel plutôt que résumé.
+     *
+     *  Un DÉSACCORD entre deux passes se range ici, et non dans une colonne
+     *  scalaire : un scalaire par page dit « celle-ci a gagné », alors qu'un
+     *  désaccord localisé dit « regarde ici », avec de quoi retrouver l'endroit
+     *  sur le papier. La boîte englobante vient du TSV de tesseract. */
+    incertitudes: jsonb("incertitudes")
+      .$type<(string | DesaccordOcr)[]>()
+      .notNull()
+      .default([]),
+    /** L'IDENTITÉ de la passe : version du moteur, empreinte du modèle de langue,
+     *  --psm, drapeaux de dictionnaire, empreinte de l'image lue.
+     *
+     *  Sans elle, deux passes ne sont PAS comparables — `tesseract-mlg` depuis
+     *  `tessdata` et depuis `tessdata_best` sont deux modèles différents, et
+     *  `--psm 3` ne lit pas comme `--psm 6`. Refuser de désigner un vainqueur
+     *  entre des lectures non reproductibles, ce serait refuser de classer des
+     *  choses qui n'ont jamais été comparables. */
+    meta: jsonb("meta").$type<Record<string, unknown>>().notNull().default({}),
+    produitParUserId: text("produit_par_user_id").references(() => users.id),
+    createdAt,
+  },
+  (t) => [index("page_ocr_page_idx").on(t.pageId, t.createdAt)],
+);
+
+/**
+ * Une correction proposée sur un passage précis d'une lecture précise.
+ *
+ * CE QU'ELLE CORRIGE N'EST PAS « LA PAGE », C'EST UNE PASSE
+ * `baseOcrId` désigne la ligne de `page_ocr` dans laquelle `debut` et `fin`
+ * découpent. Sans elle, une correction acceptée sur la lecture `tesseract-fra`
+ * s'appliquerait à des offsets qui, dans la lecture `tesseract-eng`, tombent au
+ * milieu d'un autre mot. Il y a donc une version corrigée PAR LECTURE, jamais
+ * une par page : en fusionner deux reviendrait à désigner une gagnante, ce que
+ * ce module refuse partout ailleurs.
+ *
+ * `lu` recopie la sous-chaîne d'origine, et la base VÉRIFIE qu'elle correspond
+ * (déclencheur `page_corrections_ancree`). L'écart n'est donc pas « détectable »,
+ * il est inécrivable. C'est aussi le seul endroit où se fait la conversion entre
+ * les offsets 0-indexés demi-ouverts de l'API et le `substr` 1-indexé de
+ * Postgres — l'erreur de un que toute implémentation commet, écrite une fois.
+ *
+ * UN INTERVALLE VIDE EST REFUSÉ. Un `int4range` vide ne chevauche rien, donc
+ * deux insertions acceptées au même point passeraient la contrainte d'exclusion
+ * et s'appliqueraient dans un ordre indéterminé. Pour insérer un mot manquant,
+ * on étend l'intervalle sur un mot voisin.
+ *
+ * `propose = ''` est LÉGITIME : c'est une suppression, et supprimer du bruit
+ * inséré est la correction la plus fréquente sur ces pages.
+ *
+ * `propose` n'est JAMAIS normalisé ni rogné. Normaliser vers une forme canonique
+ * est, en miniature, la faute qui a fait rejeter deux correcteurs d'OCR sur ce
+ * corpus : ils gagnaient 16,6 points de reconnaissance lexicale en perdant 4,8
+ * points de fidélité au document.
+ *
+ * LA CASCADE EST UN CHOIX DE DROITS. `lu` et `propose` sont des copies du texte
+ * de la page. Un retrait exigé par un ayant droit qui laisserait ces lignes
+ * debout garderait la page retirée en base sous un autre nom de table.
+ */
+export const pageCorrections = pgTable(
+  "page_corrections",
+  {
+    id: text("id").primaryKey(),
+    pageId: text("page_id")
+      .notNull()
+      .references(() => pages.id, { onDelete: "cascade" }),
+    baseOcrId: text("base_ocr_id")
+      .notNull()
+      .references(() => pageOcr.id, { onDelete: "cascade" }),
+    /** Offsets en points de code, 0-indexés, demi-ouverts [debut, fin). */
+    debut: integer("debut").notNull(),
+    fin: integer("fin").notNull(),
+    lu: text("lu").notNull(),
+    propose: text("propose").notNull(),
+    motif: text("motif"),
+    /** [x, y, largeur, hauteur] dans l'image lue, quand le client la connaît.
+     *  Même rôle que dans `DesaccordOcr` : de quoi en appeler au papier. */
+    bbox: jsonb("bbox").$type<[number, number, number, number]>(),
+    proposeParUserId: text("propose_par_user_id")
+      .notNull()
+      .references(() => users.id),
+    // proposee | acceptee | refusee | retiree | obsolete | revoquee
+    statut: text("statut").notNull().default("proposee"),
+    /** { par, le, motif } — la seule sortie d'une acceptation erronée. Sans
+     *  elle, un intervalle accepté à tort est verrouillé à vie : la ligne est
+     *  immuable et la contrainte d'exclusion interdit toute rivale. Or l'erreur
+     *  qu'on redoute — accepter une modernisation de l'orthographe — est
+     *  exactement celle que ce corpus a déjà subie. */
+    revocation: jsonb("revocation").$type<{
+      par: string;
+      le: string;
+      motif: string;
+    }>(),
+    createdAt,
+  },
+  (t) => [
+    /** La file du relecteur : par page puis par position, JAMAIS par date. Un
+     *  ordre chronologique donne une file entièrement possédée par le dernier
+     *  arrivé. */
+    index("page_corrections_file_idx").on(t.statut, t.pageId, t.debut),
+    index("page_corrections_base_idx").on(t.baseOcrId, t.debut),
+    index("page_corrections_auteur_idx").on(t.proposeParUserId, t.createdAt),
+    /** Un double-clic n'est pas un second avis. */
+    uniqueIndex("page_corrections_doublon_uq")
+      .on(t.baseOcrId, t.debut, t.fin, t.proposeParUserId)
+      .where(sql`statut = 'proposee'`),
+  ],
+);
+
+/**
+ * L'avis d'UN relecteur sur UNE proposition. Append-only.
+ *
+ * POURQUOI UNE TABLE ET NON DEUX COLONNES SUR LA CORRECTION
+ * Le protocole de relecture de ce projet (repparcs/scripts/kit_relecture.py)
+ * pose depuis toujours que « vos jugements sont conservés individuellement…
+ * ils ne sont jamais fondus dans une moyenne », et qu'un désaccord est un
+ * résultat qu'on publie plutôt qu'un problème qu'on arbitre. Deux colonnes
+ * `decide_par` / `decide_le` rendraient le second avis impossible à écrire.
+ *
+ * Le seuil vit dans `page_correction_statut()` : `accords_requis = 1`
+ * aujourd'hui. Le porter à deux relecteurs de régions différentes — ce que le
+ * kit exige déjà hors ligne — sera une ligne de migration, pas un changement de
+ * schéma.
+ */
+export const pageCorrectionAvis = pgTable(
+  "page_correction_avis",
+  {
+    id: text("id").primaryKey(),
+    correctionId: text("correction_id")
+      .notNull()
+      .references(() => pageCorrections.id, { onDelete: "cascade" }),
+    relecteurUserId: text("relecteur_user_id")
+      .notNull()
+      .references(() => users.id),
+    avis: text("avis").notNull(), // accord | desaccord
+    motif: text("motif"),
+    createdAt,
+  },
+  (t) => [
+    uniqueIndex("page_correction_avis_uq").on(t.correctionId, t.relecteurUserId),
+    index("page_correction_avis_relecteur_idx").on(t.relecteurUserId, t.createdAt),
+  ],
+);
+
+export type PageCorrection = typeof pageCorrections.$inferSelect;
+export type PageCorrectionAvis = typeof pageCorrectionAvis.$inferSelect;
+
+/** Un endroit précis où deux passes ne lisent pas la même chose. */
+export interface DesaccordOcr {
+  type: "desaccord";
+  /** L'identifiant de la passe à laquelle on se compare. */
+  contre: string;
+  lu: string;
+  autre: string;
+  /** [x, y, largeur, hauteur] dans l'image lue — de quoi montrer le papier. */
+  bbox?: [number, number, number, number];
+  /** La confiance du moteur sur ce mot, telle qu'il la donne. C'est le seul
+   *  nombre qui vienne de la lecture elle-même et non d'un juge fabriqué ici. */
+  conf?: number;
+}
+
+/**
+ * La file des travaux d'océrisation.
+ *
+ * Reprise du patron de `webhook_deliveries` — status, attempts, nextAttemptAt,
+ * lastError, index sur (status, next_attempt_at), recul exponentiel — avec UNE
+ * différence obligatoire au moment de la prise : `FOR UPDATE SKIP LOCKED`.
+ * Les webhooks s'en passent parce qu'un doublon d'envoi est tolérable ; un
+ * doublon d'appel à un modèle de vision se paie.
+ */
+export const ocrJobs = pgTable(
+  "ocr_jobs",
+  {
+    id: text("id").primaryKey(),
+    pageId: text("page_id")
+      .notNull()
+      .references(() => pages.id, { onDelete: "cascade" }),
+    moteur: text("moteur").notNull(),
+    status: text("status").notNull().default("pending"), // pending | running | success | failed
+    attempts: integer("attempts").notNull().default(0),
+    nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }),
+    /** Pris à un instant donné par un ouvrier donné. Sans bail, deux répliques
+     *  paieraient deux fois le même appel. */
+    claimedAt: timestamp("claimed_at", { withTimezone: true }),
+    lastError: text("last_error"),
+    demandeParUserId: text("demande_par_user_id").references(() => users.id),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    index("ocr_jobs_status_idx").on(t.status, t.nextAttemptAt),
+    /** UNIQUE seulement sur les travaux EN COURS.
+     *
+     *  Un index total verrouillerait un moteur à vie sur une page : une fois la
+     *  passe réussie, on ne pourrait plus la rejouer après une mise à jour du
+     *  modèle ni après avoir récupéré une meilleure image. Or `page_ocr` n'a
+     *  volontairement pas d'unicité (page, moteur) — les passes multiples sont
+     *  le principe. La file doit dire la même chose que le registre : ce qu'on
+     *  empêche, c'est de payer deux fois le travail en cours. */
+    uniqueIndex("ocr_jobs_actif_uq")
+      .on(t.pageId, t.moteur)
+      .where(sql`${t.status} in ('pending', 'running')`),
+  ],
+);
+
 export type User = typeof users.$inferSelect;
 export type Org = typeof orgs.$inferSelect;
 export type OrgMember = typeof orgMembers.$inferSelect;
@@ -428,3 +887,7 @@ export type TaleFamily = typeof taleFamilies.$inferSelect;
 export type Tale = typeof tales.$inferSelect;
 export type TaleVersion = typeof taleVersions.$inferSelect;
 export type TaleConsent = typeof taleConsents.$inferSelect;
+export type Livre = typeof livres.$inferSelect;
+export type Page = typeof pages.$inferSelect;
+export type PageOcr = typeof pageOcr.$inferSelect;
+export type OcrJob = typeof ocrJobs.$inferSelect;

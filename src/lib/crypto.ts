@@ -16,6 +16,22 @@ export function sha256(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
+/**
+ * The sha256 of raw BYTES — the one `sha256sum` also computes.
+ *
+ * Deliberately separate from `sha256(string)` above, and this is not a stylistic
+ * split. `createHash().update(s)` encodes a string as UTF-8, so hashing bytes by
+ * first turning them into a latin1 string (as a deleted helper in
+ * routes/bibliotheque.ts did) doubles every byte ≥ 0x80 and yields a digest that
+ * matches nothing outside this process. That helper's own doc comment promised
+ * the opposite: that an external uploader could "compute it the same way". It
+ * could not. Images are content-addressed, so the digest IS the URL — a wrong
+ * one silently breaks deduplication and addresses no file any tool can produce.
+ */
+export function sha256Bytes(bytes: Uint8Array): string {
+  return createHash("sha256").update(Buffer.from(bytes)).digest("hex");
+}
+
 /** HMAC-SHA256 hex signature (webhook signing). */
 export function hmacSign(payload: string, secret: string): string {
   return createHmac("sha256", secret).update(payload).digest("hex");

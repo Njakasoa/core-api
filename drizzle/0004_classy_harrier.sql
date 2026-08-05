@@ -1,0 +1,1 @@
+ALTER TABLE "tales" ADD COLUMN "amorce_id" text;

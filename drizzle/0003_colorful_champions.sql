@@ -1,0 +1,1 @@
+ALTER TABLE "tales" ADD COLUMN "quand_entendu" text;
