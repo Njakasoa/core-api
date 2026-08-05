@@ -85,16 +85,17 @@ const nouveauLivre = z
  * tessdata_fast, vérifié le 2026-08-05). Il a `msa`, `ind`, `jav`, `sun` —
  * quatre parents austronésiens — et pas celui-ci.
  *
- * D'où ces trois moteurs, qui isolent deux choses différentes :
- *   fra            le modèle français AVEC son dictionnaire — le texte actuel
- *   fra-sansdico   le même modèle de caractères, dictionnaires coupés
- *   eng-sansdico   un modèle de caractères SANS lettres accentuées, idem
+ * D'où ces deux moteurs, et pas trois. Une version antérieure annonçait un
+ * `tesseract-fra-sansdico`, censé isoler ce que le dictionnaire invente. Mesuré :
+ * sur 80 folios, la sortie avec et sans dictionnaire est OCTET POUR OCTET
+ * identique — y compris sur des pages en français. tesseract accepte les
+ * drapeaux sans avertissement mais tourne en LSTM seul, où ils ne mordent pas ;
+ * même `language_model_penalty_non_dict_word=0` ne change rien. Un moteur dont
+ * le nom annonce une différence qui n'existe pas est un moteur qui ment.
  *
- * L'écart fra ↔ fra-sansdico mesure ce que le dictionnaire français INVENTE
- * sur du malgache : sans lexique, sans référence, sans juge fabriqué ici.
- * L'écart fra-sansdico ↔ eng-sansdico mesure ce que le modèle de caractères
- * change à lui seul — le malgache s'écrit sans accents, donc un modèle qui n'en
- * connaît pas devrait, en principe, en poser moins à tort.
+ * Reste l'écart fra ↔ eng : le modèle de langue complet. Le malgache s'écrit
+ * sans accents et sans c, q, u, w, x ; un modèle entraîné sur de l'anglais n'a
+ * pas d'accent à proposer, un modèle français en a plein.
  *
  * `humain` n'y figure pas : une transcription humaine n'est pas un travail
  * qu'on met en file, c'est une ligne qu'on verse. Aucun `vision:<modèle>` non
@@ -103,11 +104,7 @@ const nouveauLivre = z
  * standard et en bac à sable lecture seule. Annoncer un moteur qui n'existe pas
  * est la façon dont une file se remplit de travaux que personne ne fera.
  */
-export const MOTEURS_CONNUS = [
-  "tesseract-fra",
-  "tesseract-fra-sansdico",
-  "tesseract-eng-sansdico",
-] as const;
+export const MOTEURS_CONNUS = ["tesseract-fra", "tesseract-eng"] as const;
 
 const nouvellePage = z
   .object({

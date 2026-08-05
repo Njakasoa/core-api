@@ -251,12 +251,12 @@ describe("ce que la bibliothèque avoue", () => {
     await db.execute(sql`
       insert into page_ocr (id, page_id, moteur, texte, texte_sha256, created_at) values
         (${id("ocr")}, ${pageId}, 'tesseract-fra', 'Nisy indray mandeha', 'a', now()),
-        (${id("ocr")}, ${pageId}, 'tesseract-fra-sansdico', 'Nisy indray mandeha, hono', 'b', now() + interval '1 second')
+        (${id("ocr")}, ${pageId}, 'tesseract-eng', 'Nisy indray mandeha, hono', 'b', now() + interval '1 second')
     `);
     const r = await app.request(`/v1/bibliotheque/pages/${pageId}`);
     const b = (await r.json()) as { ocr: { moteur: string; accordDocument: number | null }[] };
     expect(b.ocr).toHaveLength(2);
-    expect(b.ocr.map((o) => o.moteur)).toEqual(["tesseract-fra", "tesseract-fra-sansdico"]);
+    expect(b.ocr.map((o) => o.moteur)).toEqual(["tesseract-fra", "tesseract-eng"]);
     // Nul, parce qu'aucune transcription humaine n'existe pour cette page. Une
     // colonne nulle est une réponse : on ne sait pas.
     expect(b.ocr[0]?.accordDocument).toBeNull();
@@ -272,7 +272,7 @@ describe("ce que la bibliothèque avoue", () => {
     });
     const { id: pageId } = (await p.json()) as { id: string };
     const r = await app.request(`/v1/bibliotheque/pages/${pageId}/ocr`, {
-      method: "POST", headers: cur.headers, body: JSON.stringify({ moteur: "tesseract-fra-sansdico" }),
+      method: "POST", headers: cur.headers, body: JSON.stringify({ moteur: "tesseract-eng" }),
     });
     expect(r.status).toBe(422);
   });
@@ -462,7 +462,7 @@ describe("la file d'océrisation", () => {
     const h = await verserImage(octetsUniques());
     await db.update(pages).set({ imageSha256: h }).where(eq(pages.id, pageId));
 
-    const corpsOcr = JSON.stringify({ moteur: "tesseract-fra-sansdico" });
+    const corpsOcr = JSON.stringify({ moteur: "tesseract-eng" });
     const un = await app.request(`/v1/bibliotheque/pages/${pageId}/ocr`, {
       method: "POST", headers: cur.headers, body: corpsOcr,
     });
