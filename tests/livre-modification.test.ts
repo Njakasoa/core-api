@@ -316,19 +316,53 @@ describe("retirer un livre, et le rétablir", () => {
 });
 
 /**
- * La suppression définitive, éprouvée contre un VRAI stockage d'objet qui échoue.
+ * La suppression définitive, éprouvée contre un VRAI stockage d'objet.
  *
- * Un faux seau en trente lignes, dont on commande les pannes : sans lui, ces
- * essais tourneraient contre `stockage = 'db'`, où aucun appel distant ne peut
- * échouer — c'est-à-dire précisément à côté de ce qu'on veut mesurer. Et jamais
- * contre le seau réel : un essai qui écrit en production n'est pas un essai.
+ * Un faux seau en trente lignes : sans lui, ces essais tourneraient contre
+ * `stockage = 'db'`, où aucun appel distant ne peut échouer — c'est-à-dire
+ * précisément à côté de ce qu'on veut mesurer. Et jamais contre le seau réel :
+ * un essai qui écrit en production n'est pas un essai.
+ *
+ * LA PANNE EST INJECTÉE DANS NOTRE CODE, PAS DANS LE CLIENT S3, et c'est une
+ * correction. Une première version faisait répondre 500 au faux seau sur DELETE.
+ * Ça marchait — la route rendait bien 500 — mais `Bun.S3Client` laissait
+ * échapper un rejet que personne n'observe, et le lanceur l'attribuait à
+ * l'essai en cours au moment où il remontait : ici le bon, sur l'intégration
+ * continue trois autres, qui n'injectent aucune panne. Quatre essais rouges pour
+ * une seule cause, et pas dans le fichier qu'on regardait.
+ *
+ * `sansDepot()` retire simplement les identifiants le temps de l'appel :
+ * `depots.ts` lève alors une Error ordinaire, la nôtre, que la route attrape.
+ * Aucune promesse interne au client n'entre en jeu — et l'essai mesure la même
+ * chose : `supprimerObjet` échoue, la boucle s'arrête, le livre reste fermé.
  */
 describe("supprimer un livre détruit ses octets", () => {
   const seau = "essai";
   const contenus = new Map<string, Uint8Array>();
   let serveur: ReturnType<typeof Bun.serve> | null = null;
-  let pannesRestantes = 0;
   const envAvant: Record<string, unknown> = {};
+
+  /** Le dépôt d'objets, injoignable le temps d'un appel.
+   *  `T | Promise<T>` parce qu'`app.request` rend l'un ou l'autre selon la
+   *  route : exiger une promesse ferait échouer le typage, pas l'essai. */
+  async function sansDepot<T>(f: () => T | Promise<T>): Promise<T> {
+    const { env } = await import("../src/env.ts");
+    const garde = {
+      R2_ACCESS_KEY_ID: env.R2_ACCESS_KEY_ID,
+      R2_SECRET_ACCESS_KEY: env.R2_SECRET_ACCESS_KEY,
+      R2_BUCKET: env.R2_BUCKET,
+    };
+    Object.assign(env, {
+      R2_ACCESS_KEY_ID: undefined, R2_SECRET_ACCESS_KEY: undefined, R2_BUCKET: undefined,
+    });
+    oublierClientDepot();
+    try {
+      return await f();
+    } finally {
+      Object.assign(env, garde);
+      oublierClientDepot();
+    }
+  }
 
   beforeAll(async () => {
     serveur = Bun.serve({
@@ -340,16 +374,6 @@ describe("supprimer un livre détruit ses octets", () => {
           return new Response(null, { status: 200 });
         }
         if (req.method === "DELETE") {
-          // LA PANNE EST COMMANDÉE, et elle ne ressemble pas à « objet absent » :
-          // `depots.ts` avale NoSuchKey exprès, et un essai qui déclencherait
-          // celle-là mesurerait le contraire de ce qu'il croit.
-          if (pannesRestantes > 0) {
-            pannesRestantes--;
-            return new Response(
-              `<?xml version="1.0"?><Error><Code>InternalError</Code></Error>`,
-              { status: 500, headers: { "content-type": "application/xml" } },
-            );
-          }
           contenus.delete(chemin);
           return new Response(null, { status: 204 });
         }
@@ -470,8 +494,8 @@ describe("supprimer un livre détruit ses octets", () => {
      * boucle : deux allers-retours par folio, soit des minutes durant lesquelles
      * chaque empreinte pas encore atteinte continue de sortir.
      *
-     * On fait échouer la destruction sur le PREMIER objet : la boucle s'arrête
-     * là, aucun des suivants n'est touché, et pourtant plus aucun ne doit sortir.
+     * On rend le dépôt injoignable : la boucle échoue sur le PREMIER objet,
+     * aucun des suivants n'est touché, et pourtant plus aucun ne doit sortir.
      */
     const cur = await compte("curateur");
     const mod = await compte("moderateur");
@@ -482,10 +506,8 @@ describe("supprimer un livre détruit ses octets", () => {
       expect((await app.request(`/v1/objets/${e}`)).status).toBe(200);
     }
 
-    pannesRestantes = 1;
-    const r = await supprimer(mod.headers, id);
+    const r = await sansDepot(() => supprimer(mod.headers, id));
     expect(r.status).toBe(500);
-    pannesRestantes = 0;
 
     // La boucle n'a détruit aucun objet — la panne portait sur le premier.
     for (const e of empreintes) expect(await objetExiste(e)).toBe(true);
@@ -506,14 +528,13 @@ describe("supprimer un livre détruit ses octets", () => {
     const mod = await compte("moderateur");
     const { id, empreintes } = await livreAvecFolios(cur, 3);
 
-    // Une seule panne : elle tombe sur le premier objet, la boucle s'arrête là.
-    pannesRestantes = 1;
-    expect((await supprimer(mod.headers, id)).status).toBe(500);
+    // Le dépôt injoignable : la boucle échoue sur le premier objet.
+    expect((await sansDepot(() => supprimer(mod.headers, id))).status).toBe(500);
     // Le livre est resté — fermé, mais présent. C'est ce qui rend le rejeu
     // possible : rien n'a été détruit à moitié sans que la base le sache.
     expect(await ligne(id)).not.toBeNull();
 
-    pannesRestantes = 0;
+    // Le dépôt revenu, le second appel termine le travail.
     const r = await supprimer(mod.headers, id);
     expect(r.status).toBe(200);
     expect(await ligne(id)).toBeNull();
