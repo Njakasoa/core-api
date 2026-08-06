@@ -422,16 +422,18 @@ describe("supprimer un livre détruit ses octets", () => {
   ) {
     const { corps: l } = await deposerLivre(h.headers, { publiable: true });
     const empreintes: string[] = [];
+    const folios: { id: string; folio: number }[] = [];
     for (let i = 0; i < combien; i++) {
       const { corps } = await verser(h.octets, png());
       empreintes.push(corps.sha256!);
-      await app.request(url(l.id, "/pages"), {
+      const r = await app.request(url(l.id, "/pages"), {
         method: "POST",
         headers: h.headers,
         body: JSON.stringify({ folio: i + 1, imageSha256: corps.sha256 }),
       });
+      folios.push((await r.json()) as { id: string; folio: number });
     }
-    return { id: l.id, empreintes };
+    return { id: l.id, empreintes, folios };
   }
 
   async function objetExiste(sha: string) {
@@ -600,6 +602,245 @@ describe("supprimer un livre détruit ses octets", () => {
     const r = await supprimer(mod.headers, l.id);
     expect((await r.json() as { objetsDetruits: number }).objetsDetruits).toBe(2);
     expect(await objetExiste(vignette.corps.sha256!)).toBe(false);
+  });
+
+  // ── Les vues, une par une ────────────────────────────────────────────────
+  const corrigerPage = (h: Record<string, string>, pageId: string, corps: object) =>
+    app.request(`/v1/bibliotheque/pages/${pageId}`, {
+      method: "PATCH", headers: h, body: JSON.stringify(corps),
+    });
+
+  test("remplacer la photo d'une vue détruit l'ancienne", async () => {
+    // L'ancienne image ne doit pas SURVIVRE au remplacement : plus aucune page ne
+    // la référencerait, donc le gardien de la bibliothèque cesserait de la
+    // refuser — et si elle a moins de 48 h, celui du dépôt la dit encore
+    // servable. Un scan sous droits redeviendrait public par le seul fait qu'on
+    // l'a remplacé.
+    const cur = await compte("curateur");
+    const { folios, empreintes } = await livreAvecFolios(cur, 2);
+    const nette = await verser(cur.octets, png());
+
+    const r = await corrigerPage(cur.headers, folios[0]!.id, {
+      imageSha256: nette.corps.sha256,
+    });
+    expect(r.status).toBe(200);
+    expect((await r.json() as { objetsDetruits: number }).objetsDetruits).toBe(1);
+    expect(await objetExiste(empreintes[0]!)).toBe(false);
+    expect(await objetExiste(nette.corps.sha256!)).toBe(true);
+    expect((await app.request(`/v1/objets/${nette.corps.sha256}`)).status).toBe(200);
+  });
+
+  test("…mais pas si une autre vue porte les mêmes octets", async () => {
+    const cur = await compte("curateur");
+    const { corps: l } = await deposerLivre(cur.headers, { publiable: true });
+    const partagee = await verser(cur.octets, png());
+    const pages: { id: string }[] = [];
+    for (const folio of [1, 2]) {
+      const r = await app.request(url(l.id, "/pages"), {
+        method: "POST", headers: cur.headers,
+        body: JSON.stringify({ folio, imageSha256: partagee.corps.sha256 }),
+      });
+      pages.push((await r.json()) as { id: string });
+    }
+    const autre = await verser(cur.octets, png());
+
+    const r = await corrigerPage(cur.headers, pages[0]!.id, {
+      imageSha256: autre.corps.sha256,
+    });
+    expect((await r.json() as { objetsDetruits: number }).objetsDetruits).toBe(0);
+    expect(await objetExiste(partagee.corps.sha256!)).toBe(true);
+  });
+
+  test("une empreinte inconnue est refusée AVANT que l'ancienne ne soit détruite", async () => {
+    // Dans l'autre ordre, une coquille dans l'empreinte laisserait la vue sans
+    // image et l'ancienne détruite — une perte pour une faute de frappe.
+    const cur = await compte("curateur");
+    const { folios, empreintes } = await livreAvecFolios(cur, 1);
+    const r = await corrigerPage(cur.headers, folios[0]!.id, {
+      imageSha256: "f".repeat(64),
+    });
+    expect(r.status).toBe(422);
+    expect(await objetExiste(empreintes[0]!)).toBe(true);
+  });
+
+  test("corriger le numéro d'une vue, et le refus quand il est pris", async () => {
+    const cur = await compte("curateur");
+    const { folios } = await livreAvecFolios(cur, 2);
+
+    expect((await corrigerPage(cur.headers, folios[0]!.id, { folio: 7 })).status).toBe(200);
+
+    const prise = await corrigerPage(cur.headers, folios[1]!.id, { folio: 7 });
+    expect(prise.status).toBe(409);
+    // Le message NOMME la sortie : sans elle, on conclurait que l'échange est
+    // impossible plutôt qu'ailleurs.
+    const err = (await prise.json()) as { error: { message: string } };
+    expect(err.error.message).toContain("renumerotation");
+  });
+
+  test("le texte océrisé ne se corrige pas par ici", async () => {
+    // La première lecture est un FAIT observé. La réécrire à la main en ferait
+    // une affirmation dont plus rien ne dirait l'origine ; le texte se corrige
+    // par une proposition, qui garde le lu, le proposé et le motif.
+    const cur = await compte("curateur");
+    const { folios } = await livreAvecFolios(cur, 1);
+    const r = await corrigerPage(cur.headers, folios[0]!.id, { texteOcr: "réécrit" });
+    expect(r.status).toBe(400);
+  });
+
+  test("intervertir deux vues — ce qu'un PATCH ne peut pas faire", async () => {
+    const cur = await compte("curateur");
+    const { id, folios } = await livreAvecFolios(cur, 3);
+
+    const r = await app.request(url(id, "/renumerotation"), {
+      method: "POST", headers: cur.headers,
+      body: JSON.stringify({
+        folios: [
+          { id: folios[0]!.id, folio: 3 },
+          { id: folios[1]!.id, folio: 2 },
+          { id: folios[2]!.id, folio: 1 },
+        ],
+      }),
+    });
+    expect(r.status).toBe(200);
+    expect((await r.json() as { deplacees: number }).deplacees).toBe(2);
+
+    const apres = await db.execute<{ id: string; folio: number }>(sql`
+      select id, folio from pages where livre_id = ${id} order by folio
+    `);
+    expect(apres.map((p) => p.folio)).toEqual([1, 2, 3]);
+    expect(apres[0]!.id).toBe(folios[2]!.id);
+    expect(apres[2]!.id).toBe(folios[0]!.id);
+  });
+
+  test("une renumérotation partielle est refusée", async () => {
+    // Les vues omises resteraient en travers des nouveaux numéros, et l'appel
+    // échouerait à mi-chemin — après avoir déjà tout mis en négatif.
+    const cur = await compte("curateur");
+    const { id, folios } = await livreAvecFolios(cur, 3);
+    const r = await app.request(url(id, "/renumerotation"), {
+      method: "POST", headers: cur.headers,
+      body: JSON.stringify({ folios: [{ id: folios[0]!.id, folio: 9 }] }),
+    });
+    expect(r.status).toBe(422);
+    const [inchange] = await db.execute<{ folio: number }>(
+      sql`select folio from pages where id = ${folios[0]!.id}`,
+    );
+    expect(inchange!.folio).toBe(1);
+  });
+
+  test("deux vues ne peuvent pas recevoir le même numéro", async () => {
+    const cur = await compte("curateur");
+    const { id, folios } = await livreAvecFolios(cur, 2);
+    const r = await app.request(url(id, "/renumerotation"), {
+      method: "POST", headers: cur.headers,
+      body: JSON.stringify({
+        folios: [{ id: folios[0]!.id, folio: 4 }, { id: folios[1]!.id, folio: 4 }],
+      }),
+    });
+    expect(r.status).toBe(422);
+  });
+
+  test("ajouter une vue déjà prise le dit, plutôt que de rendre une erreur Postgres", async () => {
+    const cur = await compte("curateur");
+    const { id } = await livreAvecFolios(cur, 1);
+    const image = await verser(cur.octets, png());
+    const r = await app.request(url(id, "/pages"), {
+      method: "POST", headers: cur.headers,
+      body: JSON.stringify({ folio: 1, imageSha256: image.corps.sha256 }),
+    });
+    expect(r.status).toBe(409);
+  });
+
+  test("supprimer une vue emporte ses octets", async () => {
+    const cur = await compte("curateur");
+    const { id, folios, empreintes } = await livreAvecFolios(cur, 2);
+
+    const r = await app.request(`/v1/bibliotheque/pages/${folios[0]!.id}`, {
+      method: "DELETE", headers: cur.headers,
+    });
+    expect(r.status).toBe(200);
+    expect((await r.json() as { objetsDetruits: number }).objetsDetruits).toBe(1);
+    expect(await objetExiste(empreintes[0]!)).toBe(false);
+    // L'autre vue est intacte : la suppression porte sur une vue, pas sur le livre.
+    expect(await objetExiste(empreintes[1]!)).toBe(true);
+    const restantes = await db.execute(sql`select 1 from pages where livre_id = ${id}`);
+    expect(restantes.length).toBe(1);
+  });
+
+  test("une vue sur laquelle un TIERS a travaillé ne s'efface pas d'un clic", async () => {
+    // Supprimer un livre est réservé au modérateur parce que la cascade emporte
+    // le travail d'autrui. Une vue pose la même question en plus petit — et la
+    // réponse n'est pas de tout réserver, ce qui empêcherait un contributeur
+    // d'effacer la photo qu'il vient de verser deux fois.
+    const cur = await compte("curateur");
+    const mod = await compte("moderateur");
+    const relecteur = await compte("relecteur");
+    const { folios, empreintes } = await livreAvecFolios(cur, 1);
+
+    // Une relecture scellée par quelqu'un d'autre, versée directement : ce qui
+    // est éprouvé ici est la garde, pas le parcours de relecture.
+    await db.execute(sql`
+      insert into page_ocr (id, page_id, moteur, texte, texte_sha256, produit_par_user_id)
+      values (${"ocr_" + Math.random().toString(36).slice(2, 14)}, ${folios[0]!.id},
+              'humain:relecture', 'ny tantara', ${"a".repeat(64)}, ${relecteur.id})
+    `);
+
+    const refus = await app.request(`/v1/bibliotheque/pages/${folios[0]!.id}`, {
+      method: "DELETE", headers: cur.headers,
+    });
+    expect(refus.status).toBe(409);
+    expect(await objetExiste(empreintes[0]!)).toBe(true);
+
+    // Un modérateur, lui, tranche.
+    const r = await app.request(`/v1/bibliotheque/pages/${folios[0]!.id}`, {
+      method: "DELETE", headers: mod.headers,
+    });
+    expect(r.status).toBe(200);
+    expect(await objetExiste(empreintes[0]!)).toBe(false);
+  });
+
+  test("une vue FERMÉE reste visible à qui peut la rouvrir", async () => {
+    /**
+     * Sans cette exception, une vue passée à `publiable = false` disparaissait
+     * pour tout le monde — son déposant compris. La liste la filtrait,
+     * `GET /pages/:id` répondait 404, et aucune route ne pouvait la corriger :
+     * une case cochée par erreur au dépôt effaçait une page définitivement, sans
+     * rien détruire et sans que personne puisse le constater.
+     */
+    const cur = await compte("curateur");
+    const tiers = await compte();
+    const { id, folios } = await livreAvecFolios(cur, 2);
+    expect((await corrigerPage(cur.headers, folios[0]!.id, { publiable: false })).status).toBe(200);
+
+    const vues = async (h?: Record<string, string>) => {
+      const r = await app.request(url(id, "/pages"), h ? { headers: h } : undefined);
+      return ((await r.json()) as { data: { id: string; publiable: boolean | null }[] }).data;
+    };
+
+    // Le public n'en voit qu'une, et c'est bien ce qu'on veut.
+    expect((await vues()).length).toBe(1);
+    // Le curateur voit les deux, et l'état de chacune — sans quoi son écran de
+    // correction renverrait « comme le livre » sur une vue qu'il a fermée.
+    const sienne = await vues(cur.headers);
+    expect(sienne.length).toBe(2);
+    expect(sienne.find((v) => v.id === folios[0]!.id)?.publiable).toBe(false);
+    // Un tiers, lui, ne la voit pas.
+    expect((await vues(tiers.headers)).length).toBe(1);
+
+    // Et elle se rouvre.
+    await corrigerPage(cur.headers, folios[0]!.id, { publiable: null });
+    expect((await vues()).length).toBe(2);
+  });
+
+  test("les vues d'autrui ne se corrigent pas", async () => {
+    const cur = await compte("curateur");
+    const tiers = await compte();
+    const { folios } = await livreAvecFolios(cur, 1);
+    expect((await corrigerPage(tiers.headers, folios[0]!.id, { folio: 5 })).status).toBe(403);
+    const r = await app.request(`/v1/bibliotheque/pages/${folios[0]!.id}`, {
+      method: "DELETE", headers: tiers.headers,
+    });
+    expect(r.status).toBe(403);
   });
 });
 
