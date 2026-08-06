@@ -71,6 +71,13 @@
       "when": 1785926361628,
       "tag": "0009_open_deposit",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1785926421628,
+      "tag": "0010_retrait_suppression",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,6 @@
+[test]
+# Chargé AVANT tout module d'essai — voir tests/preload.ts.
+# Il force `OBJETS_STOCKAGE=db` et retire les identifiants R2 : sans lui, une
+# machine configurée contre le vrai seau versait les images de témoin en
+# production à chaque `bun test`, sans que rien ne l'indique.
+preload = ["./tests/preload.ts"]
