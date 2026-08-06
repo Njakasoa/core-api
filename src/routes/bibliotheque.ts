@@ -230,6 +230,47 @@ const nouvellePage = z
   .strict();
 
 /**
+ * Ce qu'on peut corriger sur un folio déjà versé.
+ *
+ * `texteOcr` et `ocrMoteur` n'y sont PAS. La première lecture est un fait
+ * observé — ce que le moteur a lu — et le corriger à la main en ferait une
+ * affirmation dont plus rien ne dirait l'origine. Le texte se corrige par
+ * `POST /pages/:id/corrections`, qui garde le lu, le proposé et le motif.
+ *
+ * `livreId` n'y est pas non plus : déplacer une vue d'un livre à l'autre n'est
+ * pas une correction, c'est un dépôt refait.
+ */
+const correctifPage = z
+  .object({
+    folio: z.number().int().positive(),
+    pageImprimee: z.string().max(20).nullish(),
+    publiable: z.boolean().nullish(),
+    imageSha256: z.string().regex(/^[a-f0-9]{64}$/).nullish(),
+    vignetteSha256: z.string().regex(/^[a-f0-9]{64}$/).nullish(),
+    imageLargeur: z.number().int().positive().max(40_000).nullish(),
+    imageHauteur: z.number().int().positive().max(40_000).nullish(),
+  })
+  .partial()
+  .strict();
+
+/** La nouvelle numérotation, pour le livre entier. */
+const renumerotation = z
+  .object({
+    folios: z
+      .array(
+        z.object({
+          id: z.string().min(1).max(60),
+          folio: z.number().int().positive(),
+        }).strict(),
+      )
+      .min(1)
+      // Le plus gros livre du corpus en a 374 ; le plafond laisse de la marge
+      // sans ouvrir un corps arbitrairement grand.
+      .max(2000),
+  })
+  .strict();
+
+/**
  * Une correction proposée sur un passage.
  *
  * `baseOcrId` est OBLIGATOIRE, et ce n'est pas de la cérémonie : `page_ocr` n'a
@@ -333,6 +374,12 @@ function pagePublique(p: typeof pages.$inferSelect, sourceRef: string, source: s
     ocrBitsParCaractere: p.ocrBitsParCaractere == null
       ? null
       : p.ocrBitsParCaractere / 1000,
+    /** `null` veut dire « comme le livre » — un état à part de `false`, et le
+     *  confondre avec lui ferait qu'un écran de correction restreint toutes les
+     *  vues qu'il enregistre. Dans une liste publique la valeur est toujours
+     *  `true` ou `null`, les autres étant filtrées : le champ n'y apprend rien.
+     *  Il n'existe que pour qui peut voir — et corriger — les vues fermées. */
+    publiable: p.publiable,
     imageUrl: urlObjet(p.imageSha256),
     imageLargeur: p.imageLargeur,
     imageHauteur: p.imageHauteur,
@@ -483,6 +530,47 @@ async function peutGerer(l: typeof livres.$inferSelect, moi: string | null) {
   };
 }
 
+/**
+ * Le folio demandé, et seulement si l'appelant peut agir dessus — ou 404 / 403.
+ *
+ * Il passe par `livrePubliable`, donc un folio dont le livre est invisible rend
+ * 404 comme le livre lui-même : répondre autrement apprendrait, à qui devine un
+ * identifiant de page, que le livre existe.
+ */
+async function pageGerable(pageId: string, moi: string) {
+  const [p] = await db.select().from(pages).where(eq(pages.id, pageId)).limit(1);
+  if (!p) throw errors.notFound("Page introuvable");
+  const l = await livrePubliable(p.livreId, moi);
+  if (!(await peutGerer(l, moi)).peutModifier) {
+    throw errors.forbidden(
+      "ce livre n'est pas le vôtre — son déposant, un curateur ou un modérateur peuvent en corriger les vues",
+    );
+  }
+  return { page: p, livre: l };
+}
+
+/**
+ * Détruit une empreinte si plus AUCUNE autre page ne la référence.
+ *
+ * L'adressage par contenu déduplique : deux vues d'un même livre — ou de deux
+ * livres — peuvent porter les mêmes octets. Détruire sans regarder emporterait
+ * l'image de l'autre, et personne ne le verrait avant qu'une tuile ne manque.
+ *
+ * Les DEUX colonnes sont interrogées : une empreinte de vignette n'apparaît
+ * jamais dans `image_sha256`.
+ */
+async function detruireSiOrpheline(sha256: string, saufPageId: string): Promise<boolean> {
+  const [r] = await db.execute<{ ailleurs: boolean }>(sql`
+    select exists (
+      select 1 from pages
+       where id <> ${saufPageId}
+         and (image_sha256 = ${sha256} or vignette_sha256 = ${sha256})) as ailleurs
+  `);
+  if (r?.ailleurs) return false;
+  await supprimerObjet(sha256);
+  return true;
+}
+
 /** Les deux rôles qui pèsent sur un livre, lus d'un coup. */
 async function rolesDeGestion(moi: string) {
   const [curateur, moderateur] = await Promise.all([
@@ -590,9 +678,23 @@ export function bibliothequeRoute(): Hono<{ Variables: Variables }> {
     optionalAuth,
     validate("query", pageQuery),
     async (c) => {
-      const l = await livrePubliable(c.req.param("id"), demandeur(c));
+      const moi = demandeur(c);
+      const l = await livrePubliable(c.req.param("id"), moi);
       const { limit, cursor } = c.req.valid("query");
       const apres = cursor ? Number(decodeCursor(cursor) ?? 0) : 0;
+
+      /**
+       * QUI PEUT GÉRER LE LIVRE VOIT AUSSI SES VUES FERMÉES.
+       *
+       * Sans cette exception, une vue passée à `publiable = false` disparaissait
+       * pour TOUT LE MONDE — son déposant compris — et plus rien ne pouvait la
+       * rouvrir : la liste la filtrait, `GET /pages/:id` répondait 404, et il
+       * n'existait aucune route pour la corriger. Une case cochée par erreur au
+       * dépôt effaçait donc une page de façon définitive, sans rien détruire et
+       * sans que personne puisse le constater.
+       */
+      const gestionnaire = (await peutGerer(l, moi)).peutModifier;
+
       // Le filtre de publication est posé EN SQL, pas après la découpe. Appliqué
       // en aval de `slice(limit)`, il rendait moins de pages que demandé sans
       // rien dire, et la page suivante repartait quand même du bon folio : le
@@ -604,7 +706,7 @@ export function bibliothequeRoute(): Hono<{ Variables: Variables }> {
           and(
             eq(pages.livreId, l.id),
             gt(pages.folio, apres),
-            sql`${pages.publiable} is distinct from false`,
+            gestionnaire ? undefined : sql`${pages.publiable} is distinct from false`,
           ),
         )
         .orderBy(asc(pages.folio))
@@ -1232,6 +1334,23 @@ export function bibliothequeRoute(): Hono<{ Variables: Variables }> {
           );
         }
       }
+      // UNE VUE DÉJÀ PRISE SE DIT, PLUTÔT QUE DE REMONTER EN ERREUR POSTGRES.
+      // `pages_livre_folio_uq` refuse déjà le doublon, mais un versement en lot
+      // qui reprend à 1 sur un livre existant produisait alors une erreur 500
+      // illisible au milieu de soixante photos — sans dire laquelle, ni que le
+      // numéro était le problème.
+      const [prise] = await db
+        .select({ id: pages.id })
+        .from(pages)
+        .where(and(eq(pages.livreId, l.id), eq(pages.folio, b.folio)))
+        .limit(1);
+      if (prise) {
+        throw errors.conflict(
+          `la vue ${b.folio} existe déjà dans ce livre`,
+          { folio: b.folio, pageId: prise.id },
+        );
+      }
+
       const pageId = id("page");
       // Le déclencheur de la base refusera une page publiable dans un livre qui
       // ne l'est pas ; on ne le rattrape pas ici, on le laisse parler.
@@ -1257,6 +1376,248 @@ export function bibliothequeRoute(): Hono<{ Variables: Variables }> {
         },
         201,
       );
+    },
+  );
+
+  /**
+   * Corriger un folio — son numéro, sa pagination imprimée, sa photo.
+   *
+   * POURQUOI CETTE ROUTE MANQUAIT, ET CE QUE SON ABSENCE COÛTAIT
+   * `DeposerLivrePage` numérote les folios dans l'ORDRE DE SÉLECTION DES
+   * FICHIERS, et l'écrit à l'écran : « il se corrige ensuite page par page ».
+   * Rien ne l'implémentait. Or un explorateur de fichiers trie volontiers
+   * `photo1, photo10, photo11, photo2…` : le livre entier arrive dans le
+   * désordre, et le seul recours était de le supprimer et de tout reverser.
+   *
+   * REMPLACER UNE IMAGE DÉTRUIT L'ANCIENNE, ET AVANT DE LA DÉTACHER.
+   * C'est le même piège que la suppression d'un livre, en miniature : une fois
+   * la page repointée, plus aucune page ne référence les anciens octets, donc le
+   * gardien `bibliotheque` passe de « refusée » à « inconnue » — et si l'objet a
+   * moins de 48 heures, le gardien `depot` le dit encore servable. Un scan sous
+   * droits deviendrait public par le seul fait qu'on l'a remplacé.
+   *
+   * D'où l'ordre : les octets partent AVANT la ligne. Si la destruction échoue,
+   * la page n'est pas touchée et l'état reste cohérent ; si elle réussit et que
+   * la mise à jour échoue, il reste une tuile blanche que le même appel rejoué
+   * répare. C'est le côté qui se répare, comme partout ailleurs ici.
+   */
+  app.patch(
+    "/pages/:id",
+    describeRoute({ description: "Corriger un folio", tags: ["bibliotheque"] }),
+    requireAuth,
+    requireRealUser,
+    validate("json", correctifPage),
+    async (c) => {
+      const moi = demandeur(c)!;
+      const { page: p, livre: l } = await pageGerable(c.req.param("id"), moi);
+      const b = c.req.valid("json") as Record<string, unknown>;
+      const envoyes = Object.keys(b);
+      if (envoyes.length === 0) throw errors.unprocessable("aucun champ à modifier");
+
+      const ligne = p as unknown as Record<string, unknown>;
+      const changes: Record<string, unknown> = {};
+      for (const k of envoyes) {
+        const apres = b[k] === undefined ? null : b[k];
+        if (ligne[k] !== apres) changes[k] = apres;
+      }
+      if (Object.keys(changes).length === 0) {
+        return c.json({ id: p.id, folio: p.folio, modifie: [] });
+      }
+
+      // Le numéro de vue : refusé s'il est pris, avec la route qui sait le faire.
+      // Échanger deux folios ne peut PAS passer par ici — la valeur intermédiaire
+      // heurterait l'unicité quel que soit l'ordre des deux appels.
+      if (changes.folio !== undefined) {
+        const [prise] = await db
+          .select({ id: pages.id })
+          .from(pages)
+          .where(and(eq(pages.livreId, p.livreId), eq(pages.folio, changes.folio as number)))
+          .limit(1);
+        if (prise) {
+          throw errors.conflict(
+            `la vue ${changes.folio} est déjà prise — pour échanger deux folios, ` +
+              `utilisez POST /livres/${p.livreId}/renumerotation`,
+            { folio: changes.folio, pageId: prise.id },
+          );
+        }
+      }
+
+      // Les nouvelles empreintes doivent exister AVANT qu'on détruise les
+      // anciennes : dans l'autre sens, une empreinte fautive laisserait la page
+      // sans image et l'ancienne détruite.
+      for (const champ of ["imageSha256", "vignetteSha256"] as const) {
+        const nouvelle = changes[champ] as string | null | undefined;
+        if (!nouvelle) continue;
+        if (!(await ficheObjet(nouvelle))) {
+          throw errors.unprocessable(
+            `aucun objet ne porte l'empreinte de ${champ} — versez l'image par POST /v1/objets avant de la rattacher`,
+          );
+        }
+      }
+
+      // Les octets AVANT la ligne. Voir l'en-tête de la route.
+      let detruits = 0;
+      for (const champ of ["imageSha256", "vignetteSha256"] as const) {
+        if (!(champ in changes)) continue;
+        const ancienne = ligne[champ] as string | null;
+        if (ancienne && (await detruireSiOrpheline(ancienne, p.id))) detruits++;
+      }
+
+      await db
+        .update(pages)
+        .set({ ...(changes as Partial<typeof pages.$inferInsert>), updatedAt: new Date() })
+        .where(eq(pages.id, p.id));
+
+      const [apres] = await db.select().from(pages).where(eq(pages.id, p.id)).limit(1);
+      return c.json({
+        ...pagePublique(apres!, l.sourceRef, l.source),
+        modifie: Object.keys(changes),
+        // Rendu parce que ça se vérifie : remplacer une photo sans rien détruire
+        // veut dire que les anciens octets sont restés dans le seau.
+        objetsDetruits: detruits,
+      });
+    },
+  );
+
+  /**
+   * Supprimer un folio — octets compris.
+   *
+   * OUVERT AU DÉPOSANT, MAIS PAS SUR LE TRAVAIL D'AUTRUI.
+   * Supprimer un livre est réservé au modérateur parce que la cascade emporte les
+   * corrections proposées par des tiers. Une page pose la même question en plus
+   * petit — et la réponse n'est pas « réservons tout au modérateur », qui
+   * empêcherait un contributeur d'effacer la photo qu'il vient de verser deux
+   * fois. La règle dit exactement ce qu'elle protège : votre page est à vous,
+   * SAUF si quelqu'un d'autre y a travaillé.
+   */
+  app.delete(
+    "/pages/:id",
+    describeRoute({ description: "Supprimer un folio et ses octets", tags: ["bibliotheque"] }),
+    requireAuth,
+    requireRealUser,
+    async (c) => {
+      const moi = demandeur(c)!;
+      const { page: p } = await pageGerable(c.req.param("id"), moi);
+
+      if (!(await detientRole(moi, "moderateur"))) {
+        const [tiers] = await db.execute<{ n: number }>(sql`
+          select (
+            (select count(*) from page_corrections
+              where page_id = ${p.id} and propose_par_user_id <> ${moi})
+          + (select count(*) from page_ocr
+              where page_id = ${p.id} and moteur = ${MOTEUR_RELECTURE}
+                and produit_par_user_id is distinct from ${moi})
+          )::int as n
+        `);
+        if ((tiers?.n ?? 0) > 0) {
+          throw errors.conflict(
+            `cette vue porte le travail de quelqu'un d'autre — ${tiers!.n} ` +
+              `correction(s) ou relecture(s). Un modérateur peut la supprimer ; ` +
+              `sinon, corrigez-la plutôt que de l'effacer.`,
+            { travauxDeTiers: tiers!.n },
+          );
+        }
+      }
+
+      // Les octets d'abord : la ligne partie, plus rien ne les réclame — et
+      // « plus rien ne les réclame » est précisément ce qui les rouvre.
+      let detruits = 0;
+      for (const empreinte of [p.imageSha256, p.vignetteSha256]) {
+        if (empreinte && (await detruireSiOrpheline(empreinte, p.id))) detruits++;
+      }
+      // La cascade emporte les océrisations, les travaux et les corrections.
+      await db.delete(pages).where(eq(pages.id, p.id));
+
+      // Du JSON, pas un 204 : le client lit toujours le corps.
+      return c.json({ id: p.id, folio: p.folio, objetsDetruits: detruits });
+    },
+  );
+
+  /**
+   * Renuméroter les folios d'un livre, d'un coup.
+   *
+   * ELLE EXISTE PARCE QU'UN ÉCHANGE NE PASSE PAS PAR `PATCH`.
+   * `pages_livre_folio_uq` rend (livre, folio) unique : intervertir les vues 2
+   * et 11 heurte l'unicité au premier des deux appels, quel que soit l'ordre. Et
+   * le cas réel n'est pas un échange mais un décalage de tout un livre —
+   * l'explorateur de fichiers a trié `photo1, photo10, photo2…`, et les soixante
+   * folios sont à replacer ensemble.
+   *
+   * DEUX TEMPS DANS UNE SEULE TRANSACTION : les folios passent d'abord en négatif,
+   * puis reçoivent leur valeur finale. L'index unique n'est pas différable — c'est
+   * un index, pas une contrainte — donc il n'y a pas d'autre issue que de traverser
+   * un espace de valeurs que rien n'occupe. La colonne n'a pas de contrainte de
+   * positivité : ce sont `nouvellePage` et `correctifPage` qui l'exigent en
+   * entrée, et le passage par le négatif reste interne à la transaction.
+   *
+   * LE LIVRE ENTIER OU RIEN. Une renumérotation partielle laisserait les folios
+   * non listés en travers des nouveaux numéros, et l'appel échouerait à mi-chemin
+   * sur une unicité — après avoir déjà tout mis en négatif.
+   */
+  app.post(
+    "/livres/:id/renumerotation",
+    describeRoute({ description: "Renuméroter les folios d'un livre", tags: ["bibliotheque"] }),
+    requireAuth,
+    requireRealUser,
+    validate("json", renumerotation),
+    async (c) => {
+      const moi = demandeur(c)!;
+      const livreId = c.req.param("id");
+      const l = await livrePubliable(livreId, moi);
+      if (!(await peutGerer(l, moi)).peutModifier) {
+        throw errors.forbidden("ce livre n'est pas le vôtre");
+      }
+
+      const { folios } = c.req.valid("json");
+      const existantes = await db
+        .select({ id: pages.id, folio: pages.folio })
+        .from(pages)
+        .where(eq(pages.livreId, l.id));
+
+      const connues = new Set(existantes.map((p) => p.id));
+      const inconnues = folios.filter((f) => !connues.has(f.id)).map((f) => f.id);
+      if (inconnues.length > 0) {
+        throw errors.unprocessable(
+          "certaines vues ne sont pas dans ce livre",
+          { inconnues },
+        );
+      }
+      if (folios.length !== existantes.length) {
+        throw errors.unprocessable(
+          `la renumérotation porte sur le livre entier : ${existantes.length} vues ` +
+            `à replacer, ${folios.length} reçues. Les vues omises resteraient en ` +
+            `travers des nouveaux numéros.`,
+          { attendues: existantes.length, recues: folios.length },
+        );
+      }
+      const distincts = new Set(folios.map((f) => f.folio));
+      if (distincts.size !== folios.length) {
+        throw errors.unprocessable("deux vues ne peuvent pas porter le même numéro");
+      }
+
+      const bouges = folios.filter((f) => {
+        const avant = existantes.find((p) => p.id === f.id);
+        return avant && avant.folio !== f.folio;
+      });
+      if (bouges.length === 0) {
+        return c.json({ id: l.id, deplacees: 0, folios: existantes.length });
+      }
+
+      await db.transaction(async (tx) => {
+        // Le passage par le négatif : aucun folio réel n'y vit, donc rien ne
+        // peut heurter l'unicité pendant la traversée.
+        await tx.execute(sql`
+          update pages set folio = -folio where livre_id = ${livreId} and folio > 0
+        `);
+        for (const f of folios) {
+          await tx
+            .update(pages)
+            .set({ folio: f.folio, updatedAt: new Date() })
+            .where(eq(pages.id, f.id));
+        }
+      });
+
+      return c.json({ id: l.id, deplacees: bouges.length, folios: folios.length });
     },
   );
 
