@@ -5,6 +5,7 @@ import { and, asc, desc, eq, gt, sql } from "drizzle-orm";
 import { db } from "../db/index.ts";
 import {
   livres,
+  livresSupprimes,
   pages,
   pageOcr,
   ocrJobs,
@@ -15,7 +16,7 @@ import {
 import type { Variables } from "../types.ts";
 import { id } from "../lib/ids.ts";
 import { sha256 } from "../lib/crypto.ts";
-import { enregistrerGardien, ficheObjet } from "../lib/stockage/index.ts";
+import { enregistrerGardien, ficheObjet, supprimerObjet } from "../lib/stockage/index.ts";
 import { urlObjet } from "./objets.ts";
 import { appliquer, contexte } from "../lib/bibliotheque/corrections.ts";
 import { errors } from "../lib/errors.ts";
@@ -55,38 +56,101 @@ import {
  * est une plateforme qui republie du contenu sous droits sans le savoir.
  */
 
-const nouveauLivre = z
-  .object({
-    sourceRef: z.string().min(1).max(120),
-    source: z.enum(["gallica", "archive_org", "scan_local", "autre"]),
-    titre: z.string().min(1).max(300),
-    auteur: z.string().max(200).optional(),
-    annee: z.number().int().min(1500).max(2100).optional(),
-    /** La seconde borne, pour un ouvrage paru sur plusieurs millésimes. Écraser
-     *  « 1930-1932 » en `1930` serait une coercition muette. */
-    anneeFin: z.number().int().min(1500).max(2100).optional(),
-    langue: z.string().max(20).default("plt_Latn"),
-    pagesTotal: z.number().int().positive().optional(),
-    statutFixation: z.enum([
-      "DOMAINE_PUBLIC",
-      "SOUS_DROITS",
-      "LICENCE_CC",
-      "SOUS_DROITS_A_ETABLIR",
-    ]),
-    licence: z.string().min(1).max(300),
-    /** Ce que la source a AFFICHÉ, recopié tel quel. « domaine public (notice
-     *  Gallica, lue le 2026-08-02) » n'est pas la même affirmation que
-     *  « domaine public » : la seconde perd qui l'a dit et quand. */
-    licenceConstatee: z.string().max(400).optional(),
-    publiable: z.boolean().default(false),
-    motifNonPubliable: z.string().max(500).optional(),
-    urlNotice: z.string().max(500).optional(),
-  })
+/**
+ * Les champs d'un livre — l'objet NU, sans `.strict()` ni `.refine()`.
+ *
+ * Il est extrait pour que le correctif puisse en dériver : `.partial()` ne se
+ * chaîne pas sur `nouveauLivre`, qui finit par un `.refine()` et n'est donc plus
+ * un `ZodObject` mais un `ZodEffects`. Recopier les champs à la main aurait
+ * marché le premier jour et divergé au premier ajout — un plafond changé d'un
+ * côté seulement ne fait aucun bruit.
+ */
+const champsLivre = z.object({
+  sourceRef: z.string().min(1).max(120),
+  source: z.enum(["gallica", "archive_org", "scan_local", "autre"]),
+  titre: z.string().min(1).max(300),
+  auteur: z.string().max(200).optional(),
+  annee: z.number().int().min(1500).max(2100).optional(),
+  /** La seconde borne, pour un ouvrage paru sur plusieurs millésimes. Écraser
+   *  « 1930-1932 » en `1930` serait une coercition muette. */
+  anneeFin: z.number().int().min(1500).max(2100).optional(),
+  langue: z.string().max(20).default("plt_Latn"),
+  pagesTotal: z.number().int().positive().optional(),
+  statutFixation: z.enum([
+    "DOMAINE_PUBLIC",
+    "SOUS_DROITS",
+    "LICENCE_CC",
+    "SOUS_DROITS_A_ETABLIR",
+  ]),
+  licence: z.string().min(1).max(300),
+  /** Ce que la source a AFFICHÉ, recopié tel quel. « domaine public (notice
+   *  Gallica, lue le 2026-08-02) » n'est pas la même affirmation que
+   *  « domaine public » : la seconde perd qui l'a dit et quand. */
+  licenceConstatee: z.string().max(400).optional(),
+  publiable: z.boolean().default(false),
+  motifNonPubliable: z.string().max(500).optional(),
+  urlNotice: z.string().max(500).optional(),
+});
+
+const nouveauLivre = champsLivre
   .strict()
   .refine((l) => l.publiable || !!l.motifNonPubliable, {
     message: "un livre non publiable doit dire pourquoi",
     path: ["motifNonPubliable"],
   });
+
+/**
+ * Ce qu'on peut corriger sur un livre déjà déposé.
+ *
+ * `source` ET `sourceRef` SONT ABSENTS, ET C'EST UN REFUS, PAS UN OUBLI.
+ * Ils forment l'identité du dépôt — `livres_source_uq` en fait une clé — et les
+ * changer ne corrigerait pas le livre : ça le ferait pointer vers un autre
+ * ouvrage, en gardant ses pages, ses océrisations et ses corrections. Un dépôt
+ * fait sur la mauvaise notice se supprime et se refait.
+ *
+ * PAS DE `.refine()` ICI. L'invariant « un livre non publiable doit dire
+ * pourquoi » porte sur le livre, pas sur le correctif : envoyer `publiable:
+ * false` seul est légitime quand le motif est déjà en base. Il est donc vérifié
+ * plus bas, sur la ligne FUSIONNÉE.
+ *
+ * Les champs facultatifs acceptent `null` — et c'est la seule façon d'EFFACER.
+ * À la création, on vide en omettant ; sur un correctif, omettre veut dire « ne
+ * touche pas ». Sans le `null`, un auteur saisi par erreur resterait à vie.
+ */
+const correctifLivre = champsLivre
+  .omit({ sourceRef: true, source: true })
+  .partial()
+  .extend({
+    auteur: z.string().max(200).nullish(),
+    annee: z.number().int().min(1500).max(2100).nullish(),
+    anneeFin: z.number().int().min(1500).max(2100).nullish(),
+    pagesTotal: z.number().int().positive().nullish(),
+    licenceConstatee: z.string().max(400).nullish(),
+    motifNonPubliable: z.string().max(500).nullish(),
+    urlNotice: z.string().max(500).nullish(),
+  })
+  .strict();
+
+/**
+ * Les champs que seul un curateur ou un modérateur peut toucher.
+ *
+ * CE SONT LES CINQ QUI DÉCIDENT SI DES OCTETS SORTENT. Le déposant décrit son
+ * livre — titre, auteur, année, langue, nombre de pages — et cette description
+ * n'ouvre aucune porte. La déclaration de droits, elle, est ce sur quoi la
+ * modération s'est prononcée : la laisser modifier par son auteur reviendrait à
+ * pouvoir republier un ouvrage refusé en changeant sa propre étiquette.
+ */
+const CHAMPS_DROITS = [
+  "publiable",
+  "statutFixation",
+  "licence",
+  "licenceConstatee",
+  "motifNonPubliable",
+] as const;
+
+/** Le motif d'un retrait ou d'une suppression. Trois caractères au moins :
+ *  « x » n'est pas une raison, et c'est cette ligne que lira le déposant. */
+const avecMotif = z.object({ motif: z.string().min(3).max(1000) }).strict();
 
 /**
  * Les moteurs qu'un exécutant sait réclamer.
@@ -389,6 +453,45 @@ function demandeur(c: { get: (k: "auth") => unknown }): string | null {
   return a?.kind === "user" ? (a.userId ?? null) : null;
 }
 
+/**
+ * Qui peut faire quoi sur ce livre. UNE SEULE FONCTION LE DIT, ET TROIS ROUTES LA LISENT.
+ *
+ * Trois pouvoirs distincts, et les confondre serait une faute pour chacun :
+ *
+ *   modifier         le déposant décrit son propre livre — titre, auteur, année
+ *   modifierDroits   réservé : c'est ce qui décide si des octets sortent, et le
+ *                    déposant qui a déclaré son livre sous droits pourrait sinon
+ *                    se rétracter tout seul le lendemain
+ *   supprimer        modérateur SEUL — c'est irréversible et ça détruit aussi le
+ *                    travail de tiers (corrections proposées, avis rendus), qui
+ *                    n'appartient pas au déposant
+ *
+ * La réponse voyage jusqu'à l'écran pour qu'il n'ait pas à recopier la règle :
+ * deux copies d'une règle d'accès divergent toujours, et toujours du côté
+ * permissif, parce que c'est celui dont personne ne se plaint.
+ */
+async function peutGerer(l: typeof livres.$inferSelect, moi: string | null) {
+  if (!moi) {
+    return { peutModifier: false, peutModifierDroits: false, peutSupprimer: false };
+  }
+  const deposant = l.deposeParUserId != null && l.deposeParUserId === moi;
+  const roles = await rolesDeGestion(moi);
+  return {
+    peutModifier: deposant || roles.curateur || roles.moderateur,
+    peutModifierDroits: roles.curateur || roles.moderateur,
+    peutSupprimer: roles.moderateur,
+  };
+}
+
+/** Les deux rôles qui pèsent sur un livre, lus d'un coup. */
+async function rolesDeGestion(moi: string) {
+  const [curateur, moderateur] = await Promise.all([
+    detientRole(moi, "curateur"),
+    detientRole(moi, "moderateur"),
+  ]);
+  return { curateur, moderateur };
+}
+
 export function bibliothequeRoute(): Hono<{ Variables: Variables }> {
   const app = new Hono<{ Variables: Variables }>();
 
@@ -425,7 +528,8 @@ export function bibliothequeRoute(): Hono<{ Variables: Variables }> {
     describeRoute({ description: "Un livre et l'état de ses pages", tags: ["bibliotheque"] }),
     optionalAuth,
     async (c) => {
-      const l = await livrePubliable(c.req.param("id"), demandeur(c));
+      const moi = demandeur(c);
+      const l = await livrePubliable(c.req.param("id"), moi);
       const [compte] = await db
         .select({
           pages: sql<number>`count(*)::int`,
@@ -434,6 +538,13 @@ export function bibliothequeRoute(): Hono<{ Variables: Variables }> {
         })
         .from(pages)
         .where(eq(pages.livreId, l.id));
+
+      // Qui peut agir sur ce livre, DIT PAR L'API plutôt que deviné par l'écran.
+      // Le front recopiait sinon la règle d'autorisation en TypeScript, et deux
+      // copies d'une règle d'accès finissent toujours par diverger — dans le
+      // sens permissif, puisque c'est celui qui ne provoque aucune plainte.
+      const gestionnaire = await peutGerer(l, moi);
+
       return c.json({
         ...livrePublic(l),
         // Dire combien de pages ont une image ET combien n'en ont pas. Une
@@ -447,7 +558,28 @@ export function bibliothequeRoute(): Hono<{ Variables: Variables }> {
         // reviendrait à lui cacher pourquoi son dépôt n'apparaît nulle part.
         statutModeration: l.statutModeration,
         motifModeration: l.motifModeration,
-        deposeParMoi: l.deposeParUserId != null && l.deposeParUserId === demandeur(c),
+        deposeParMoi: l.deposeParUserId != null && l.deposeParUserId === moi,
+        /**
+         * L'ÉTAT DE DROITS N'EST RENDU QU'À QUI PEUT LE CHANGER.
+         *
+         * `livrePublic()` ne l'expose pas, et c'est volontaire — un lecteur n'a
+         * rien à faire de `motifNonPubliable`. Mais un formulaire de correction
+         * ne peut alors rien pré-remplir : il afficherait des cases vides et les
+         * enverrait telles quelles, effaçant la déclaration du déposant à la
+         * première sauvegarde. C'est pour ce formulaire, et pour lui seul, que
+         * ces trois champs sortent.
+         */
+        gestion: gestionnaire.peutModifier
+          ? {
+              publiable: l.publiable,
+              motifNonPubliable: l.motifNonPubliable,
+              retire: l.retireLe
+                ? { le: l.retireLe, motif: l.motifRetrait }
+                : null,
+              peutModifierDroits: gestionnaire.peutModifierDroits,
+              peutSupprimer: gestionnaire.peutSupprimer,
+            }
+          : null,
       });
     },
   );
@@ -634,6 +766,428 @@ export function bibliothequeRoute(): Hono<{ Variables: Variables }> {
         },
         201,
       );
+    },
+  );
+
+  /**
+   * Corriger un livre déjà déposé.
+   *
+   * DEUX FRONTIÈRES, ET ELLES NE RÉPONDENT PAS LA MÊME CHOSE
+   *   404  le demandeur ne voit pas ce livre — répondre 403 confirmerait à qui
+   *        devine un identifiant qu'il a visé juste
+   *   403  il le voit, mais il n'y a pas droit — c'est le cas d'un lecteur sur
+   *        un livre public, et lui mentir par un 404 serait incompréhensible
+   *
+   * SEULES LES CLÉS ENVOYÉES SONT TOUCHÉES, et seules celles qui changent
+   * réellement sont écrites. La distinction compte : un écran qui renvoie tout
+   * le formulaire à chaque enregistrement enverrait aussi les champs de droits,
+   * qu'il n'a pas le droit de toucher — et ferait repartir en modération un
+   * livre dont on corrigeait une coquille.
+   */
+  app.patch(
+    "/livres/:id",
+    describeRoute({ description: "Corriger un livre", tags: ["bibliotheque"] }),
+    requireAuth,
+    requireRealUser,
+    validate("json", correctifLivre),
+    async (c) => {
+      const moi = demandeur(c)!;
+      const l = await livrePubliable(c.req.param("id"), moi);
+      const pouvoirs = await peutGerer(l, moi);
+      if (!pouvoirs.peutModifier) {
+        throw errors.forbidden(
+          "ce livre n'est pas le vôtre — son déposant, un curateur ou un modérateur peuvent le corriger",
+        );
+      }
+
+      // Zod n'ajoute pas les clés absentes du corps : ce tableau est exactement
+      // ce que l'appelant a envoyé, ni plus ni moins.
+      const b = c.req.valid("json") as Record<string, unknown>;
+      const envoyes = Object.keys(b);
+      if (envoyes.length === 0) {
+        throw errors.unprocessable("aucun champ à modifier");
+      }
+
+      const droitsVises = envoyes.filter((k) =>
+        (CHAMPS_DROITS as readonly string[]).includes(k),
+      );
+      if (droitsVises.length > 0 && !pouvoirs.peutModifierDroits) {
+        throw errors.forbidden(
+          `${droitsVises.join(", ")} : la déclaration de droits ne se corrige que par un ` +
+            `curateur ou un modérateur — c'est elle qui décide si les images sortent`,
+        );
+      }
+
+      // Ce qui CHANGE, et pas ce qui a été envoyé. Un formulaire renvoie
+      // volontiers des valeurs identiques ; les écrire ferait bouger `updatedAt`
+      // et, sur les champs de droits, renverrait le livre en modération pour
+      // rien.
+      const ligne = l as unknown as Record<string, unknown>;
+      const changes: Record<string, unknown> = {};
+      for (const k of envoyes) {
+        const apres = b[k] === undefined ? null : b[k];
+        if (ligne[k] !== apres) changes[k] = apres;
+      }
+      const droitsChanges = Object.keys(changes).filter((k) =>
+        (CHAMPS_DROITS as readonly string[]).includes(k),
+      );
+
+      if (Object.keys(changes).length === 0) {
+        return c.json({ id: l.id, modifie: [], renvoyeEnModeration: false });
+      }
+
+      // L'invariant se vérifie sur la ligne FUSIONNÉE, jamais sur le correctif :
+      // `publiable: false` seul est parfaitement licite quand le motif est déjà
+      // en base, et le refuser obligerait à réécrire le motif à chaque fois.
+      const fusion = { ...ligne, ...changes } as typeof l;
+      if (!fusion.publiable && !fusion.motifNonPubliable?.trim()) {
+        throw errors.unprocessable("un livre non publiable doit dire pourquoi", {
+          champ: "motifNonPubliable",
+        });
+      }
+      // Republier par correctif un livre RETIRÉ serait contourner le
+      // rétablissement, qui est réservé et qui, lui, restaure l'état d'avant
+      // plutôt que d'en inventer un. La base le refuserait aussi
+      // (`livres_retire_non_publiable_ck`), mais avec une erreur Postgres.
+      if (fusion.publiable && l.retireLe) {
+        throw errors.unprocessable(
+          "ce livre est retiré — il se republie par POST /livres/:id/retablissement, pas par un correctif",
+        );
+      }
+
+      /**
+       * UN CHANGEMENT DE DROITS ANNULE LA MODÉRATION QUI PORTAIT SUR LES ANCIENS.
+       *
+       * `statut_moderation` répond « quelqu'un a-t-il vérifié ». Vérifié QUOI :
+       * la déclaration telle qu'elle était au moment de la décision. Changer la
+       * licence après coup laisserait un livre marqué « accepté » sur une
+       * déclaration que personne n'a jamais lue.
+       *
+       * La correction d'une coquille dans le titre, elle, ne remet rien en file :
+       * c'est exactement pourquoi l'écran n'envoie que ce qui change.
+       */
+      const renvoi = droitsChanges.length > 0 && l.statutModeration === "accepte";
+
+      await db
+        .update(livres)
+        .set({
+          ...(changes as Partial<typeof livres.$inferInsert>),
+          ...(renvoi
+            ? {
+                statutModeration: "en_attente",
+                motifModeration: null,
+                modereParUserId: null,
+                modereLe: null,
+              }
+            : {}),
+          // Aucun déclencheur ne maintient `updated_at` sur cette table.
+          updatedAt: new Date(),
+        })
+        .where(eq(livres.id, l.id));
+
+      const [apres] = await db.select().from(livres).where(eq(livres.id, l.id)).limit(1);
+      return c.json({
+        ...livrePublic(apres!),
+        publiable: apres!.publiable,
+        motifNonPubliable: apres!.motifNonPubliable,
+        statutModeration: apres!.statutModeration,
+        modifie: Object.keys(changes),
+        // DIT, et pas subi : sans ce drapeau, le déposant verrait son livre
+        // quitter la bibliothèque publique sans comprendre pourquoi.
+        renvoyeEnModeration: renvoi,
+      });
+    },
+  );
+
+  /**
+   * Retirer un livre de la publication — RÉVERSIBLE.
+   *
+   * C'est le geste qu'on fait quand un ayant droit écrit, et il doit être
+   * possible en une seconde, sans réunion et sans suppression : les octets
+   * cessent de sortir, le livre reste, et si la réclamation ne tient pas on le
+   * remet. Une plateforme qui n'a que la suppression finit par ne rien faire.
+   *
+   * LE RETRAIT NE TOUCHE PAS `motif_non_publiable`, et c'est tout l'objet des
+   * colonnes ajoutées par la migration 0010. Ce champ-là est la DÉCLARATION du
+   * déposant — « je n'ai pas les droits » — et l'écraser par « retiré à la
+   * demande de X » ferait disparaître la raison d'origine. Les deux états
+   * étaient auparavant indiscernables, si bien qu'un rétablissement aveugle
+   * aurait publié une œuvre que personne n'avait jamais eu le droit de publier.
+   *
+   * OUVERT AU DÉPOSANT, parce que retirer est TOUJOURS une restriction. Le
+   * risque d'un pouvoir donné trop largement est qu'il serve à ouvrir ; celui-ci
+   * ne peut que fermer.
+   */
+  app.post(
+    "/livres/:id/retrait",
+    describeRoute({ description: "Retirer un livre de la publication", tags: ["bibliotheque"] }),
+    requireAuth,
+    requireRealUser,
+    validate("json", avecMotif),
+    async (c) => {
+      const moi = demandeur(c)!;
+      const l = await livrePubliable(c.req.param("id"), moi);
+      const pouvoirs = await peutGerer(l, moi);
+      if (!pouvoirs.peutModifier) {
+        throw errors.forbidden(
+          "ce livre n'est pas le vôtre — son déposant, un curateur ou un modérateur peuvent le retirer",
+        );
+      }
+
+      // IDEMPOTENT, ET CE N'EST PAS DE LA COMMODITÉ. Réécrire poserait un
+      // nouveau `retire_le` et un nouvel auteur à chaque appel : le premier
+      // retrait — celui qui compte le jour où l'on demande « depuis quand, et
+      // sur la demande de qui ? » — serait perdu par un double-clic.
+      if (l.retireLe) {
+        return c.json({
+          id: l.id,
+          retireLe: l.retireLe,
+          motif: l.motifRetrait,
+          deja: true,
+        });
+      }
+
+      const motif = c.req.valid("json").motif.trim();
+      await db
+        .update(livres)
+        .set({
+          publiableAvant: l.publiable,
+          publiable: false,
+          retireLe: new Date(),
+          retireParUserId: moi,
+          motifRetrait: motif,
+          updatedAt: new Date(),
+        })
+        .where(eq(livres.id, l.id));
+
+      const [apres] = await db.select().from(livres).where(eq(livres.id, l.id)).limit(1);
+      return c.json({
+        id: l.id,
+        retireLe: apres!.retireLe,
+        motif: apres!.motifRetrait,
+        // Ce qui sera rendu si l'on rétablit. Un livre qui n'était pas publiable
+        // avant son retrait ne le deviendra pas en le rétablissant, et le dire
+        // ici évite de le découvrir en cliquant.
+        publiableAvant: apres!.publiableAvant,
+      });
+    },
+  );
+
+  /**
+   * Rétablir un livre retiré. UNE ANNULATION, PAS UNE DÉCISION DE PUBLIER.
+   *
+   * Il remet `publiable_avant` — donc `false` si le livre n'était pas publiable
+   * avant qu'on le retire. Poser `true` serait une décision de publier prise par
+   * un bouton nommé « rétablir », sur un ouvrage que son déposant avait
+   * peut-être lui-même déclaré sous droits.
+   *
+   * REFUSE UN LIVRE JAMAIS RETIRÉ. Sans cette garde, le rétablissement
+   * deviendrait la porte dérobée qu'il évite : appelé sur un dépôt déclaré sous
+   * droits — `publiable = false`, `motifNonPubliable` rempli, exactement la
+   * silhouette d'un retrait — il aurait publié ce que personne n'a jamais
+   * autorisé.
+   */
+  app.post(
+    "/livres/:id/retablissement",
+    describeRoute({ description: "Annuler un retrait", tags: ["bibliotheque"] }),
+    requireAuth,
+    requireRealUser,
+    requireCorpusRole("moderateur", "curateur"),
+    async (c) => {
+      const [l] = await db
+        .select()
+        .from(livres)
+        .where(eq(livres.id, c.req.param("id")))
+        .limit(1);
+      if (!l) throw errors.notFound("Livre introuvable");
+      if (!l.retireLe) {
+        throw errors.unprocessable(
+          "ce livre n'a jamais été retiré — s'il n'est pas publiable, c'est sa déclaration de droits qui le dit, " +
+            "et elle se corrige par PATCH /livres/:id",
+          { motifNonPubliable: l.motifNonPubliable },
+        );
+      }
+
+      await db
+        .update(livres)
+        .set({
+          // `?? false` plutôt que `!`. La contrainte
+          // `livres_retrait_complet_ck` garantit que les deux colonnes vont
+          // ensemble, mais une ligne écrite à la main en SQL n'en sait rien, et
+          // `publiable` est NOT NULL : le repli est la valeur qui ne publie pas.
+          publiable: l.publiableAvant ?? false,
+          publiableAvant: null,
+          retireLe: null,
+          retireParUserId: null,
+          motifRetrait: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(livres.id, l.id));
+
+      return c.json({
+        id: l.id,
+        publiable: l.publiableAvant ?? false,
+        retireLe: null,
+        // Rétabli ne veut pas dire visible : la modération est une autre
+        // question, et la taire ferait chercher longtemps pourquoi le livre
+        // n'apparaît toujours pas dans la liste.
+        statutModeration: l.statutModeration,
+      });
+    },
+  );
+
+  /**
+   * Supprimer un livre — DÉFINITIVEMENT, octets compris.
+   *
+   * LE FAIT QUI COMMANDE TOUT L'ORDRE DES OPÉRATIONS
+   * Supprimer un livre déposé SANS effacer ses octets les rend à nouveau
+   * publics. Deux gardiens votent sur chaque objet, et il sort dès qu'un le
+   * réclame sans qu'aucun ne le refuse :
+   *
+   *   avant       `bibliotheque` refuse (livre non publiable) · `depot` accepte
+   *   après       `bibliotheque` ne connaît plus rien (ses pages ont disparu)
+   *               `depot` accepte toujours
+   *
+   * C'est exactement le scénario que lib/stockage/objets.ts disait vouloir
+   * empêcher — « un ouvrage retiré dont les lignes de rattachement ont disparu
+   * redeviendrait public par le seul fait qu'on l'a détaché » — et que le
+   * gardien `depot`, ajouté pour le dépôt ouvert, avait réintroduit. Une
+   * suppression qui n'efface pas les octets est une DÉ-suppression.
+   *
+   * MODÉRATEUR SEUL. Un curateur verse et corrige ; détruire le travail de tiers
+   * — les corrections proposées et les avis rendus partent avec la cascade —
+   * n'est pas de l'édition.
+   */
+  app.delete(
+    "/livres/:id",
+    describeRoute({ description: "Supprimer un livre et ses octets", tags: ["bibliotheque"] }),
+    requireAuth,
+    requireRealUser,
+    requireCorpusRole("moderateur"),
+    validate("json", avecMotif),
+    async (c) => {
+      const livreId = c.req.param("id");
+      const moi = demandeur(c)!;
+      const motif = c.req.valid("json").motif.trim();
+      const [l] = await db.select().from(livres).where(eq(livres.id, livreId)).limit(1);
+      if (!l) throw errors.notFound("Livre introuvable");
+
+      /**
+       * ÉTAPE 0 — FERMER LE LIVRE, VALIDÉE SEULE, AVANT DE TOUCHER AU MOINDRE OCTET.
+       *
+       * C'est elle qui rend vrai l'invariant « à tout instant, ces octets sont
+       * soit refusés, soit détruits ». Sans elle, sur le cas qui motive une
+       * suppression — un ayant droit écrit au sujet d'un volume PUBLIÉ —
+       * `publiable` resterait vrai pendant toute la boucle : 748 allers-retours
+       * vers R2 pour 374 folios, soit des minutes durant lesquelles chaque
+       * empreinte pas encore atteinte continue d'être servie à qui a listé les
+       * pages. Et un échec R2 à mi-course laisserait un livre accepté, listé,
+       * moitié en tuiles blanches et moitié servable — un état DURABLE.
+       *
+       * PAS DE TRANSACTION ENGLOBANTE, et c'est le point délicat : le gardien
+       * interroge la base par une autre connexion et ne verrait pas un UPDATE
+       * non validé. Enfermer l'étape 0 dans la transaction qui porte la
+       * destruction rouvrirait exactement la fenêtre qu'elle ferme. La
+       * VALIDATION de l'étape 0 est la frontière.
+       *
+       * `coalesce` partout : la suppression est rejouable, et un second appel ne
+       * doit ni déplacer la date du premier retrait ni effacer son auteur.
+       */
+      const ferme = await db.execute(sql`
+        update livres set
+          publiable = false,
+          publiable_avant = coalesce(publiable_avant, publiable),
+          statut_moderation = 'refuse',
+          motif_moderation = ${motif},
+          motif_retrait = coalesce(motif_retrait, ${motif}),
+          retire_le = coalesce(retire_le, now()),
+          retire_par_user_id = coalesce(retire_par_user_id, ${moi}),
+          updated_at = now()
+        where id = ${livreId}
+        returning id
+      `);
+      if (ferme.length === 0) throw errors.notFound("Livre introuvable");
+
+      /**
+       * Les empreintes de ce livre qu'AUCUN AUTRE livre ne référence.
+       *
+       * L'adressage par contenu déduplique : deux ouvrages qui portent la même
+       * page de garde partagent l'objet. Détruire les octets d'un livre
+       * emporterait la page de l'autre, et personne ne le verrait avant qu'une
+       * tuile ne manque.
+       *
+       * LES DEUX COLONNES, image ET vignette : l'empreinte d'une vignette
+       * n'apparaît jamais dans `image_sha256`, et l'oublier laisserait dans le
+       * seau la moitié des octets d'un livre supprimé.
+       */
+      const aDetruire = await db.execute<{ e: string }>(sql`
+        with mien as (
+          select image_sha256 as e from pages
+           where livre_id = ${livreId} and image_sha256 is not null
+          union
+          select vignette_sha256 from pages
+           where livre_id = ${livreId} and vignette_sha256 is not null
+        )
+        select m.e from mien m
+         where not exists (
+           select 1 from pages p
+            where p.livre_id <> ${livreId}
+              and (p.image_sha256 = m.e or p.vignette_sha256 = m.e))
+      `);
+
+      // Une erreur ici N'EST PAS RATTRAPÉE, et c'est délibéré. Continuer malgré
+      // un échec R2 mènerait au `DELETE FROM livres` avec des octets encore dans
+      // le seau — c'est-à-dire à la dé-suppression décrite plus haut. Le livre
+      // reste fermé, l'appel échoue, et un second appel reprend là où il en
+      // était : `supprimerObjet` tolère l'objet déjà parti.
+      let detruits = 0;
+      for (const { e } of aDetruire) {
+        await supprimerObjet(e);
+        detruits++;
+      }
+
+      const [nb] = await db
+        .select({ pages: sql<number>`count(*)::int` })
+        .from(pages)
+        .where(eq(pages.livreId, livreId));
+
+      // Le registre et la disparition ensemble : si l'insertion échouait après
+      // le DELETE, plus rien ne saurait dire pourquoi ce livre a disparu.
+      await db.transaction(async (tx) => {
+        await tx
+          .insert(livresSupprimes)
+          .values({
+            id: id("lsupp"),
+            livreId: l.id,
+            titre: l.titre,
+            auteur: l.auteur,
+            annee: l.annee,
+            source: l.source,
+            sourceRef: l.sourceRef,
+            deposeParUserId: l.deposeParUserId,
+            supprimeParUserId: moi,
+            motif,
+            objetsDetruits: detruits,
+            pagesSupprimees: nb?.pages ?? 0,
+          })
+          // Rejouée, la suppression ne s'inscrit qu'une fois.
+          .onConflictDoNothing();
+        // La cascade emporte pages, océrisations, corrections et avis.
+        await tx.delete(livres).where(eq(livres.id, livreId));
+      });
+
+      // DU JSON, ET PAS UN 204. Le client de `boky-collecte` lit toujours le
+      // corps de la réponse ; un 204 le ferait échouer sur une suppression
+      // pourtant réussie, et l'écran proposerait de recommencer.
+      return c.json({
+        id: livreId,
+        titre: l.titre,
+        // Rendus parce qu'ils se vérifient : un zéro sur un livre de 374 folios
+        // dit que la boucle n'a pas fait son travail.
+        objetsDetruits: detruits,
+        pagesSupprimees: nb?.pages ?? 0,
+        motif,
+      });
     },
   );
 

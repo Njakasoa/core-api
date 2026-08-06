@@ -536,6 +536,30 @@ export const livres = pgTable(
       onDelete: "set null",
     }),
     modereLe: timestamp("modere_le", { withTimezone: true }),
+
+    /**
+     * LE RETRAIT A SES PROPRES COLONNES, ET C'EST UNE CORRECTION.
+     *
+     * Retirer un livre s'écrivait `publiable = false` + `motif_non_publiable`
+     * rempli — exactement ce qu'écrit un dépôt déclaré SOUS DROITS par son
+     * déposant, à la seconde où il arrive. Les deux états étaient donc
+     * indiscernables, et « rétablir » l'un revenait à publier l'autre : une
+     * œuvre que personne n'avait jamais eu le droit de publier.
+     *
+     * `motifNonPubliable` n'est plus jamais réécrit par un retrait. C'est la
+     * déclaration du déposant sur les droits ; une décision de retrait est autre
+     * chose, et l'écraser ferait disparaître la raison pour laquelle le livre
+     * n'était pas publiable au départ.
+     */
+    retireLe: timestamp("retire_le", { withTimezone: true }),
+    retireParUserId: text("retire_par_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    motifRetrait: text("motif_retrait"),
+    /** Ce qu'il faudra remettre — et surtout pas `true`. Sans cette colonne,
+     *  rétablir voudrait dire publier, y compris ce qui ne l'a jamais été. */
+    publiableAvant: boolean("publiable_avant"),
+
     createdAt,
     updatedAt,
   },
@@ -545,6 +569,57 @@ export const livres = pgTable(
     /** La file de modération, et la liste publique, se lisent par cet index. */
     index("livres_moderation_idx").on(t.statutModeration, t.createdAt),
     index("livres_depose_par_idx").on(t.deposeParUserId),
+    index("livres_retrait_idx").on(t.retireLe),
+  ],
+);
+
+/**
+ * Ce qui reste d'un livre supprimé définitivement : de quoi répondre, rien de plus.
+ *
+ * Une suppression détruit les octets et, par cascade, les pages, les
+ * océrisations, les corrections proposées par des tiers et les avis rendus
+ * dessus. Ne rien garder rendrait la question « pourquoi ce livre a-t-il
+ * disparu ? » sans réponse — pour le déposant qui la posera en premier, et pour
+ * l'ayant droit qui a demandé le retrait et voudra savoir qu'il a été fait.
+ *
+ * AUCUN CONTENU N'EST CONSERVÉ, PAS MÊME LES EMPREINTES. Les garder permettrait
+ * de reconnaître un fichier reversé après coup — au prix de conserver la trace
+ * de ce qu'un ayant droit a demandé d'effacer. Le titre et la source répondent
+ * à la question ; l'empreinte, elle, ne fait que survivre au retrait.
+ */
+export const livresSupprimes = pgTable(
+  "livres_supprimes",
+  {
+    id: text("id").primaryKey(),
+    /** L'identifiant du livre disparu. PAS une clé étrangère : la ligne qu'elle
+     *  désignerait n'existe plus, c'est tout l'objet de cette table. */
+    livreId: text("livre_id").notNull(),
+    titre: text("titre").notNull(),
+    auteur: text("auteur"),
+    annee: integer("annee"),
+    source: text("source").notNull(),
+    sourceRef: text("source_ref").notNull(),
+    deposeParUserId: text("depose_par_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    supprimeParUserId: text("supprime_par_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    motif: text("motif").notNull(),
+    /** Combien d'octets ont RÉELLEMENT été détruits, et combien de pages sont
+     *  parties avec. Un zéro sur un livre de 374 folios dit que la boucle n'a
+     *  pas fait son travail — sans ces chiffres, rien après coup ne permettrait
+     *  de s'en apercevoir. */
+    objetsDetruits: integer("objets_detruits").notNull().default(0),
+    pagesSupprimees: integer("pages_supprimees").notNull().default(0),
+    createdAt,
+  },
+  (t) => [
+    /** Une suppression rejouée ne s'inscrit qu'une fois : la route est rejouable
+     *  par construction, et le registre compterait sinon deux disparitions là où
+     *  il n'y en a eu qu'une. */
+    uniqueIndex("livres_supprimes_livre_uq").on(t.livreId),
+    index("livres_supprimes_deposant_idx").on(t.deposeParUserId, t.createdAt),
   ],
 );
 

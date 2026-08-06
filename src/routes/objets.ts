@@ -42,11 +42,21 @@ import type { Variables } from "../types.ts";
  * empreinte — d'où le vote des gardiens, qui se fait en base, et d'où le fait
  * que le seau ne soit pas public.
  */
+/**
+ * Combien de temps un objet versé reste joignable par son seul déposant.
+ *
+ * Assez pour se relire, téléverser les folios suivants, reprendre le lendemain
+ * un lot interrompu. Pas assez pour qu'un rattachement raté laisse des octets
+ * publics indéfiniment. Exporté pour que les essais mesurent la même valeur que
+ * la route, plutôt qu'une constante recopiée.
+ */
+export const FENETRE_DEPOT_HEURES = 48;
+
 export function objetsRoute(): Hono<{ Variables: Variables }> {
   const app = new Hono<{ Variables: Variables }>();
 
   /**
-   * CE QU'UN CONTRIBUTEUR A DÉPOSÉ LUI RESTE VISIBLE, PAR SON EMPREINTE.
+   * CE QU'UN CONTRIBUTEUR VIENT DE DÉPOSER LUI RESTE VISIBLE — PENDANT 48 HEURES.
    *
    * Sans ce gardien, un objet fraîchement versé n'est réclamé par personne — le
    * vote le refuse, et le déposant ne peut pas se relire avant de rattacher sa
@@ -60,6 +70,21 @@ export function objetsRoute(): Hono<{ Variables: Variables }> {
    * refuserait tout objet non modéré ne protégerait rien de plus — le déposant
    * possède déjà le fichier — et rendrait la relecture impossible.
    *
+   * LA FENÊTRE EST LA CORRECTION, ET ELLE VIENT DE LA JUSTIFICATION ELLE-MÊME.
+   * Le besoin décrit ci-dessus — se relire avant de rattacher — dure quelques
+   * minutes. Ce gardien, lui, rendait servable À JAMAIS tout objet versé, y
+   * compris les images d'un lot dont le rattachement a échoué : plus aucune page
+   * ne les référence, donc plus aucun gardien de fonctionnalité ne les refuse, et
+   * le balayage de purge ne les voit pas non plus puisqu'il filtre sur
+   * `meta.source`, que seul le script de versement écrit. Un dépôt ouvert
+   * accumulait ainsi des octets publics que rien ne réclamait et que rien ne
+   * pouvait fermer.
+   *
+   * Passé le délai, le verdict retombe à `inconnue` — pas à `refusee` : ce
+   * gardien ne SAIT rien contre l'objet, il cesse simplement de le réclamer. Le
+   * relais est pris par le gardien de la fonctionnalité dès que la page existe,
+   * et lui n'a pas de limite de temps. Rien du parcours nominal n'en dépend.
+   *
    * Le refus, lui, vient d'ailleurs : si la photo est rattachée à un livre
    * refusé ou non publiable, le gardien de la bibliothèque vote « refusee » et un
    * seul refus l'emporte.
@@ -67,8 +92,12 @@ export function objetsRoute(): Hono<{ Variables: Variables }> {
   enregistrerGardien({
     nom: "depot",
     async verdict(sha256) {
+      // `objets_deposant_idx` porte déjà (depose_par_user_id, created_at).
       const [r] = await db.execute<{ depose: boolean }>(sql`
-        select depose_par_user_id is not null as depose from objets where sha256 = ${sha256}
+        select depose_par_user_id is not null
+               and created_at > now() - (${FENETRE_DEPOT_HEURES} || ' hours')::interval
+                 as depose
+          from objets where sha256 = ${sha256}
       `);
       return r?.depose ? "servable" : "inconnue";
     },
